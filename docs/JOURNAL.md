@@ -4,6 +4,34 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-09 — Étape 1 : squelette outillage
+
+**Fait** : `api/` (projet uv : `create_app(deps)`, `GET /api/v1/health` → `{ok}`, CLI `ffe serve [--reload]` et `ffe openapi`, service statique de `web/dist/` avec repli `index.html`, 7 tests pytest dont `test_openapi.py`) ; `web/` (Vite 8 `host:true` + proxy `/api`, React 19, Tailwind 4, Prettier, Vitest ; `src/api/client.ts` seul importeur d'openapi-fetch, `queries/health.ts`, page « API OK », `scripts/gen-api.ts` partagé avec `tests/schema-freshness.test.ts`, `tests/boundaries.test.ts`) ; `check.sh` complété ; `.claude/settings.json` élargi. `./check.sh` vert ; `npm run build` puis `uv run ffe serve` sert l'interface sur `127.0.0.1:8000` ; une route modifiée sans `ffe openapi` + `gen:api` fait échouer `test_openapi.py` puis `schema-freshness.test.ts` (vérifié).
+
+**Versions installées** : Python 3.14.7, FastAPI 0.143.0, uvicorn 0.54.0, Typer 0.27.3, pydantic-settings 2.15.0, pytest 9.1.1, httpx2 2.13.1 (demandé par Starlette pour `TestClient`, à la place d'httpx), ruff 0.17.0, pyright 1.1.414 ; Vite 8.3.4, React 19.3.0, TypeScript 6.0.3, Vitest 5.0.3, Prettier 3.9.9, Tailwind 4.3.3, openapi-fetch 0.17.0, openapi-typescript 7.13.0, @vitejs/plugin-react 6.1.2, @types/node 24.19.2.
+
+**Décisions** (défauts acceptés par l'utilisateur) :
+
+- D1.1 Ports 8000 (API) / 5173 (Vite). — défaut.
+- D1.2 SQLAlchemy 2.0.x, pas 2.1 ; `sqlalchemy` et `alembic` ne sont ajoutés qu'à l'étape 3. — défaut.
+- D1.3 Tailwind dès maintenant. — défaut.
+- D1.4 uv `native-tls = true` → écrit `system-certs = true` (nouveau nom, uv 0.12 déprécie l'ancien). — défaut.
+- D1.5 `api/openapi.json` commité par `ffe openapi`, source de `gen:api`, deux tests de fraîcheur. — défaut.
+- D1.6 TypeScript : option (a) « TS 7 + `overrides` npm » **échoue** (npm hisse les peers à la racine : ERESOLVE ; et `typescript@7.0.2` n'a plus `lib/typescript.js`, qu'openapi-typescript 7.13 importe à l'exécution). **Repli (b) appliqué : TypeScript 6.0.3** (dernière lignée JS, repli nommé dans ADR-0001), `overrides: { "openapi-typescript": { "typescript": "$typescript" } }`. Retour à TS 7 quand openapi-typescript n'importera plus le compilateur. — défaut (a) puis repli (b), consigné ici.
+- D1.7 react-router 7 (pas 8), TanStack Query et react-hook-form : non installés avant l'étape 5. — défaut.
+- D1.8 Tests : `pytest` + `httpx2` côté API ; `vitest` seul côté front (jsdom et Testing Library à l'étape 5). — défaut.
+- D1.9 `web/dist/` servi par FastAPI dès l'étape 1, monté seulement si `index.html` existe. — défaut.
+
+**Faits d'environnement** (maître : ARCHITECTURE §11) : le conteneur exporte `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` ; venv FFE = `~/.venvs/ffe`, neutralisé par `check.sh`. `npm create vite` sans TTY échoue : `web/` écrit à la main. Pyright 1.1.414 refuse `typeCheckingMode` dans `executionEnvironments` → `strict = ["src"]`.
+
+**Commits** : `feat(api): squelette FastAPI, CLI ffe serve/openapi, route de santé et tests` (`8de723d`) ; `feat(web): squelette Vite/React, page « API OK », contrat généré et tests de fraîcheur` (`664a309`) ; `docs(repo): étape 1 — commandes, architecture, API, journal, feuille de route` (dernier commit de la session).
+
+**À vérifier par l'utilisateur** (5 min) : 1) `./check.sh` vert ; 2) `export UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe; unset UV_FROZEN; cd api && uv run ffe serve --reload` puis `cd web && npm run dev`, ouvrir `http://localhost:5173` depuis Windows → « API OK » ; 3) ajouter un champ à `HealthRead` dans `api/src/ffe/api/v1/health.py`, lancer `./check.sh` → échec de `test_openapi.py` ; `uv run ffe openapi` puis `npm run gen:api` → vert ; annuler la modification.
+
+**Reste** : accès depuis le navigateur Windows non vérifiable depuis le conteneur (à confirmer, repli JOURNAL si `localhost:5173` ne répond pas) ; pas de « Idée parquée » nouvelle.
+
+**Prochaine étape : 2 — Modèle de données validé (aucun code).** Décisions à poser en bloc : D2.1 à D2.7 (ROADMAP).
+
 ## 2026-10-09 — Étape 0 : outils de travail
 
 **Fait** : dépôt `/workspaces/Perso/FFE` créé (l'ancien dossier `FF&E`, vide, reste à supprimer par l'utilisateur : `rmdir "/workspaces/Perso/FF&E"` ; puis rouvrir VS Code / Claude Code sur `FFE`), git initialisé sur `main`, documentation et configuration de collaboration écrites. Aucun code applicatif. Plan de l'étape 0 approuvé par l'utilisateur après une conception multi-agents (3 recherches, 3 stacks jugées, 3 livrables critiqués puis révisés) ; matière conservée sous `~/.persist/claude/projects/-workspaces-Perso-FF-E/…/subagents/workflows/wf_adc0dbc8-2df/journal.jsonl`.

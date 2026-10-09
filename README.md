@@ -6,7 +6,7 @@ Il s'adresse à un architecte d'intérieur ou décorateur qui gère seul ses pro
 
 ## État
 
-**Étape 0 (2026-10-09) : faite : documentation et configuration seulement.** Aucun code applicatif n'existe encore (pas de `api/`, pas de `web/`). La feuille de route et les décisions sont écrites ; le squelette technique arrive à l'étape 1.
+**Étape 1 (2026-10-09) : faite : squelette `api/` et `web/`.** L'API répond sur `GET /api/v1/health`, le front affiche « API OK », `./check.sh` enchaîne les deux chaînes d'outils et deux tests de fraîcheur gardent le contrat OpenAPI à jour. Aucune table : le modèle de données se valide à l'étape 2.
 
 ## Architecture (3 couches)
 
@@ -22,7 +22,11 @@ Le dépôt vit sur `/workspaces/Perso/FFE` (montage 9p, vu depuis Windows). Les 
 
 ## Lancer
 
-À compléter à l'étape 1. Prévu : `cd api && uv run ffe serve` (API sur `http://127.0.0.1:8000`) et `cd web && npm run dev` (interface sur `http://localhost:5173`, accessible depuis le navigateur Windows). Vérification du dépôt : `./check.sh`.
+Pré-requis : `uv` ≥ 0.12 et Node 24. Dans ce devcontainer, exporter d'abord `UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe` et `unset UV_FROZEN` (variables globales héritées d'un autre projet, voir `docs/ARCHITECTURE.md` §11).
+
+- Développement : `cd api && uv run ffe serve --reload` (API sur `http://127.0.0.1:8000`) et, dans un autre terminal, `cd web && npm run dev` (interface sur `http://localhost:5173`, accessible depuis le navigateur Windows).
+- Usage réel : `cd web && npm run build` puis `cd api && uv run ffe serve` ; l'interface est servie sur `http://127.0.0.1:8000`.
+- Vérification du dépôt : `./check.sh`.
 
 ## Documentation
 

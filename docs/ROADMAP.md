@@ -32,7 +32,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : `./check.sh` vert ; `uv run ffe serve` puis `npm run dev` affichent « API OK » depuis Windows ; modifier une route sans relancer `ffe openapi` puis `gen:api` fait échouer un test de fraîcheur.
 - **Décisions préalables** : D1.1 ports 8000 API / 5173 Vite (défaut) ; D1.2 SQLAlchemy 2.0.x, pas 2.1 (défaut) ; D1.3 Tailwind dès maintenant (défaut : oui) ; D1.4 uv `native-tls = true` (défaut : oui, comme Racoon) ; D1.5 instantané `api/openapi.json` commité, source de `gen:api` (défaut : oui, ARCHITECTURE §4).
 - **Risques** : proxy TLS du devcontainer bloquant `uv sync` ou `npm install` ; `127.0.0.1` inaccessible depuis Windows → repli consigné dans une nouvelle ADR ou un paragraphe JOURNAL (ADR-0001 acceptée ne se modifie pas) ; deux chaînes d'outils à tenir vertes.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-09 — commits `8de723d` (api), `664a309` (web), puis le commit de docs de la même session. Écart au plan : TypeScript 6.0.3 au lieu de 7 (repli ADR-0001, JOURNAL D1.6) ; `@tanstack/react-query`, `react-router`, `react-hook-form` reportés à l'étape 5 (première utilisation). Affichage depuis le navigateur Windows : à confirmer par l'utilisateur (JOURNAL « à vérifier »).
 
 ## Étape 2 — Modèle de données validé (aucun code)
 

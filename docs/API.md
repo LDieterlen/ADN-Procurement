@@ -1,6 +1,6 @@
 # API
 
-Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. À l'étape 0 (2026-10-09) aucune route n'existe ; chaque ligne du tableau est marquée « prévue (étape N) » et passera à « livrée (étape N) » dans la session qui la livre. Détail des tables : `DATA_MODEL.md` ; flux d'une requête : `ARCHITECTURE.md` §3. Le contrat exécutable est `api/openapi.json` (instantané de `/openapi.json` produit par FastAPI, écrit par `ffe openapi`, ARCHITECTURE §4) ; ce document fixe les règles que ce contrat doit respecter.
+Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaque ligne du tableau est marquée « prévue (étape N) » et passe à « livrée (étape N) » dans la session qui la livre ; à l'étape 1 (2026-10-09) seule `GET /health` est livrée. Détail des tables : `DATA_MODEL.md` ; flux d'une requête : `ARCHITECTURE.md` §3. Le contrat exécutable est `api/openapi.json` (instantané de `/openapi.json` produit par FastAPI, écrit par `ffe openapi`, ARCHITECTURE §4) ; ce document fixe les règles que ce contrat doit respecter.
 
 ## Conventions
 
@@ -80,7 +80,7 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. À l
 
 | Ressource | Routes (sous `/api/v1`) | Statut |
 |---|---|---|
-| Système | `GET /health` → `{ok}` (étape 1), enrichi `dbPath, isDevDb, schemaRevision, lastBackupAt, backupDirOk` à l'étape 3 | prévue (étapes 1 et 3) |
+| Système | `GET /health` → `{ok}` (`operationId: getHealth`), enrichi `dbPath, isDevDb, schemaRevision, lastBackupAt, backupDirOk` à l'étape 3 | livrée (étape 1) ; enrichissement prévu (étape 3) |
 | Clients | `GET/POST /clients` · `GET/PATCH /clients/{id}` · `POST /clients/{id}/archive` · `POST /clients/{id}/unarchive` | prévue (étape 4) |
 | Réglages | `GET/PATCH /settings` (ressource unique, sans id) | prévue (étape 9) |
 | Fournisseurs | `GET/POST /suppliers` (paginé) · `GET/PATCH /suppliers/{id}` · `POST …/archive` · `POST …/unarchive` | prévue (étape 6a) |

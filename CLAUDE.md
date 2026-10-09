@@ -8,11 +8,12 @@ Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARC
 
 ## Commandes
 
-**Étape 0 (2026-10-09) : AUCUNE commande applicative n'existe encore.** `api/` et `web/` naissent à l'étape 1, la CLI `ffe db …` à l'étape 3. Mettre cette liste à jour à chaque étape. Pré-requis vérifiés le 2026-10-09 : `uv` 0.12 et Node 24 (nvm) ; amorçage des sous-projets : ROADMAP étape 1.
+**Étape 1 (2026-10-09) : `api/` et `web/` existent ; `ffe serve`, `ffe openapi`, `GET /api/v1/health`, page « API OK ».** La CLI `ffe db …` naît à l'étape 3. Mettre cette liste à jour à chaque étape.
+**Piège du conteneur** : l'environnement exporte globalement `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` (venv d'un autre projet) et `UV_FROZEN=1`. `check.sh` les neutralise ; pour toute commande `uv` manuelle dans `api/`, exporter d'abord `UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe` et `unset UV_FROZEN` (ARCHITECTURE §11, maître).
 
 ```
-./check.sh                         # LA porte avant commit : api (ruff format --check, ruff check, pyright, pytest) + web (npm run check) ; détecte api/ et web/ s'ils existent
-cd api && uv run ffe serve         # API FastAPI sur 127.0.0.1:8000 (uvicorn) ; base de dev ~/.persist/ffe-dev par défaut
+./check.sh                         # LA porte avant commit : api (ruff format --check, ruff check, pyright, pytest) + web (npm run check)
+cd api && uv run ffe serve [--reload]   # API FastAPI sur 127.0.0.1:8000 (uvicorn) ; sert web/dist/ si présent ; base de dev ~/.persist/ffe-dev (étape 3)
 cd api && uv run pytest -q         # tests Python (base fichier temporaire migrée)
 cd api && uv run ruff format --check . && uv run ruff check .   # format + lint (règles E9, F, I, UP)
 cd api && uv run pyright           # typage strict
@@ -22,13 +23,13 @@ cd api && uv run ffe db migrate|backup|restore <f>|check|export-json|import-json
 cd api && uv run ffe openapi       # écrit api/openapi.json (commité) depuis create_app().openapi() (étape 1)
 cd web && npm run dev              # Vite 5173, host:true (visible depuis Windows), proxy /api → 127.0.0.1:8000
 cd web && npm run check            # tsc --noEmit && prettier --check . && vitest run — jamais vitest en mode watch
-cd web && npm run gen:api          # openapi-typescript ../api/openapi.json -o src/api/schema.d.ts, sans API lancée (après `ffe openapi`)
+cd web && npm run gen:api          # scripts/gen-api.ts : ../api/openapi.json → src/api/schema.d.ts, sans API lancée (après `ffe openapi`)
 cd web && npm run format | build   # prettier --write . | vite build
 ```
 
 Données hors dépôt : `~/.persist/ffe/` (réel) et `~/.persist/ffe-dev/` (dev) = `ffe.sqlite` (+ `-wal`, `-shm`), `files/`, `backups/`, `logs/`, `ffe.lock`.
 Variables d'environnement : `FFE_DATA_DIR` (refusé si le FS n'est pas ext4) et `FFE_BACKUP_DIR` ; liste et défauts : ARCHITECTURE §1 (maître). Mécanisme de choix réel/dev : à trancher à l'étape 3 (D3.4).
-Le dépôt est sur 9p (`/workspaces`) : jamais une base SQLite dedans ; `uv` avec `native-tls = true` ; `vitest run` et `pytest` sans watch.
+Le dépôt est sur 9p (`/workspaces`) : jamais une base SQLite dedans ; `uv` avec `system-certs = true` (nouveau nom de `native-tls`) ; `vitest run` et `pytest` sans watch.
 
 ## Avant de committer
 
@@ -47,13 +48,13 @@ Ce qui est prouvé par couche, fichiers et étapes : ARCHITECTURE §7 (maître).
 - Nommage : `test_<module>.py` / `test_api_<resource>.py` côté Python (dont `test_openapi.py`, fraîcheur du contrat) ; côté front, `<Component>.test.tsx` à côté du composant, tests transverses (`schema-freshness.test.ts`, `boundaries.test.ts`) dans `web/tests/`. Un test = un comportement, nommé par le comportement attendu (`test_ordered_to_draft_is_refused`).
 - `TestClient` sur `create_app(deps)` avec horloge injectée ; par ressource : 201 + relecture, PATCH partiel, 422 champ par champ, 404, 409, archive/désarchive.
 
-## Carte du code (arborescence prévue ; étape 0 = `docs/` et configuration seulement)
+## Carte du code (arborescence prévue ; étape 1 = squelette `api/` et `web/`)
 
 ```
 CLAUDE.md · README.md · check.sh · .claude/settings.json · .gitignore · .gitattributes · .editorconfig   # étape 0
 docs/        ARCHITECTURE · DATA_MODEL · API · ROADMAP · GLOSSARY · JOURNAL · RUNBOOK (étape 9) · decisions/ADR-NNNN-*.md
-api/         étape 1, projet uv : src/ffe/ (config, app, main, cli, errors, money, i18n/fr.py, db/, models/, schemas/, services/, api/v1/) · tests/ · alembic/ · openapi.json
-web/         étape 1, paquet npm : src/ (api/{schema.d.ts, client.ts, queries/}, routes.tsx, pages/, components/{ui,forms,tables}, styles.css) · tests/
+api/         étape 1, projet uv : src/ffe/ (config, app, main, cli, api/v1/{router,health}) · tests/ · openapi.json ; étape 3 : db/, models/, alembic/ ; étape 4 : errors, i18n/fr.py, schemas/, services/ ; étape 7a : money, transitions
+web/         étape 1, paquet npm : src/ (api/{schema.d.ts, client.ts, queries/health.ts}, pages/HealthPage.tsx, main.tsx, styles.css) · scripts/gen-api.ts · tests/ ; étape 5 : routes.tsx, components/{ui,forms,tables}
 extension/   étape F6 seulement ; n'existe pas avant
 ```
 

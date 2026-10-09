@@ -1,6 +1,6 @@
 # Architecture
 
-Outil local, mono-utilisateur, de procurement FF&E. Trois couches, deux sous-projets, un seul fichier de données. Ce document décrit la cible ; à l'étape 0 (2026-10-09) rien de ce qui est décrit sous `api/` et `web/` n'existe encore. Chaque dossier porte l'étape où il naît (voir `ROADMAP.md`). Décisions de fond : `decisions/ADR-0001` à `ADR-0005`.
+Outil local, mono-utilisateur, de procurement FF&E. Trois couches, deux sous-projets, un seul fichier de données. Ce document décrit la cible ; à l'étape 1 (2026-10-09) seuls le squelette d'`api/` et de `web/` existent (santé, CLI `serve`/`openapi`, page « API OK », contrat généré). Chaque dossier porte l'étape où il naît (voir `ROADMAP.md`). Décisions de fond : `decisions/ADR-0001` à `ADR-0005`.
 
 ## 1. Vue d'ensemble
 
@@ -8,7 +8,7 @@ Outil local, mono-utilisateur, de procurement FF&E. Trois couches, deux sous-pro
 |---|---|---|---|
 | Base | SQLite ≥ 3.37 (stdlib Python), tables STRICT, WAL | `api/` | Seule vérité ; invariants dans le schéma (CHECK, UNIQUE, FK) |
 | Back | Python 3.14, FastAPI, SQLAlchemy 2.0.x, Alembic (batch), Pydantic v2, Typer | `api/` (projet uv) | API `/api/v1` sur `127.0.0.1:8000`, CLI `ffe`, migrations, sauvegardes |
-| Front | Vite 8, React 19, TypeScript 7 strict, TanStack Query 5, react-router 7, react-hook-form, Tailwind 4, openapi-fetch | `web/` (paquet npm) | Écrans de saisie ; n'additionne jamais, n'appelle jamais un service externe |
+| Front | Vite 8, React 19, TypeScript 6 strict (repli d'ADR-0001 appliqué à l'étape 1 : openapi-typescript exige l'API JS du compilateur, absente de TS 7 ; JOURNAL D1.6), TanStack Query 5, react-router 7, react-hook-form, Tailwind 4, openapi-fetch | `web/` (paquet npm) | Écrans de saisie ; n'additionne jamais, n'appelle jamais un service externe |
 
 Deux sous-projets, aucun outil de workspace : `api/` a son `pyproject.toml` et son `uv.lock`, `web/` son `package.json` et son `package-lock.json`. Le contrat entre les deux est le document OpenAPI produit par FastAPI (§4).
 
@@ -38,7 +38,7 @@ Sélection de la base : défaut proposé `FFE_ENV=dev` implicite et `ffe serve -
 | `ffe db export-json [sortie]` · `ffe db import-json <fichier> [--replace]` | 3 | Copie lisible indépendante du format, et son retour |
 | `ffe db seed` | 6a | Catégories de départ dans une base vide (dev) |
 
-Variables d'environnement (lues par `config.py`, aucune n'est obligatoire ; ce paragraphe est le maître) : `FFE_DATA_DIR` (surcharge du dossier de données, refusé hors ext4), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, absent = avertissement) ; `FFE_ENV` (`dev` par défaut) et `--prod` : proposition, à trancher à l'étape 3 (D3.4) ; `FFE_PORT` (`8000`, proposition). Aucun `.env` versionné ; `.env.example` documente les noms retenus.
+Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe `FFE_`, aucune n'est obligatoire ; ce paragraphe est le maître) : `FFE_HOST` (`127.0.0.1`) et `FFE_PORT` (`8000`), `FFE_WEB_DIST` (dossier statique servi en usage réel, défaut `web/dist/`) — étape 1 ; `FFE_DATA_DIR` (surcharge du dossier de données, refusé hors ext4), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, absent = avertissement) ; `FFE_ENV` (`dev` par défaut) et `--prod` : proposition, à trancher à l'étape 3 (D3.4). Aucun `.env` versionné ; `.env.example` documente les noms retenus (étape 3).
 
 ## 2. Arborescence cible
 
@@ -78,13 +78,14 @@ Variables d'environnement (lues par `config.py`, aucune n'est obligatoire ; ce p
 │   └── tests/                              # étape 1 : conftest.py ; étape 3 : test_startup, test_integrity,
 │                                           #   test_migrations, test_backup ; étape 4+ : test_api_<ressource>
 ├── web/                                    # étape 1 : paquet npm
-│   ├── package.json · package-lock.json · tsconfig.json · vite.config.ts · vitest.config.ts · .prettierrc
+│   ├── package.json · package-lock.json · tsconfig.json · vite.config.ts · vitest.config.ts · .prettierrc · .prettierignore
 │   ├── index.html
+│   ├── scripts/gen-api.ts                  # étape 1 : openapi.json → schema.d.ts (exécuté par Node 24, partagé avec le test de fraîcheur)
 │   ├── src/
 │   │   ├── main.tsx · routes.tsx · styles.css
 │   │   ├── api/schema.d.ts                 # étape 1 : GÉNÉRÉ par openapi-typescript, jamais édité
 │   │   ├── api/client.ts                   # étape 1 : seul import d'openapi-fetch
-│   │   ├── api/queries/                    # étape 5 : hooks TanStack Query par ressource
+│   │   ├── api/queries/                    # étape 1 : health.ts (hook simple) ; étape 5 : hooks TanStack Query par ressource
 │   │   ├── pages/                          # étape 1 : « API OK » ; étape 5 : clients ; …
 │   │   └── components/{ui,forms,tables}    # étape 5 : DataTable, Form, MoneyField, QuantityField, BpField,
 │   │                                       #   DateField, EntityPicker, Toast, Confirm
@@ -126,7 +127,7 @@ Règles :
 - **Source de vérité** : les schémas Pydantic de `api/src/ffe/schemas/`. Trois par ressource : `XxxCreate`, `XxxUpdate` (tous champs optionnels), `XxxRead` (DTO). Enums Python (`StrEnum`) exposés dans le schéma OpenAPI.
 - **camelCase** en JSON par `alias_generator=to_camel` + `populate_by_name=True` sur un `BaseSchema` commun ; snake_case en Python et en SQL. Aucun mapping manuel.
 - **OpenAPI** : FastAPI le produit (`/openapi.json`). `uv run ffe openapi` l'écrit dans `api/openapi.json`, commité (instantané commité : défaut, à confirmer à l'étape 1, D1.5). Un test pytest (`test_openapi.py`) échoue si `app.openapi()` diffère du fichier (fraîcheur côté API).
-- **Types TS** : `npm run gen:api` dans `web/` lance `openapi-typescript ../api/openapi.json -o src/api/schema.d.ts`, sans API lancée. Un test Vitest (`schema-freshness.test.ts`) régénère en mémoire et compare au fichier (fraîcheur côté front). `schema.d.ts` n'est jamais édité à la main.
+- **Types TS** : `npm run gen:api` dans `web/` exécute `scripts/gen-api.ts` (API d'openapi-typescript : `../api/openapi.json` → `src/api/schema.d.ts`, en-tête « GÉNÉRÉ »), sans API lancée. Un test Vitest (`schema-freshness.test.ts`) appelle la même fonction et compare au fichier (fraîcheur côté front). `schema.d.ts` n'est jamais édité à la main.
 - **Client** : `openapi-fetch` typé par `schema.d.ts` ; les hooks de `queries/` sont le seul endroit qui l'appelle.
 - Ordre d'une modification d'API : schéma Pydantic → `ffe openapi` → `gen:api` → front → `./check.sh`. Les deux tests de fraîcheur rendent l'oubli impossible.
 
@@ -204,7 +205,7 @@ Clés camelCase (mêmes DTO que l'API), tables dans l'ordre des dépendances, id
 Tests d'architecture, zéro dépendance :
 
 - Côté API, `tests/test_architecture.py` parcourt `src/ffe/` avec `ast` (stdlib), collecte les `import`/`from … import` de chaque module et vérifie la table ci-dessus. `import-linter` n'est pas ajouté tant que ce test suffit.
-- Côté front, `web/tests/boundaries.test.ts` extrait les imports par regex sur le code formaté par Prettier (TypeScript 7 n'expose plus d'API compilateur) : `client.ts` seul importe `openapi-fetch` ; `pages/` et `components/` n'importent pas `client.ts` ; aucun `fetch(` hors `client.ts` ; aucune URL `http` externe dans `web/src/`.
+- Côté front, `web/tests/boundaries.test.ts` extrait les imports par regex sur le code formaté par Prettier (indépendant de l'API du compilateur, qui disparaît avec TypeScript 7) : `client.ts` seul importe `openapi-fetch` ; `pages/` et `components/` n'importent pas `client.ts` ; aucun `fetch(` hors `client.ts` ; aucune URL `http` externe dans `web/src/`.
 - Garde-fou approximatif mais utile : grep des `services/` pour un `+`, `-`, `*`, `/` appliqué à un identifiant `*_cents`, `*_milli`, `*_bp` hors `money.py` ; échec = calcul hors du module unique.
 - La frontière API ↔ front n'est pas un import mais un contrat : `schema.d.ts` est le seul lien, et les deux tests de fraîcheur (§4) en tiennent lieu.
 
@@ -231,13 +232,14 @@ Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire**
 | `ruff format --check` · `ruff check` | `api/` | Format ; règles `E9, F, I, UP` (comme Racoon) | `pyproject.toml` `[tool.ruff]` |
 | `pyright` | `api/` | Typage strict sur `src/`, standard sur `tests/` | `pyproject.toml` `[tool.pyright]` |
 | `pytest -q` | `api/` | Tests §7 ; `alembic check` et fraîcheur d'`openapi.json` inclus | `pyproject.toml` `[tool.pytest.ini_options]` |
-| `tsc --noEmit` | `web/` | TypeScript 7 strict, `noUncheckedIndexedAccess` | `tsconfig.json` |
+| `tsc --noEmit` | `web/` | TypeScript 6 strict, `noUncheckedIndexedAccess` (TS 7 dès qu'openapi-typescript s'en passe, JOURNAL D1.6) | `tsconfig.json` |
 | `prettier --check .` | `web/` | `semi: false, singleQuote: true, printWidth: 160` | `.prettierrc` ; `.prettierignore` : `dist`, `src/api/schema.d.ts` |
 | `vitest run` | `web/` | Tests de composants, frontières, fraîcheur de `schema.d.ts` | `vitest.config.ts` |
 
 - `npm run check` dans `web/` = `tsc --noEmit && prettier --check . && vitest run`. Pas d'ESLint (typescript-eslint ne suit pas TypeScript 7).
 - `./check.sh` à la racine enchaîne `api/` puis `web/` en détectant `api/pyproject.toml` et `web/package.json` ; c'est la seule porte avant commit. Pas de CI : la porte est locale.
-- `[tool.uv] native-tls = true` dans `pyproject.toml` (proxy TLS, comme Racoon).
+- `[tool.uv] system-certs = true` dans `pyproject.toml` (proxy TLS, comme Racoon ; `native-tls` est le nom déprécié par uv 0.12).
+- Pyright : `typeCheckingMode = "standard"` global et `strict = ["src"]` (pyright 1.1.414 ne reconnaît pas `typeCheckingMode` dans `executionEnvironments`).
 - Toute nouvelle dépendance = une ligne dans l'ADR concerné ou dans `JOURNAL.md` ; `uv lock --upgrade` et `npm outdated` revus à chaque étape.
 
 ## 9. Checklist « ajouter une ressource »
@@ -272,6 +274,7 @@ Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire**
 - **9p** : le dépôt est sur `/workspaces/Perso` (9p drvfs). Code et `node_modules` y vivent (lenteur acceptée) ; **aucune donnée SQLite** n'y est jamais écrite. inotify ne remonte pas toujours : `vite.config.ts` prévoit `server.watch.usePolling` activable par variable d'environnement (`VITE_POLL=1`), `uvicorn --reload` avec `--reload-dir src` (polling via `watchfiles` par `WATCHFILES_FORCE_POLLING=1` si besoin). `vitest run` toujours, jamais en mode watch.
 - **Accès depuis Windows** : Vite `server.host: true` ; l'API écoute `127.0.0.1` seulement et reste joignable depuis le navigateur Windows par la redirection de ports de WSL/devcontainer.
 - **Persistance** : seul `~/.persist` survit au rebuild. Base, fichiers, sauvegardes, verrou et logs y vivent ; `FFE_BACKUP_DIR` sur le disque Windows est la seule copie hors conteneur.
-- **Proxy TLS** : `uv` avec `native-tls = true` (comme Racoon) ; côté npm, `cafile`/`strict-ssl` dans `.npmrc` local si `npm install` échoue (jamais versionné).
+- **Proxy TLS** : `uv` avec `system-certs = true` (comme Racoon) ; côté npm, `cafile`/`strict-ssl` dans `.npmrc` local si `npm install` échoue (jamais versionné). Constaté à l'étape 1 : `uv` et `npm` passent sans réglage supplémentaire.
+- **Variables `uv` héritées (maître)** : le conteneur exporte `UV_PROJECT_ENVIRONMENT=/home/vscode/.venvs/racoon` (venv d'un autre projet), `UV_FROZEN=1` et `UV_PYTHON_PREFERENCE=only-managed`, sans source visible dans les profils du shell. Sans contre-mesure, `uv run` dans `api/` installerait FFE dans le venv de Racoon et refuserait de créer `uv.lock`. Règle : le venv de FFE est `~/.venvs/ffe` (ext4, hors 9p) ; `check.sh` exporte `UV_PROJECT_ENVIRONMENT="${FFE_VENV:-$HOME/.venvs/ffe}"` et `unset UV_FROZEN` ; toute commande `uv` manuelle fait de même. `npm create vite` a échoué sans TTY : `web/` a été écrit à la main (mêmes fichiers).
 - **Outils absents** : pas de `sqlite3` CLI dans le conteneur ; inspection par `ffe db check` et l'extension VS Code SQLite.
 - **Sécurité locale** : écoute `127.0.0.1:8000`, CORS fermé jusqu'à l'extension, aucune authentification tant que l'outil n'est pas partagé.
