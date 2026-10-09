@@ -1,7 +1,7 @@
 # Modèle de données v1
 
-> **Brouillon écrit à l'étape 0, à valider à l'étape 2 avant toute migration.**
-> Rédigé le 2026-10-09. Fait foi : le cadrage du 2026-10-09 (JOURNAL D0.1 à D0.8), ADR-0003 (argent, dates, identifiants) et ADR-0005 (lignes, placements, prix). Les points marqués « défaut » ou « à trancher à l'étape N » n'engagent pas encore.
+> **Modèle validé à l'étape 2 (2026-10-09)** : décisions D2.1 à D2.15 (JOURNAL), rejeu des 12 cas en §10. Toute migration s'écrit à partir de ce document ; un changement de fond passe par une ADR.
+> Rédigé le 2026-10-09. Fait foi : le cadrage du 2026-10-09 (JOURNAL D0.1 à D0.8), ADR-0003 (argent, dates, identifiants) et ADR-0005 (lignes, placements, prix). Les seuls points encore ouverts sont marqués « à trancher à l'étape N » et concernent des valeurs, jamais la structure.
 
 Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centaines de lignes par projet). Accès par SQLAlchemy 2.0.x (`Mapped[]`), migrations Alembic en mode batch, validation Pydantic v2 côté API. Aucune marge de revente en v1 ; plusieurs devises dès la v1 ; totaux et budgets en EUR.
 
@@ -268,25 +268,25 @@ Point à vérifier à l'étape 3 : la conservation du mot-clé `STRICT` (émis p
 
 Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL` (sauf `project_item_event` et `code_sequence` ; `file` sans `updated_at`). `notes TEXT NULL` = texte libre interne sur les référentiels. Types notés tels qu'écrits dans le DDL STRICT. `TS` = TEXT horodatage, `DATE` = TEXT `YYYY-MM-DD`.
 
-### 4.1 `setting` — étape 3
+### 4.1 `setting` — étape 3, complétée par `ADD COLUMN` aux étapes 6a, 6c, 8 et 9 (D2.8)
 
-Réglages de l'installation, une seule ligne. Identité de l'agence pour les futurs exports, défauts hérités par les projets, devise de base.
+Réglages de l'installation, une seule ligne. Identité de l'agence pour les futurs exports, défauts hérités par les projets, devise de base. La migration 0001 ne crée que les colonnes utilisées aux étapes 3–4 ; chaque autre colonne arrive, additive, à l'étape indiquée.
 
-| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
-|---|---|---|---|---|---|
-| id | INTEGER | non | — | PK, `CHECK (id = 1)` | une ligne, créée par la migration 0001 |
-| agency_name | TEXT | non | `''` | | en-tête des exports |
-| agency_address | TEXT | oui | | | multiligne |
-| agency_email, agency_phone | TEXT | oui | | | |
-| agency_siret | TEXT | oui | | `GLOB` 14 chiffres | |
-| agency_vat_number | TEXT | oui | | | `FR12345678901`, sans espaces |
-| default_vat_bp | INTEGER | non | `2000` | `BETWEEN 0 AND 10000` | hérité par `project.default_vat_bp` |
-| default_contingency_bp | INTEGER | non | `1000` | `BETWEEN 0 AND 10000` | hérité par `project.contingency_bp` ; défaut 1000, à trancher à l'étape 3 (D3.1) |
-| base_currency | TEXT | non | `'EUR'` | `CHECK (base_currency = 'EUR')` | lever le CHECK = migration future |
-| project_code_prefix | TEXT | non | `''` | | `'P'` donne `P2026-001` |
-| seed_category_version | INTEGER | non | `0` | `>= 0` | version du seed appliqué |
+| Colonne | Étape | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|---|
+| id | 3 | INTEGER | non | — | PK, `CHECK (id = 1)` | une ligne, insérée par la migration 0001 |
+| default_vat_bp | 3 | INTEGER | non | `2000` | `BETWEEN 0 AND 10000` | hérité par `project.default_vat_bp` |
+| base_currency | 3 | TEXT | non | `'EUR'` | `CHECK (base_currency = 'EUR')` | lever le CHECK = migration future |
+| seed_category_version | 6a | INTEGER | non | `0` | `>= 0` | version du seed appliqué |
+| project_code_prefix | 6c | TEXT | non | `''` | | `'P'` donne `P2026-001` |
+| default_contingency_bp | 8 | INTEGER | non | `1000` | `BETWEEN 0 AND 10000` | hérité par `project.contingency_bp` ; valeur à confirmer à l'étape 8 |
+| agency_name | 9 | TEXT | non | `''` | | en-tête des exports |
+| agency_address | 9 | TEXT | oui | | | multiligne |
+| agency_email, agency_phone | 9 | TEXT | oui | | | |
+| agency_siret | 9 | TEXT | oui | | `GLOB` 14 chiffres | |
+| agency_vat_number | 9 | TEXT | oui | | | `FR12345678901`, sans espaces |
 
-Exemple : `(1, 'Atelier X', '12 rue …', 'contact@…', NULL, '12345678900012', 'FR12345678900', 2000, 1000, 'EUR', '', 1)`.
+Exemple (état final) : `(1, 2000, 'EUR', 1, '', 1000, 'Atelier X', '12 rue …', 'contact@…', NULL, '12345678900012', 'FR12345678900')`.
 
 ### 4.2 `client` — étape 3
 
@@ -320,7 +320,7 @@ Conteneur de tout le travail ; porte les défauts hérités par les lignes à le
 | site_address | TEXT | oui | | | chantier (≠ adresse client) |
 | delivery_address, delivery_contact | TEXT | oui | | | livraison si ≠ chantier ; NULL = chantier |
 | default_vat_bp | INTEGER | non | `setting` | `BETWEEN 0 AND 10000` | copié de `setting` à la création, hérité par les lignes |
-| contingency_bp | INTEGER | non | `setting` | `BETWEEN 0 AND 10000` | appliqué au budget global ; créé en 6c ou ajouté en 8 (D2.6) |
+| contingency_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | **étape 8** (`ADD COLUMN`, migration 0006, D2.6) ; la migration recopie `setting.default_contingency_bp` sur les projets existants ; ensuite copié de `setting` à la création ; appliqué au budget global |
 | start_on, due_on | DATE | oui | | `due_on IS NULL OR start_on IS NULL OR due_on >= start_on` | |
 | notes | TEXT | oui | | | |
 
@@ -343,7 +343,7 @@ Lieu de destination d'un projet. Porte le **multiplicateur** : quantité réelle
 | notes | TEXT | oui | | | |
 | archived_at | TS | oui | | | zone sortie du périmètre |
 
-Contrainte technique : `UNIQUE (id, project_id)` (cible des FK composites). Index : `(project_id, sort_order)`. Invariants d'app : modifier `multiplier` quand des lignes placées sont `approved` ou plus exige confirmation et écrit un événement `qty` sur chaque ligne touchée ; archiver une zone exige que ses placements soient sur des lignes `cancelled`/`replaced` ou soient déplacés ; suppression physique seulement sans placement ni budget (RESTRICT en filet).
+Contrainte technique : `UNIQUE (id, project_id)` (cible des FK composites). Index : `(project_id, sort_order)`. Invariants d'app : modifier `multiplier` quand des lignes placées sont `approved` ou plus exige confirmation et écrit un événement `qty` sur chaque ligne touchée, sans exiger de nouvelle validation client (D2.3 ; l'écart apparaît dans R9) ; archiver une zone exige que ses placements soient sur des lignes `cancelled`/`replaced` ou soient déplacés ; suppression physique seulement sans placement ni budget (RESTRICT en filet).
 
 Exemple : `(3, 'CHA', 'Chambre type A', 'chambre', 12, 20, NULL, NULL)`.
 
@@ -494,7 +494,7 @@ Une spécification dans un projet : quoi, en quelle finition, à quel prix figé
 | on_hold | INTEGER | non | `0` | `IN (0, 1)` | orthogonal au statut ; compté, affiché à part |
 | replaced_by_id | INTEGER | oui | | FK composite `(replaced_by_id, project_id) → project_item (id, project_id)` RESTRICT ; `(status = 'replaced') = (replaced_by_id IS NOT NULL)` ; `replaced_by_id IS NULL OR replaced_by_id <> id` | |
 | approved_at | TS | oui | | `(approved_at IS NULL) = (approved_unit_net_cents IS NULL)` ; idem `approved_total_qty_milli` | snapshot validation client |
-| approved_unit_net_cents | INTEGER | oui | | `>= 0` | **net unitaire en EUR** au moment de la validation (défaut, voir §10) |
+| approved_unit_net_cents | INTEGER | oui | | `>= 0` | **net unitaire en EUR** au moment de la validation (D2.9 ; la part « change » d'un écart se lit dans le journal, événements `fx` vs `price`) |
 | approved_total_qty_milli | INTEGER | oui | | `>= 0` | Σ placements × multiplicateur à la validation |
 | sort_order | INTEGER | non | `0` | | |
 | internal_notes | TEXT | oui | | | jamais exporté |
@@ -598,8 +598,8 @@ Le budget et le Prescrit portent sur l'enveloppe FF&E (`is_amount_counted AND ki
 | `approved` → `ordered` | `order_ref` renseigné ; devis non expiré (avertissement seul) | événement `status` ; à partir d'ici **aucun retour arrière** |
 | `ordered` → `delivered` → `installed` | ordre strict | événement `status` |
 | tout statut non terminal → `cancelled` | note obligatoire | terminal ; budget libéré |
-| `cancelled` → `draft` | note obligatoire ; refusé si la ligne a été `ordered` un jour (journal) — défaut, à trancher à l'étape 2 | événement `status` |
-| ligne → `replaced` | uniquement par l'action « remplacer le produit », depuis `approved` ; avant `approved`, le produit se change en place sans nouvelle ligne ; depuis `ordered` et au-delà : défaut refusé (passer par `cancelled` + nouvelle ligne), à trancher à l'étape 2 | nouvelle ligne reprend `item_code`, l'ancienne prend `<code>.R1`, `status = 'replaced'`, `replaced_by_id` ; placements réaffectés ; événements sur les deux |
+| `cancelled` → `draft` | note obligatoire ; **refusé** si la ligne a été `ordered` un jour (journal) — D2.10 | événement `status` |
+| ligne → `replaced` | uniquement par l'action « remplacer le produit », **depuis `approved` seulement** (D2.10) ; avant `approved`, le produit se change en place sans nouvelle ligne ; depuis `ordered` et au-delà : refusé, passer par `cancelled` + nouvelle ligne | nouvelle ligne reprend `item_code`, copie la spécification, repart en `specified` sans snapshot ; l'ancienne prend `<code>.R1`, `status = 'replaced'`, `replaced_by_id` ; placements réaffectés à la nouvelle ; événements sur les deux (§10 cas 11) |
 | suppression physique | `status = 'draft'` et aucun événement autre que `created` | placements, événements, fichiers de ligne supprimés (CASCADE) |
 
 Après `approved`, un changement de prix, remise, devise, taux de change ou quantité se fait **en place** et écrit un événement `price`/`fx`/`qty` (`old_value`/`new_value`) ; le snapshot `approved_*` ne bouge pas, ce qui permet d'afficher « validé » et « prescrit » côte à côte. Une nouvelle validation client explicite réécrit le snapshot avec un événement `approval`.
@@ -664,7 +664,7 @@ Conversion à la création d'une ligne depuis un produit : si `list_price_tax_mo
   RETURNING next_value - 1;
   ```
   La séquence n'est jamais décrémentée : annuler ou supprimer `LUM-003` laisse un trou, et c'est voulu (un code vu une fois n'est jamais réattribué). Changer la catégorie d'une ligne `draft` propose un nouveau code ; au-delà, le code reste.
-- Codes projet : `<project_code_prefix><YYYY>-NNN`, calculé par `MAX + 1` sur l'année sous protection de `UNIQUE (code)` (mono-utilisateur) ; éditable. Défaut, à confirmer à l'étape 6c.
+- Codes projet : `<project_code_prefix><YYYY>-NNN`, calculé par `MAX + 1` sur l'année sous protection de `UNIQUE (code)` (mono-utilisateur) ; éditable ; pas de séquence globale (D2.12).
 - Codes zone : saisis à la main, `UNIQUE (project_id, code)`.
 
 ---
@@ -857,7 +857,9 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 | Marge / prix de vente (ADR-0005, question ouverte) | `project_item.markup_bp INTEGER NULL`, `project_item.unit_sell_override_cents INTEGER NULL`, `setting.pricing_mode TEXT` (`resale`/`fees_only`) ; `money.py` ajoute `sell = COALESCE(override, net_eur × (10000 + markup) / 10000)` ; `budget_line` reste en net ou passe en vente selon `pricing_mode` |
 | Options A/B présentées au client | `project_item.alternative_of_id INTEGER NULL` FK composite ; `is_counted` ajoute `alternative_of_id IS NULL` ; codes `.A`, `.B` ; retenir une option = transaction d'échange de codes + `replaced_by_id` |
 | Achats (étape 10) | `quote`, `quote_line`, `purchase_order`, `po_line`, `delivery`, `delivery_line`, `supplier_invoice` ; statuts `in_production`, `shipped` ajoutés au CHECK ; les lignes `fee` deviennent les frais du BC ; Engagé / Facturé / Payé |
-| TVA d'achat, autoliquidation | `project_item.purchase_vat_bp INTEGER NULL` ou sur `supplier_invoice` |
+| TVA d'achat, autoliquidation (D2.5 : rien en v1, taux 0 autorisé) | `project_item.purchase_vat_bp INTEGER NULL` ou sur `supplier_invoice` |
+| Validé ventilé par zone (D2.14 : approximation acceptée en v1) | `project_item_placement.approved_qty_milli INTEGER NULL` posé à `approved` ; R2 l'utilise à la place du prix courant |
+| Snapshot dans la devise de la ligne (D2.9 : EUR seul en v1) | `project_item.approved_unit_net_currency_cents`, `approved_fx_rate_micro` nullables |
 | Recherche d'entreprises (DINUM, INSEE, VIES) | `supplier.activity_code`, `legal_form_code`, `admin_status`, `registry_source`, `registry_synced_at`, `vat_status`, `vat_checked_at` ; table `supplier_registry_snapshot(supplier_id, source, fetched_at, raw_json)` ; aucun dirigeant |
 | Capture produit / import tarifs | `product_source(product_id, url, url_hash UNIQUE, domain, captured_at, method, raw_json)`, `price_observation(product_id, price_cents, currency, tax_mode, observed_on, source)`, `import_batch`, `capture_inbox`, `setting.api_token` |
 | Exports émis | `project_file(project_id, file_id, kind, variant, issued_at)` ; révisions de schedule `schedule_revision(project_id, label, issued_on, snapshot_json)` |
@@ -869,17 +871,25 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 
 ---
 
-## 10. Questions ouvertes pour l'étape 2
+## 10. Rejeu des 12 cas (critère de fini de l'étape 2)
 
-1. **Marge de revente** : l'utilisateur n'a pas l'information. Honoraires purs (le client achète) ou revente avec coefficient ? Rien en v1 ; le chemin additif §9 est prêt. Si revente, le budget doit-il basculer en prix de vente ?
-2. **Snapshot de validation** : `approved_unit_net_cents` en EUR (défaut retenu ici, comparable au budget) ou dans la devise de la ligne avec `approved_fx_rate_micro` en plus ? Le second permet de distinguer « hausse fournisseur » et « variation de change ».
-3. **Frais ventilés** : lignes forfaitaires `fee` par fournisseur (défaut) ou répartition par article (ajout `project_item.fee_share_bp` ou table `fee_allocation`) ?
-4. **Révisions de schedule** émises au client (Rev A/B/C) : journal + export daté suffisent-ils, ou faut-il `schedule_revision` dès l'étape 7c ?
-5. **TVA d'achat pour compte du client** : lorsque l'agence achète pour le client, la TVA affichée est-elle celle du fournisseur (20 %, 0 % import UE autoliquidé, droits de douane hors UE) ? Taux 0 autorisé ; faut-il une colonne distincte dès v1 ?
-6. **Réouverture d'une ligne annulée** après `ordered` : refusée (défaut) ou autorisée avec note ?
-7. **Devise par fournisseur** : `supplier.currency` sert de défaut ; une ligne peut-elle être dans une autre devise que son fournisseur (facture en EUR d'un fournisseur britannique) ? Défaut : oui, surcharge libre.
-8. **Code projet** : `MAX + 1` par année sous UNIQUE (défaut) ou séquence dédiée dans `code_sequence` avec `project_id = NULL` (impossible avec la FK actuelle, nécessiterait une table `global_sequence`) ?
-9. **`list_price_tax_mode = 'ttc'` sur un produit en devise étrangère** : la TVA à déduire est celle du pays d'origine ; la saisie du taux par l'utilisateur suffit-elle ?
-10. **Multiplicateur modifié après validation** : recalcul silencieux du prescrit avec événement `qty` (défaut) ou nouvelle validation client exigée ?
+Liste maîtresse des cas (ROADMAP étape 2). Pour chacun : les lignes de tables en jeu, le calcul (`money.py`, §6, `div_round`) et le résultat attendu, à vérifier à la main. Données communes : projet `3` (Hôtel X, TVA 20 %), zones `LOB` ×1 (id 11), `CHA` ×12 (id 12), `CHB` ×8 (id 13) ; fournisseur Tom Dixon en GBP, remise 15 %, 1 GBP = 1,170000 EUR (`fx_rate_micro = 1 170 000`). Les questions ouvertes de l'étape 0 sont tranchées par D2.1 à D2.15 (JOURNAL 2026-10-09).
 
-Les cas à rejouer sur papier à l'étape 2 sont listés dans ROADMAP étape 2 (liste maîtresse, 12 cas) ; ils sont couverts par §4.11–4.16, §6 et §8.
+| # | Cas | Tables et lignes | Calcul | Attendu |
+|---|---|---|---|---|
+| 1 | Fauteuil dans 2 projets à 2 prix | `product` 23 (tarif 800,00 EUR) ; `project_item` `AS-001` (projet 3 : `unit_cost_cents` 80 000, `discount_bp` 1 000) et `AS-002` (projet 5 : 85 000, 0) | net = (80 000 × 9 000 + 5 000) / 10 000 ; 85 000 × 10 000 / 10 000 | 720,00 EUR et 850,00 EUR ; le tarif catalogue passé à 900,00 ne change aucune des deux lignes (copie figée, §4.11) |
+| 2 | Chambre ×12 avec 2 lampes → 24 | `zone` 12 (`multiplier` 12) ; `project_item` `LUM-002` (15 000 cents EUR) ; `project_item_placement` (zone 12, `qty_milli` 2 000) | 2 000 × 12 = 24 000 milli ; total = (15 000 × 24 000 + 500) / 1 000 | 24 pièces ; 3 600,00 EUR HT |
+| 3 | Même lampe dans CHA ×12 et CHB ×8, le devis change le prix → 1 mise à jour, 1 code | `LUM-003` (GBP) ; placements (zone 12, 1 000) et (zone 13, 1 000) ; `PATCH` unique `unit_cost_cents` 125 000 → 118 000, `quote_ref` | qté = 1 000 × 12 + 1 000 × 8 = 20 000 ; net = (118 000 × 8 500 + 5 000) / 10 000 = 100 300 ; EUR = (100 300 × 1 170 000 + 500 000) / 10⁶ = 117 351 ; total = (117 351 × 20 000 + 500) / 1 000 | 20 pièces, un seul `item_code`, 1 003,00 GBP net, 1 173,51 EUR, **23 470,20 EUR HT** ; aucun événement `price` (statut `quoted` < `approved`, §4.13) |
+| 4 | Net sans tarif | `product` sans `list_price_cents` (NULL) ; ligne saisie en net direct : `unit_cost_cents` = net, `discount_bp` 0 | formule inchangée, remise 0 | même résultat qu'une saisie « tarif + remise » équivalente ; `quoted` exige `unit_cost_cents > 0` (§5) |
+| 5 | `existing` à 0 € + transport forfaitaire par fournisseur | `EXI-001` `kind = 'existing'`, `unit_cost_cents` 0 (CHECK), placement (zone 11, 4 000) ; `FRA-001` `kind = 'fee'`, catégorie `FRA`, fournisseur Tom Dixon, 45 000 GBP, placement (zone NULL, 1 000) | existing : qté 4, montants 0 ; fee : (45 000 × 1 170 000 + 500 000) / 10⁶ = 52 650 | `existing` compté en quantité, 0,00 dans les totaux ; `fee` = 526,50 EUR HT dans le budget et dans R5 (fournisseur), absent du book R3 et des alertes R4 ; zone NULL acceptée au-delà de `draft` pour `fee` seulement |
+| 6 | Prix révisé après validation : « que voyait le client ? » | `LUM-003` (14 pièces, cas 9) passe `approved` : `approved_unit_net_cents` 124 313, `approved_total_qty_milli` 14 000, événement `approval` ; puis `unit_cost_cents` 125 000 → 130 000 | validé = (124 313 × 14 000 + 500) / 1 000 = 1 740 382 ; nouveau net = 110 500 GBP → 129 285 EUR ; prescrit = (129 285 × 14 000 + 500) / 1 000 | Validé **17 403,82** (snapshot intact), Prescrit **18 099,90**, écart unitaire +49,72 EUR dans R9 ; événement `price` `{"cost":125000}` → `{"cost":130000}` ; le journal R7 compte 1 changement depuis la validation |
+| 7 | Moquette 12,5 m² | `TXT-004`, `unit = 'm2'`, 45,00 EUR/m², placement (zone 12, 12 500) | 12 500 × 12 = 150 000 milli ; (4 500 × 150 000 + 500) / 1 000 ; TVA (675 000 × 2 000 + 5 000) / 10 000 | 150 m² ; 6 750,00 HT ; 1 350,00 TVA ; 8 100,00 TTC (§6) |
+| 8 | Fauteuil en 2 finitions = 2 lignes | `AS-003` (`product_id` 23, `finish` 'chêne') et `AS-004` (`product_id` 23, `finish` 'noyer') | deux `project_item`, deux codes (`code_sequence` AS → 3 puis 4), prix indépendants | la finition est une colonne figée de la ligne (§4.11), jamais une variante du produit ; une ligne = une spécification |
+| 9 | Fournisseur en GBP → totaux EUR | `LUM-003` : 125 000 GBP, remise 1 500 bp, fx 1 170 000, placements (zone 11, 2 000) + (zone 12, 1 000), TVA 2 000 bp | §6 : qté 14 000 ; net 106 250 ; EUR 124 313 ; total (124 313 × 14 000 + 500) / 1 000 ; TVA (1 740 382 × 2 000 + 5 000) / 10 000 | 1 062,50 GBP ; 1 243,13 EUR ; **17 403,82 HT** ; 3 480,76 TVA ; 20 884,58 TTC ; R5 donne aussi le total en GBP (14 × 1 062,50 = 14 875,00) |
+| 10 | 2 budgets globaux impossibles | `budget_line` (3, NULL, NULL, 5 000 000) puis une seconde (3, NULL, NULL, …) | index unique d'expression `(project_id, COALESCE(zone_id, 0), COALESCE(category_id, 0))` | seconde insertion refusée → 409 `conflict` (§4.16) ; même filet pour deux budgets « CHA » ou deux « CHA × LUM » |
+| 11 | Remplacement de produit après validation | `LUM-003` `approved` (id 41) ; action « remplacer » → nouvelle ligne id 57 | 57 : `item_code` 'LUM-003', spécification copiée, nouveau prix, `status` 'specified', snapshot NULL ; 41 : `item_code` 'LUM-003.R1', `status` 'replaced', `replaced_by_id` 57 ; placements de 41 réaffectés à 57 ; événements `status` sur 41 et `created` sur 57 | 41 sort du Prescrit et du Validé (`is_counted = 0`) ; 57 entre dans le Prescrit, pas dans le Validé tant qu'elle n'est pas `approved` ; l'historique de 41 reste lisible ; `code_sequence` LUM inchangée ; CHECK `(status = 'replaced') = (replaced_by_id IS NOT NULL)` satisfait des deux côtés |
+| 12 | Annuler une ligne libère le budget | `AS-001` (720,00 × 4 = 2 880,00, zone 11) → `cancelled` avec note | `is_counted = 0` ; R2 : prescrit zone 11 − 288 000 cents ; reste + 288 000 | budget inchangé, Reste augmente de 2 880,00 ; événement `status` avec la note ; retour `cancelled → draft` possible avec note car jamais `ordered` (D2.10) |
+
+Lecture du rejeu : chaque cas n'utilise que des colonnes de §4 dont l'étape de création est ≤ 8, et chaque montant sort de la seule formule §6. Les totaux par zone (R2) arrondissent par placement et peuvent différer d'un centime du total par ligne : documenté §6, accepté.
+
+Validation : rejoué sur papier par l'utilisateur le **à compléter** (JOURNAL étape 2).

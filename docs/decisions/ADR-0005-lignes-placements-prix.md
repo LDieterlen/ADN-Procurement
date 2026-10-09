@@ -1,6 +1,6 @@
 # ADR-0005 — Lignes, placements, prix figés et statuts
 Date : 2026-10-09
-Statut : à confirmer (étape 2, rejeu sur papier des cas listés dans ROADMAP étape 2 avant toute migration)
+Statut : acceptée (étape 2, 2026-10-09 : décisions D2.1 à D2.15 du JOURNAL ; rejeu des 12 cas = DATA_MODEL §10)
 
 ## Contexte
 Résidentiel et hôtellerie : une même lampe peut être prescrite dans plusieurs zones, une zone « Chambre A » vaut × 12. Prix d'achat HT, remise fournisseur, plusieurs devises, TVA ; totaux et budgets en EUR net HT. La marge de revente et les options A/B n'ont pas de réponse de l'utilisateur à ce jour.
@@ -19,7 +19,7 @@ Résidentiel et hôtellerie : une même lampe peut être prescrite dans plusieur
 - Devise unique EUR (livrables initiaux) : écartée par l'utilisateur ; cas « fournisseur en GBP » rejoué à l'étape 2.
 
 ## Conséquences
-Questions ouvertes, défaut appliqué, à confirmer à l'étape 2 : marge de revente → rien en v1, ajout additif prévu `project_item.markup_bp`, `project_item.unit_sell_override_cents`, `setting.pricing_mode` ; options A/B → hors v1, ajout `project_item.alternative_of_id` ; frais → lignes forfaitaires `kind='fee'` par fournisseur (catégorie FRA), pas de ventilation par article. Statuts `in_production` et `shipped` arrivent avec l'étape 10.
+Tranché à l'étape 2 (défauts confirmés) : marge de revente → rien en v1, ajout additif prévu `project_item.markup_bp`, `project_item.unit_sell_override_cents`, `setting.pricing_mode` ; options A/B → hors v1, ajout `project_item.alternative_of_id` ; frais → lignes forfaitaires `kind='fee'` par fournisseur (catégorie FRA) ; snapshot en EUR seul ; `replaced` depuis `approved` seulement ; `cancelled → draft` refusé après `ordered` ; Validé par zone approché au prix courant. Statuts `in_production` et `shipped` arrivent avec l'étape 10.
 
 ## Repli
 Si le rejeu de l'étape 2 contredit un point, cette ADR est remplacée avant la migration 0005 (aucune donnée réelle avant l'étape 6a). Les ajouts listés sont des `ADD COLUMN` nullables : aucune recréation de table.
