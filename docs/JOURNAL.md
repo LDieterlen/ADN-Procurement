@@ -28,7 +28,7 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 **À vérifier par l'utilisateur** (5 min) : 1) `./check.sh` vert ; 2) `cd api && uv run ffe serve --reload` puis `cd web && npm run dev`, ouvrir `http://localhost:5180` depuis Windows → « API OK » ; 3) ajouter un champ à `HealthRead` dans `api/src/ffe/api/v1/health.py`, lancer `./check.sh` → échec de `test_openapi.py` ; `uv run ffe openapi` puis `npm run gen:api` → vert ; annuler la modification.
 
-**Reste** : accès depuis le navigateur Windows non vérifiable depuis le conteneur (à confirmer, repli JOURNAL si `localhost:5180` ne répond pas) ; pas de « Idée parquée » nouvelle.
+**Reste** : accès depuis le navigateur Windows **confirmé par l'utilisateur** (« API OK » sur `http://localhost:5180`, 2026-10-09) : critère de fini atteint en entier ; pas de « Idée parquée » nouvelle. `.claude/settings.json` élargi par l'utilisateur (Claude ne peut pas modifier ses propres permissions) : `allow` large, `ask` sur `git push`/`kill`, `deny` conservé sur `rm -rf`, `git push --force`, `git clean` et `~/.persist/ffe/**`.
 
 **Prochaine étape : 2 — Modèle de données validé (aucun code).** Décisions à poser en bloc : D2.1 à D2.7 (ROADMAP).
 
