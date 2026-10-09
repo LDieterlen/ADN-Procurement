@@ -3,13 +3,59 @@
     "schemas": {
       "HealthRead": {
         "properties": {
+          "backupDirOk": {
+            "title": "Backupdirok",
+            "type": "boolean"
+          },
+          "dbPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dbpath"
+          },
+          "isDevDb": {
+            "title": "Isdevdb",
+            "type": "boolean"
+          },
+          "lastBackupAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastbackupat"
+          },
           "ok": {
             "title": "Ok",
             "type": "boolean"
+          },
+          "schemaRevision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schemarevision"
           }
         },
         "required": [
-          "ok"
+          "ok",
+          "dbPath",
+          "isDevDb",
+          "schemaRevision",
+          "lastBackupAt",
+          "backupDirOk"
         ],
         "title": "HealthRead",
         "type": "object"

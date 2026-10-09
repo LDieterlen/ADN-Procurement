@@ -1,27 +1,29 @@
 """Application factory. No I/O at import time: everything comes through `Deps`."""
 
-from dataclasses import dataclass, field
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from ffe.api.v1.router import router as v1_router
-from ffe.config import Settings
+from ffe.deps import Deps
 
 API_PREFIX = "/api/v1"
 
 
-@dataclass
-class Deps:
-    """Everything the application needs from the outside world (settings, later: engine, clock)."""
-
-    settings: Settings = field(default_factory=Settings)
-
-
 def create_app(deps: Deps | None = None) -> FastAPI:
     deps = deps or Deps()
-    app = FastAPI(title="FFE", version="0.1.0", openapi_url="/openapi.json")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+        yield
+        for callback in deps.on_shutdown:
+            callback()
+
+    app = FastAPI(title="FFE", version="0.1.0", openapi_url="/openapi.json", lifespan=lifespan)
+    app.state.deps = deps
     app.include_router(v1_router, prefix=API_PREFIX)
 
     dist = deps.settings.web_dist

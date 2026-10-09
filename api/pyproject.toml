@@ -5,8 +5,10 @@ description = "FFE — API et CLI de l'outil de procurement FF&E"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.20,<2",
     "fastapi",
     "pydantic-settings",
+    "sqlalchemy>=2.0.54,<2.1",
     "typer",
     "uvicorn",
 ]

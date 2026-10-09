@@ -35,4 +35,4 @@ def test_asset_is_served(tmp_path: Path) -> None:
 
 
 def test_api_wins_over_fallback(tmp_path: Path) -> None:
-    assert make_client(tmp_path).get("/api/v1/health").json() == {"ok": True}
+    assert make_client(tmp_path).get("/api/v1/health").json()["ok"] is True

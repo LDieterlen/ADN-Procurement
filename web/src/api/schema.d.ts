@@ -24,8 +24,18 @@ export interface components {
     schemas: {
         /** HealthRead */
         HealthRead: {
+            /** Backupdirok */
+            backupDirOk: boolean;
+            /** Dbpath */
+            dbPath: string | null;
+            /** Isdevdb */
+            isDevDb: boolean;
+            /** Lastbackupat */
+            lastBackupAt: string | null;
             /** Ok */
             ok: boolean;
+            /** Schemarevision */
+            schemaRevision: string | null;
         };
     };
     responses: never;
