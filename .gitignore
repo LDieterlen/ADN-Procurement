@@ -1,0 +1,33 @@
+# Dépendances et environnements
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Caches d'outils
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.vite/
+*.tsbuildinfo
+
+# Sorties de build
+dist/
+build/
+
+# Données locales : la base et les sauvegardes vivent hors du dépôt (~/.persist/ffe), jamais ici
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# Secrets et réglages de machine
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# Système
+.DS_Store
+Thumbs.db

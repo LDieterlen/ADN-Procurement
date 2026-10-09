@@ -1,0 +1,9 @@
+# Fins de ligne : LF dans le dépôt et sur disque (le montage Windows 9p ne change rien à cette règle).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
+*.sqlite binary
+*.sqlite3 binary
