@@ -892,4 +892,4 @@ Liste maîtresse des cas (ROADMAP étape 2). Pour chacun : les lignes de tables 
 
 Lecture du rejeu : chaque cas n'utilise que des colonnes de §4 dont l'étape de création est ≤ 8, et chaque montant sort de la seule formule §6. Les totaux par zone (R2) arrondissent par placement et peuvent différer d'un centime du total par ligne : documenté §6, accepté.
 
-Validation : rejoué sur papier par l'utilisateur le **à compléter** (JOURNAL étape 2).
+Validation (2026-10-09) : choix de conception validés par l'utilisateur (D2.1 à D2.15) ; montants calculés et recoupés par script (`div_round` en Python sur les 12 cas, scratchpad de la session) par Claude. Les mêmes valeurs deviennent les cas de référence de `tests/test_money.py` à l'étape 7a.

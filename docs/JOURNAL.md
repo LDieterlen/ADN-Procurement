@@ -4,6 +4,18 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-09 — Étape 2 : modèle de données validé (aucun code)
+
+**Fait** : `DATA_MODEL.md` passé de brouillon à modèle validé : en-tête, `setting` réduite à l'étape 3 avec chaque autre colonne datée de son étape (D2.8), `project.contingency_bp` reporté à l'étape 8 (D2.6), transitions `cancelled → draft` et `replaced` tranchées (D2.10), code projet tranché (D2.12), accroches §9 complétées (snapshot ventilé, snapshot en devise), §10 « Questions ouvertes » remplacé par **« Rejeu des 12 cas »** (tables, calculs `div_round`, résultats au centime recoupés par script). ADR-0005 passée « acceptée » (25 lignes). Aucun fichier de code touché.
+
+**Décisions** (défauts, tous acceptés par l'utilisateur « vas y ») : D2.1 statuts + `on_hold` ; D2.2 codes `<CAT>-NNN` ; D2.3 multiplicateur ≥ 1, changement après validation = événement `qty` sans revalidation ; D2.4 devise + `fx_rate_micro` figés par ligne, taux manuel, surcharge libre de la devise fournisseur ; D2.5 TVA ligne → projet → `setting`, taux 0 permis, pas de TVA d'achat en v1 ; D2.6 contingence à l'étape 8 ; D2.7 millièmes ; D2.8 `setting` stricte (0001 = `id`, `default_vat_bp`, `base_currency`) ; D2.9 snapshot EUR seul ; D2.10 réouverture refusée après `ordered`, `replaced` depuis `approved` seulement ; D2.11 pas de `schedule_revision` ; D2.12 code projet `MAX + 1` ; D2.13 TTC étranger : taux saisi ; D2.14 Validé par zone approché ; D2.15 rejeu en §10.
+
+**Consignes de collaboration reçues** : l'utilisateur valide les choix de conception, pas les calculs → le critère « rejeu sur papier par l'utilisateur » est remplacé par « calculé et recoupé par Claude, prouvé par les tests » ; **blinder les tests de calcul** → livrable de 7a précisé dans la ROADMAP (12 cas de référence, cas limites, propriétés, égalité avec les CTE SQL).
+
+**Commits** : `docs(docs): étape 2 — modèle de données tranché (D2.1–D2.15), rejeu des 12 cas, ADR-0005 acceptée` (`4afeb55`) ; `docs(repo): étape 2 close — feuille de route, journal` (dernier commit de la session).
+
+**Reste** : rien de parqué. **Prochaine étape : 3 — Infrastructure base (migration 0001)**, décisions D3.1 (valeurs de `setting` : `default_vat_bp` 2000, `base_currency` 'EUR' ; les autres colonnes n'existent plus en 0001), D3.2 rotation, D3.3 sauvegarde avant `upgrade`, D3.4 sélection dev/réel ; dépendances à ajouter : `sqlalchemy` 2.0.x, `alembic`.
+
 ## 2026-10-09 — Étape 1 : squelette outillage
 
 **Fait** : `api/` (projet uv : `create_app(deps)`, `GET /api/v1/health` → `{ok}`, CLI `ffe serve [--reload]` et `ffe openapi`, service statique de `web/dist/` avec repli `index.html`, 7 tests pytest dont `test_openapi.py`) ; `web/` (Vite 8 `host:true` + proxy `/api`, React 19, Tailwind 4, Prettier, Vitest ; `src/api/client.ts` seul importeur d'openapi-fetch, `queries/health.ts`, page « API OK », `scripts/gen-api.ts` partagé avec `tests/schema-freshness.test.ts`, `tests/boundaries.test.ts`) ; `check.sh` complété ; `.claude/settings.json` élargi. `./check.sh` vert ; `npm run build` puis `uv run ffe serve` sert l'interface sur `127.0.0.1:8000` ; une route modifiée sans `ffe openapi` + `gen:api` fait échouer `test_openapi.py` puis `schema-freshness.test.ts` (vérifié).
