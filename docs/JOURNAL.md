@@ -4,6 +4,16 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-09 — Étape 3 : infrastructure base — EN COURS (pause, reprise le lendemain)
+
+**Fait** (commit `d56edc6`, `./check.sh` vert, 51 tests pytest) : `db/` (engine + pragmas, `fs_check` ext4, `lock` flock, `migrate` Alembic programmatique, `backup` + rotation + restore, `json_io`, `startup`), modèles `setting`/`client`, Alembic (`alembic.ini`, `env.py`, migration `0001_setting_client` écrite à la main), `schemas/base.py` + `schemas/health.py`, `deps.py` (Deps + `get_deps`), `/health` enrichi, CLI `ffe db migrate|backup|restore|check|export-json|import-json` et `ffe serve --prod`, `.env.example`, `tests/test_integrity|migrations|backup|startup|json_io|architecture`, `openapi.json` et `schema.d.ts` régénérés. Critère de fini rejoué en commandes : base créée sous `~/.persist/ffe-dev/` (sauvegarde `ffe-20261009-215246.sqlite`), `FFE_DATA_DIR=/workspaces/x` refusé (« overlay », pas ext4), second démarrage refusé par le verrou, `uv run alembic check` → « No new upgrade operations detected », `ffe db check` lit les tables et leur drapeau STRICT.
+
+**Décisions** : D3.1 à D3.11 — défauts, acceptés (« fait les étapes par défaut »). Écarts à noter : `db/migrate.py` et `deps.py` ajoutés à l'arborescence (ARCHITECTURE §2 à mettre à jour) ; `schemas/base.py` né à l'étape 3 pour la santé camelCase ; `alembic_version` est la seule table non STRICT (table d'Alembic, hors de notre contrôle, exclue par le test).
+
+**Incident** : ma session shell portait encore `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` (le bloc `env` du projet ne vaut que pour une nouvelle session) : un `uv sync` a resynchronisé le venv de Racoon sur le lock de FFE ; réparé aussitôt par `uv sync` dans Racoon sur son propre lock (dépôt Racoon intact). Règle pour la suite : exporter `UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv UV_FROZEN=0` dans chaque commande tant que la session n'a pas été relancée.
+
+**Reste pour clore l'étape** : CLAUDE.md (commandes `ffe db`), ARCHITECTURE §2/§5 (modules ajoutés, STRICT et batch D3.7), API.md (`/health` livrée étape 3), ROADMAP (cocher), compte rendu final ici ; `.claude/settings.json` modifié sur disque par l'utilisateur (gardes `~/.persist/ffe/**` passées de `deny` à `allow`), non commité, à trancher par lui.
+
 ## 2026-10-09 — Étape 2 : modèle de données validé (aucun code)
 
 **Fait** : `DATA_MODEL.md` passé de brouillon à modèle validé : en-tête, `setting` réduite à l'étape 3 avec chaque autre colonne datée de son étape (D2.8), `project.contingency_bp` reporté à l'étape 8 (D2.6), transitions `cancelled → draft` et `replaced` tranchées (D2.10), code projet tranché (D2.12), accroches §9 complétées (snapshot ventilé, snapshot en devise), §10 « Questions ouvertes » remplacé par **« Rejeu des 12 cas »** (tables, calculs `div_round`, résultats au centime recoupés par script). ADR-0005 passée « acceptée » (25 lignes). Aucun fichier de code touché.
