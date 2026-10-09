@@ -22,11 +22,11 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 - D1.8 Tests : `pytest` + `httpx2` côté API ; `vitest` seul côté front (jsdom et Testing Library à l'étape 5). — défaut.
 - D1.9 `web/dist/` servi par FastAPI dès l'étape 1, monté seulement si `index.html` existe. — défaut.
 
-**Faits d'environnement** (maître : ARCHITECTURE §11) : le conteneur exporte `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` ; venv FFE = `~/.venvs/ffe`, neutralisé par `check.sh`. `npm create vite` sans TTY échoue : `web/` écrit à la main. Pyright 1.1.414 refuse `typeCheckingMode` dans `executionEnvironments` → `strict = ["src"]`.
+**Faits d'environnement** (maître : ARCHITECTURE §11) : les shells de Claude Code (pas le terminal de l'utilisateur) héritent d'`UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` depuis `~/.persist/claude/settings.json` ; corrigé par le bloc `env` de `.claude/settings.json` du projet. Venv unique pour tous : `api/.venv` → lien vers `~/.venvs/ffe` (pytest 0,7 s au lieu de 3,9 s sur 9p). Port 5173 occupé lors du premier essai par le Vite d'un autre projet (`Jeux vidéo/Epoques`) : `strictPort: true` refuse volontairement, arrêter l'autre serveur. `npm create vite` sans TTY échoue : `web/` écrit à la main. Pyright 1.1.414 refuse `typeCheckingMode` dans `executionEnvironments` → `strict = ["src"]`.
 
 **Commits** : `feat(api): squelette FastAPI, CLI ffe serve/openapi, route de santé et tests` (`8de723d`) ; `feat(web): squelette Vite/React, page « API OK », contrat généré et tests de fraîcheur` (`664a309`) ; `docs(repo): étape 1 — commandes, architecture, API, journal, feuille de route` (dernier commit de la session).
 
-**À vérifier par l'utilisateur** (5 min) : 1) `./check.sh` vert ; 2) `export UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe; unset UV_FROZEN; cd api && uv run ffe serve --reload` puis `cd web && npm run dev`, ouvrir `http://localhost:5173` depuis Windows → « API OK » ; 3) ajouter un champ à `HealthRead` dans `api/src/ffe/api/v1/health.py`, lancer `./check.sh` → échec de `test_openapi.py` ; `uv run ffe openapi` puis `npm run gen:api` → vert ; annuler la modification.
+**À vérifier par l'utilisateur** (5 min) : 1) `./check.sh` vert ; 2) `cd api && uv run ffe serve --reload` puis `cd web && npm run dev`, ouvrir `http://localhost:5173` depuis Windows → « API OK » ; 3) ajouter un champ à `HealthRead` dans `api/src/ffe/api/v1/health.py`, lancer `./check.sh` → échec de `test_openapi.py` ; `uv run ffe openapi` puis `npm run gen:api` → vert ; annuler la modification.
 
 **Reste** : accès depuis le navigateur Windows non vérifiable depuis le conteneur (à confirmer, repli JOURNAL si `localhost:5173` ne répond pas) ; pas de « Idée parquée » nouvelle.
 

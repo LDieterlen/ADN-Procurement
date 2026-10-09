@@ -1,6 +1,6 @@
 # Dépendances et environnements
 node_modules/
-.venv/
+.venv
 __pycache__/
 *.pyc
 

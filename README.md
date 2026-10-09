@@ -22,7 +22,7 @@ Le dépôt vit sur `/workspaces/Perso/FFE` (montage 9p, vu depuis Windows). Les 
 
 ## Lancer
 
-Pré-requis : `uv` ≥ 0.12 et Node 24. Dans ce devcontainer, exporter d'abord `UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe` et `unset UV_FROZEN` (variables globales héritées d'un autre projet, voir `docs/ARCHITECTURE.md` §11).
+Pré-requis : `uv` ≥ 0.12 et Node 24. Première fois (ou après reconstruction du devcontainer) : `mkdir -p ~/.venvs && ln -s ~/.venvs/ffe api/.venv` pour que le venv Python vive sur ext4 et non sur le montage 9p (6× plus rapide, voir `docs/ARCHITECTURE.md` §11) ; `uv` le crée ensuite tout seul.
 
 - Développement : `cd api && uv run ffe serve --reload` (API sur `http://127.0.0.1:8000`) et, dans un autre terminal, `cd web && npm run dev` (interface sur `http://localhost:5173`, accessible depuis le navigateur Windows).
 - Usage réel : `cd web && npm run build` puis `cd api && uv run ffe serve` ; l'interface est servie sur `http://127.0.0.1:8000`.

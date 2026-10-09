@@ -9,7 +9,7 @@ Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARC
 ## Commandes
 
 **Étape 1 (2026-10-09) : `api/` et `web/` existent ; `ffe serve`, `ffe openapi`, `GET /api/v1/health`, page « API OK ».** La CLI `ffe db …` naît à l'étape 3. Mettre cette liste à jour à chaque étape.
-**Piège du conteneur** : l'environnement exporte globalement `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` (venv d'un autre projet) et `UV_FROZEN=1`. `check.sh` les neutralise ; pour toute commande `uv` manuelle dans `api/`, exporter d'abord `UV_PROJECT_ENVIRONMENT=$HOME/.venvs/ffe` et `unset UV_FROZEN` (ARCHITECTURE §11, maître).
+**Venv Python** : `api/.venv` est un lien symbolique vers `~/.venvs/ffe` (ext4, hors 9p ; ARCHITECTURE §11, maître). Les shells de Claude Code héritent d'un bloc `env` utilisateur écrit pour Racoon (`UV_PROJECT_ENVIRONMENT`, `UV_FROZEN=1`) : le bloc `env` de `.claude/settings.json` du projet le neutralise ; si `uv run` cible `~/.venvs/racoon` ou refuse de verrouiller, c'est ce bloc qui manque.
 
 ```
 ./check.sh                         # LA porte avant commit : api (ruff format --check, ruff check, pyright, pytest) + web (npm run check)
