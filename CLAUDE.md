@@ -21,7 +21,7 @@ cd api && uv run alembic revision --autogenerate -m "<slug>"    # puis RELIRE al
 cd api && uv run alembic upgrade head | check | history         # check = modèles et migrations coïncident (aussi lancé par pytest)
 cd api && uv run ffe db migrate|backup|restore <f>|check|export-json|import-json <f>   # étape 3 ; migrate = backup puis upgrade puis quick_check ; `ffe db seed` (étape 6a)
 cd api && uv run ffe openapi       # écrit api/openapi.json (commité) depuis create_app().openapi() (étape 1)
-cd web && npm run dev              # Vite 5173, host:true (visible depuis Windows), proxy /api → 127.0.0.1:8000
+cd web && npm run dev              # Vite 5180 (strictPort ; pas 5173, réservé à d'autres projets), host:true (visible depuis Windows), proxy /api → 127.0.0.1:8000
 cd web && npm run check            # tsc --noEmit && prettier --check . && vitest run — jamais vitest en mode watch
 cd web && npm run gen:api          # scripts/gen-api.ts : ../api/openapi.json → src/api/schema.d.ts, sans API lancée (après `ffe openapi`)
 cd web && npm run format | build   # prettier --write . | vite build

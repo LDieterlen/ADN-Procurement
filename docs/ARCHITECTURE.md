@@ -17,10 +17,10 @@ Deux modes d'exécution :
 | | Développement | Usage réel |
 |---|---|---|
 | Processus | Deux : `uv run ffe serve --reload` (API) et `npm run dev` dans `web/` (Vite) | Un : `uv run ffe serve` |
-| Ports | API `127.0.0.1:8000` ; Vite `5173` avec `server.host: true` et proxy `/api` → `127.0.0.1:8000` | `127.0.0.1:8000` |
+| Ports | API `127.0.0.1:8000` ; Vite `5180` (`strictPort`, hors du 5173 par défaut pour ne jamais entrer en collision avec un autre projet) avec `server.host: true` et proxy `/api` → `127.0.0.1:8000` | `127.0.0.1:8000` |
 | Front | Servi par Vite (HMR) | `web/dist/` (produit par `npm run build`) servi en statique par FastAPI, repli `index.html` |
 | Base | `~/.persist/ffe-dev/` | `~/.persist/ffe/` |
-| URL dans le navigateur Windows | `http://localhost:5173` | `http://127.0.0.1:8000` |
+| URL dans le navigateur Windows | `http://localhost:5180` | `http://127.0.0.1:8000` |
 | Badge « BASE DE DEV » | Affiché (`health.isDevDb = true`) | Absent |
 
 Sélection de la base : défaut proposé `FFE_ENV=dev` implicite et `ffe serve --prod` pour la base réelle, afin qu'aucune commande lancée par réflexe ne touche les données réelles ; à trancher à l'étape 3 (ROADMAP D3.4).

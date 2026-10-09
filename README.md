@@ -24,7 +24,7 @@ Le dépôt vit sur `/workspaces/Perso/FFE` (montage 9p, vu depuis Windows). Les 
 
 Pré-requis : `uv` ≥ 0.12 et Node 24. Première fois (ou après reconstruction du devcontainer) : `mkdir -p ~/.venvs && ln -s ~/.venvs/ffe api/.venv` pour que le venv Python vive sur ext4 et non sur le montage 9p (6× plus rapide, voir `docs/ARCHITECTURE.md` §11) ; `uv` le crée ensuite tout seul.
 
-- Développement : `cd api && uv run ffe serve --reload` (API sur `http://127.0.0.1:8000`) et, dans un autre terminal, `cd web && npm run dev` (interface sur `http://localhost:5173`, accessible depuis le navigateur Windows).
+- Développement : `cd api && uv run ffe serve --reload` (API sur `http://127.0.0.1:8000`) et, dans un autre terminal, `cd web && npm run dev` (interface sur `http://localhost:5180`, accessible depuis le navigateur Windows ; port fixe, distinct du 5173 par défaut de Vite utilisé par d'autres projets).
 - Usage réel : `cd web && npm run build` puis `cd api && uv run ffe serve` ; l'interface est servie sur `http://127.0.0.1:8000`.
 - Vérification du dépôt : `./check.sh`.
 
