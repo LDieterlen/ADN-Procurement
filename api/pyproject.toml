@@ -1,0 +1,47 @@
+[project]
+name = "ffe"
+version = "0.1.0"
+description = "FFE — API et CLI de l'outil de procurement FF&E"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "pydantic-settings",
+    "typer",
+    "uvicorn",
+]
+
+[project.scripts]
+ffe = "ffe.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.18,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+system-certs = true
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E9", "F", "I", "UP"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+strict = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pyright",
+    "pytest",
+    "ruff",
+]
