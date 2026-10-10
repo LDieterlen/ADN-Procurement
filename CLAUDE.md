@@ -8,7 +8,7 @@ Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARC
 
 ## Commandes
 
-**Étape 4 (2026-10-10) : API `client` complète (`/api/v1/clients`), gabarit de toutes les ressources (ARCHITECTURE §9 « Anatomie d'une ressource »).** Mettre cette liste à jour à chaque étape.
+**Étape 5 (2026-10-10) : front `client` (liste, fiche, archivage) et composants de base (`ui/`, `forms/`, `tables/DataTable`, `Layout`) ; gabarit API = ARCHITECTURE §9 « Anatomie d'une ressource ».** Mettre cette liste à jour à chaque étape.
 **Venv Python — règle dure pour Claude** : `api/.venv` est un lien symbolique vers `~/.venvs/ffe` (ext4 ; ARCHITECTURE §11, maître). Les shells de Claude Code héritent de `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` (réglage utilisateur, **non neutralisé** par le bloc `env` du projet, constaté le 2026-10-10) : tout `uv run` lancé tel quel **resynchronise le venv de Racoon sur le lock de FFE**. Donc : `check.sh` exporte lui-même les bonnes valeurs, et toute commande `uv` hors `check.sh` se lance avec `UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv UV_FROZEN=0 uv …` (préfixe obligatoire). Si le venv de Racoon a été touché : `cd /workspaces/Perso/Racoon && UV_PROJECT_ENVIRONMENT=~/.venvs/racoon UV_FROZEN=1 uv sync` le restaure.
 
 ```
@@ -54,7 +54,7 @@ Ce qui est prouvé par couche, fichiers et étapes : ARCHITECTURE §7 (maître).
 CLAUDE.md · README.md · check.sh · .claude/settings.json · .gitignore · .gitattributes · .editorconfig   # étape 0
 docs/        ARCHITECTURE · DATA_MODEL · API · ROADMAP · GLOSSARY · JOURNAL · RUNBOOK (étape 9) · decisions/ADR-NNNN-*.md
 api/         étape 1, projet uv : src/ffe/ (config, app, main, cli, api/v1/{router,health}) · tests/ · openapi.json ; étape 3 : deps, db/{engine,fs_check,lock,migrate,startup,backup,json_io}, models/{base,setting,client}, schemas/{base,health}, alembic/, .env.example ; étape 4 : errors, i18n/fr.py, api/handlers, schemas/client, services/{base,client}, api/v1/client ; étape 7a : money, transitions
-web/         étape 1, paquet npm : src/ (api/{schema.d.ts, client.ts, queries/health.ts}, pages/HealthPage.tsx, main.tsx, styles.css) · scripts/gen-api.ts · tests/ ; étape 5 : routes.tsx, components/{ui,forms,tables}
+web/         étape 1, paquet npm : src/ (api/{schema.d.ts, client.ts, queries/health.ts}, pages/HealthPage.tsx, main.tsx, styles.css) · scripts/gen-api.ts · tests/ ; étape 5 : api/errors.ts, api/queries/client.ts, routes.tsx, components/{Layout, ui/{Button,Toast,ConfirmDialog,EmptyState}, forms/{Form,Field,TextInput,TextArea,Select,BpField}, tables/DataTable}, pages/clients/{ClientsPage,ClientForm,ClientEditPage}, tests/helpers/{fakeApi,render}, tests/setup.ts ; étape 6b : forms/{Money,Quantity,DateField,EntityPicker}
 extension/   étape F6 seulement ; n'existe pas avant
 ```
 

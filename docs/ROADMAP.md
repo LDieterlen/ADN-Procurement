@@ -68,7 +68,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : depuis le navigateur Windows : créer 2 clients, modifier, archiver, filtre « afficher archivés », désarchiver, recharger → tout persiste ; serveur coupé → message, pas d'écran blanc.
 - **Décisions préalables** : D5.1 react-hook-form dès maintenant (défaut : oui) ; D5.2 Tailwind pur, sans bibliothèque de composants (défaut) ; D5.3 pas de mode sombre (défaut) ; D5.4 textes FR inline dans les composants, pas de couche i18n front (défaut ; les messages serveur restent dans `api/src/ffe/i18n/fr.py`).
 - **Risques** : Tailwind 4 + Vite 8 ; champs typés (Money, Bp) qui laissent passer des flottants ; `host:true` oublié.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commits `feat(web): …` puis `docs(repo): étape 5 close` (hashes dans le JOURNAL). D5.1 à D5.12 : défauts. Périmètre réduit par D5.5 : Money, Quantity, DateField, EntityPicker naissent à 6b. Critère de fini rejoué par 12 tests de composants (jsdom, faux serveur) + build servi par l'API ; affichage depuis Windows à confirmer par l'utilisateur.
 
 ## Étape 6a — Référentiel : fournisseurs, fabricants, catégories (migration 0002)
 

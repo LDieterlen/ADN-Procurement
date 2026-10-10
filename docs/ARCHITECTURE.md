@@ -88,11 +88,12 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   ├── main.tsx · routes.tsx · styles.css
 │   │   ├── api/schema.d.ts                 # étape 1 : GÉNÉRÉ par openapi-typescript, jamais édité
 │   │   ├── api/client.ts                   # étape 1 : seul import d'openapi-fetch
-│   │   ├── api/queries/                    # étape 1 : health.ts (hook simple) ; étape 5 : hooks TanStack Query par ressource
-│   │   ├── pages/                          # étape 1 : « API OK » ; étape 5 : clients ; …
-│   │   └── components/{ui,forms,tables}    # étape 5 : DataTable, Form, MoneyField, QuantityField, BpField,
-│   │                                       #   DateField, EntityPicker, Toast, Confirm
-│   ├── tests/                              # étape 1 : schema-freshness.test.ts, boundaries.test.ts (transverses) ; composants : src/**/<Composant>.test.tsx à côté du composant (étape 5)
+│   │   ├── api/errors.ts                   # étape 5 : ApiError typée {status, code, details, existingId, archivedId}, unwrap()
+│   │   ├── api/queries/                    # étape 5 : hooks TanStack Query par ressource (client.ts : useClients, useClient, useCreate/Update/Archive/UnarchiveClient ; call() convertit une panne réseau en ApiError.network()) ; health.ts
+│   │   ├── pages/                          # étape 1 : HealthPage ; étape 5 : clients/{ClientsPage, ClientForm (formulaire pur, erreurs 422 par champ), ClientEditPage (données, mutations, dialogues 409, toasts)}
+│   │   ├── components/Layout.tsx           # étape 5 : barre latérale, badge « BASE DE DEV », Outlet
+│   │   └── components/{ui,forms,tables}    # étape 5 : ui/{Button, Toast (ToastProvider + useToast), ConfirmDialog (1 à 3 actions), EmptyState} ; forms/{Form (FormProvider + bandeau), Field (label + erreur), TextInput, TextArea, Select, BpField (points de base ↔ pourcentage, entier seulement)} ; tables/DataTable (colonnes à render, ligne cliquable, état vide) ; étape 6b : Money, Quantity, DateField, EntityPicker (D5.5)
+│   ├── tests/                              # étape 1 : schema-freshness.test.ts, boundaries.test.ts (transverses) ; étape 5 : setup.ts (cleanup Testing Library), helpers/{fakeApi.ts (faux serveur en mémoire sur globalThis.fetch : 422 par champ, 409 doublon/archivé, 404, archive), render.tsx (routes réelles + fournisseurs)} ; composants : src/**/<Composant>.test.tsx (`// @vitest-environment jsdom`)
 │   └── dist/                               # build, ignoré par git
 └── extension/                              # étape F6 seulement
 ```
