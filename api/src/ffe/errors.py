@@ -73,6 +73,14 @@ class DuplicateError(ConflictError):
         )
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    code = "payload_too_large"
+
+    def __init__(self, limit_bytes: int) -> None:
+        super().__init__(fr.PAYLOAD_TOO_LARGE.format(mb=limit_bytes // (1024 * 1024)))
+
+
 class IntegrityConflictError(ConflictError):
     """A database constraint fired past Pydantic (the last-resort net, DATA_MODEL §3)."""
 

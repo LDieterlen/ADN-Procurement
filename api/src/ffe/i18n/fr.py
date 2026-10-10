@@ -5,7 +5,27 @@ RESOURCE_LABELS: dict[str, str] = {
     "supplier": "fournisseur",
     "manufacturer": "fabricant",
     "category": "catégorie",
+    "product": "produit",
+    "file": "fichier",
 }
+
+PAYLOAD_TOO_LARGE = "Fichier trop volumineux : {mb} Mo au plus."
+FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seulement."
+FILE_EMPTY = "Fichier vide."
+PRODUCT_TTC_NEEDS_VAT = "Un prix TTC exige le taux de TVA à déduire."
+PRODUCT_DUPLICATE_REF = (
+    "Un produit actif porte déjà cette référence fabricant (n° {id}) ; "
+    "ajouter ?force=true pour créer quand même (autre finition)."
+)
+PRODUCT_DUPLICATE_REF_ARCHIVED = (
+    "Un produit archivé porte déjà cette référence fabricant (n° {id}) : le restaurer."
+)
+PRODUCT_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au produit."
+PRODUCT_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au produit."
+PRODUCT_FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
+CATEGORY_MUST_BE_ACTIVE = "La catégorie est archivée."
+MANUFACTURER_MUST_BE_ACTIVE = "Le fabricant est archivé."
+SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 
 CATEGORY_CODE_REQUIRED = "Une catégorie de niveau 1 porte un code (2 à 4 lettres majuscules)."
 CATEGORY_CODE_ON_CHILD = "Une sous-catégorie n'a pas de code : elle hérite de celui de son parent."
