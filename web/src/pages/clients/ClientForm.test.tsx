@@ -8,10 +8,12 @@ import { renderApp } from '../../../tests/helpers/render'
 let api: FakeApi
 
 beforeEach(() => {
-  api = installFakeApi([
-    { name: 'Famille Martin', city: 'Paris' },
-    { name: 'Ancien Client', archivedAt: '2026-01-01T00:00:00Z' },
-  ])
+  api = installFakeApi({
+    clients: [
+      { name: 'Famille Martin', city: 'Paris' },
+      { name: 'Ancien Client', archivedAt: '2026-01-01T00:00:00Z' },
+    ],
+  })
 })
 afterEach(() => api.restore())
 
