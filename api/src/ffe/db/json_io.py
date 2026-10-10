@@ -16,14 +16,22 @@ from ffe.db import DbError
 from ffe.db.migrate import current_revision, revision_chain
 from ffe.models.base import Base
 from ffe.schemas.base import BaseSchema
+from ffe.schemas.category import CategoryRead
 from ffe.schemas.client import ClientRead
+from ffe.schemas.manufacturer import ManufacturerRead
+from ffe.schemas.supplier import SupplierRead
 
 FORMAT = "ffe-export"
 VERSION = 1
 # Dependency order: parents before children (import), same order on export.
-TABLE_ORDER: tuple[str, ...] = ("setting", "client")
+TABLE_ORDER: tuple[str, ...] = ("setting", "client", "category", "manufacturer", "supplier")
 # Row validation before insert (D4.11); `setting` gets its schema with its API (step 9).
-ROW_SCHEMAS: dict[str, type[BaseSchema]] = {"client": ClientRead}
+ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
+    "client": ClientRead,
+    "category": CategoryRead,
+    "manufacturer": ManufacturerRead,
+    "supplier": SupplierRead,
+}
 
 
 class JsonIoError(DbError):

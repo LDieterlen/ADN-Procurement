@@ -38,8 +38,8 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0001"
-    assert list(document["tables"]) == ["setting", "client"]
+    assert document["schemaRevision"] == "0002"
+    assert list(document["tables"]) == ["setting", "client", "category", "manufacturer", "supplier"]
     first = document["tables"]["client"][0]
     assert first["name"] == "Famille Martin" and first["countryCode"] == "FR"
     assert "created_at" not in first and "createdAt" in first  # camelCase only
@@ -52,7 +52,13 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
     try:
         upgrade_head(fresh)
         imported = import_json(fresh, document)
-        assert imported == {"setting": 1, "client": 2}
+        assert imported == {
+            "setting": 1,
+            "client": 2,
+            "category": 0,
+            "manufacturer": 0,
+            "supplier": 0,
+        }
         assert export_json(fresh, clock) == document
     finally:
         fresh.dispose()

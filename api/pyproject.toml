@@ -39,6 +39,11 @@ strict = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+  # Expression-based indexes are proven by tests/test_integrity_referential.py; Alembic cannot compare them (D6a.8).
+  "ignore:.*expression-based index.*:sqlalchemy.exc.SAWarning",
+  "ignore:.*expression-based index.*:UserWarning",
+]
 
 [dependency-groups]
 dev = [

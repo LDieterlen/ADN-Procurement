@@ -27,7 +27,8 @@ from ffe.db.engine import (
 )
 from ffe.db.json_io import export_json, import_json
 from ffe.db.lock import InstanceLock
-from ffe.db.migrate import current_revision, head_revision, upgrade_head
+from ffe.db.migrate import current_revision, has_pending, head_revision, upgrade_head
+from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
 from ffe.deps import Deps, utcnow
 
@@ -207,3 +208,13 @@ def import_json_cmd(
             return
         for name, count in imported.items():
             typer.echo(f"  {name:<24} {count} ligne(s)")
+
+
+@db.command()
+def seed(prod: ProdFlag = False) -> None:
+    """Catégories de départ (13 codes, D6a.1), idempotent : n'ajoute que les codes absents."""
+    with _opened(prod) as (_settings, engine):
+        if has_pending(engine):
+            _fail(DbError("Base non migrée : lancer `ffe db migrate` d'abord."))
+        inserted = seed_categories(engine, utcnow)
+        typer.echo(f"Catégories ajoutées : {inserted} (version du seed : {SEED_VERSION})")

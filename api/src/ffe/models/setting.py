@@ -21,3 +21,7 @@ class Setting(TimestampedMixin, Base):
         Integer, nullable=False, server_default=text("2000")
     )
     base_currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="EUR")
+    # Step 6a (migration 0002): version of the category seed applied by `ffe db seed`.
+    seed_category_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )

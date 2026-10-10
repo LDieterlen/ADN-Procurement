@@ -11,6 +11,7 @@ from ffe.db.migrate import (
     downgrade_base,
     has_pending,
     head_revision,
+    revision_chain,
     upgrade_head,
 )
 
@@ -21,11 +22,15 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
         assert current_revision(engine) is None
         assert has_pending(engine)
         upgrade_head(engine)
-        assert current_revision(engine) == head_revision() == "0001"
+        assert current_revision(engine) == head_revision() == "0002"
         assert not has_pending(engine)
         check(engine)  # raises when models and migrations differ
     finally:
         engine.dispose()
+
+
+def test_revision_chain_is_one_migration_per_step() -> None:
+    assert revision_chain() == ["0001", "0002"]
 
 
 def test_migration_0001_seeds_the_single_setting_row(engine: Engine) -> None:
