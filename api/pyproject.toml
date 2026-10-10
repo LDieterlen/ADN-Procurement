@@ -49,6 +49,7 @@ filterwarnings = [
 [dependency-groups]
 dev = [
     "httpx2>=2.13.1",
+    "hypothesis>=6.168.5",
     "pyright",
     "pytest",
     "ruff",
