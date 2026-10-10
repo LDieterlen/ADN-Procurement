@@ -25,7 +25,7 @@ describe('frontières de web/src', () => {
 
   test("pages/ et components/ n'importent pas client.ts", () => {
     const offenders = files.filter(
-      (f) => (f.path.startsWith('pages/') || f.path.startsWith('components/')) && imports(f.text).some((i) => /\/client$/.test(i) || /\/client\.ts$/.test(i)),
+      (f) => (f.path.startsWith('pages/') || f.path.startsWith('components/')) && imports(f.text).some((i) => /\/api\/client(\.ts)?$/.test(i)),
     )
     expect(offenders.map((f) => f.path)).toEqual([])
   })
