@@ -361,6 +361,8 @@ Arbre à 2 niveaux (Assises > Fauteuil). Le code du niveau 1 est le préfixe des
 
 Index unique partiel `(code) WHERE code IS NOT NULL`. Index `(parent_id, sort_order)`.
 
+Règles d'app (étape 6a, D6a.2 et D6a.9, testées) : profondeur 2 (un enfant n'a pas d'enfant) ; `code` fixé à la création d'un niveau 1 et immuable ensuite ; `parent_id` immuable (les codes articles en dépendent) ; nom unique sous un même parent, comparé normalisé par le service avant l'index ; archiver un niveau 1 exige ses enfants archivés ; désarchiver un enfant exige un parent actif ; `DIV` jamais archivable. Seed : `ffe db seed` (`db/seed.py`), `INSERT … ON CONFLICT (code) WHERE code IS NOT NULL DO NOTHING`, pose `setting.seed_category_version`.
+
 Exemple : `(NULL, 'LUM', 'Luminaires', 50, NULL)` puis `(5, NULL, 'Applique', 20, NULL)`.
 
 ### 4.6 `manufacturer` — étape 6a

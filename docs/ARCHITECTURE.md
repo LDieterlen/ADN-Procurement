@@ -76,7 +76,7 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   │   └── seed.py                     #   catégories de départ (étape 6a)
 │   │   ├── models/                         # étape 3 : base.py (naming_convention), un fichier par table
 │   │   ├── schemas/                        # étape 3 : base.py (BaseSchema camelCase), health.py ; étape 4 : par ressource : XxxCreate, XxxUpdate, XxxRead
-│   │   ├── services/                       # étape 4 : logique métier, transactions, journal
+│   │   ├── services/                       # étape 4 : logique métier, transactions, journal ; étape 6a : common.py (D6a.3 : get_or_404, ensure_active, archive, unarchive, check_duplicate_name, search, page), category, manufacturer, supplier
 │   │   └── api/v1/                         # étape 1 : router.py, health.py ; étape 4 : client.py …
 │   └── tests/                              # étape 1 : conftest.py ; étape 3 : test_startup, test_integrity,
 │                                           #   test_migrations, test_backup ; étape 4+ : test_api_<ressource>
@@ -90,7 +90,7 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   ├── api/client.ts                   # étape 1 : seul import d'openapi-fetch
 │   │   ├── api/errors.ts                   # étape 5 : ApiError typée {status, code, details, existingId, archivedId}, unwrap()
 │   │   ├── api/queries/                    # étape 5 : hooks TanStack Query par ressource (client.ts : useClients, useClient, useCreate/Update/Archive/UnarchiveClient ; call() convertit une panne réseau en ApiError.network()) ; health.ts
-│   │   ├── pages/                          # étape 1 : HealthPage ; étape 5 : clients/{ClientsPage, ClientForm (formulaire pur, erreurs 422 par champ), ClientEditPage (données, mutations, dialogues 409, toasts)}
+│   │   ├── pages/                          # étape 1 : HealthPage ; étape 5 : clients/{ClientsPage, ClientForm (formulaire pur, erreurs 422 par champ), ClientEditPage (données, mutations, dialogues 409, toasts)} ; étape 6a : common/useSubmitErrors.ts (chemin d'erreur partagé), suppliers/{SuppliersPage, SupplierForm, SupplierEditPage}, manufacturers/{ManufacturersPage, ManufacturerEditPage}, categories/{CategoriesPage (arbre indenté), CategoryEditPage}
 │   │   ├── components/Layout.tsx           # étape 5 : barre latérale, badge « BASE DE DEV », Outlet
 │   │   └── components/{ui,forms,tables}    # étape 5 : ui/{Button, Toast (ToastProvider + useToast), ConfirmDialog (1 à 3 actions), EmptyState} ; forms/{Form (FormProvider + bandeau), Field (label + erreur), TextInput, TextArea, Select, BpField (points de base ↔ pourcentage, entier seulement)} ; tables/DataTable (colonnes à render, ligne cliquable, état vide) ; étape 6b : Money, Quantity, DateField, EntityPicker (D5.5)
 │   ├── tests/                              # étape 1 : schema-freshness.test.ts, boundaries.test.ts (transverses) ; étape 5 : setup.ts (cleanup Testing Library), helpers/{fakeApi.ts (faux serveur en mémoire sur globalThis.fetch : 422 par champ, 409 doublon/archivé, 404, archive), render.tsx (routes réelles + fournisseurs)} ; composants : src/**/<Composant>.test.tsx (`// @vitest-environment jsdom`)

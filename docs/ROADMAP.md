@@ -77,7 +77,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : 3 fournisseurs réels, 2 fabricants, 1 sous-catégorie ajoutée ; `test_migrations` rejoue 0001 + 0002 ; `ARCHITECTURE.md` dit ce qui a été factorisé.
 - **Décisions préalables** : D6a.1 seed exact = 13 codes de D0.9 (défaut) ; D6a.2 catégories éditables (défaut : oui) ; D6a.3 factoriser seulement list/get/archive/unarchive, `create`/`update` explicites (défaut) ; D6a.4 fabricant = table (défaut) ; D6a.5 seed des catégories par `ffe db seed` idempotent (défaut) ou dans la migration 0002.
 - **Risques** : tentation d'ajouter la recherche d'entreprises (F3) ; formulaire fournisseur trop long ; SIREN/SIRET incohérents → CHECK en base.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commits `feat(db)`, `feat(api)`, `feat(web)` puis `docs(repo): étape 6a close` (hashes dans le JOURNAL). D6a.1 à D6a.13 : défauts. Factorisé (D6a.3) : `services/common.py` (`get_or_404`, `ensure_active`, `archive`, `unarchive`, `check_duplicate_name`, `search`, `page`) et, côté front, `pages/common/useSubmitErrors.ts` + `ui/Pagination`. Critère de fini rejoué sur la base de dev (migration 0001→0002 avec `pre-migrate-0002`, seed 13 puis 0, fournisseur, fabricant, sous-catégorie via l'API) ; les données réelles se saisissent sur `--prod`.
 
 ## Étape 6b — Produits et fichiers (migration 0003)
 
