@@ -95,7 +95,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : projet « Hôtel X » avec « Lobby ×1 », « Chambre type A ×12 », « Chambre type B ×8 », « SDB type A ×12 » ; renommage, réordonnancement ; archiver le client → 409 lisible ; clore le projet puis archiver → OK.
 - **Décisions préalables** : D6c.1 code projet auto `2026-001`, éditable (défaut) ; D6c.2 statuts prospect/active/delivered/closed/cancelled (défaut) ; D6c.3 type de zone : texte libre avec suggestions (défaut).
 - **Risques** : `UNIQUE(id, project_id)` oublié sur `zone` (nécessaire aux FK composites de 7a) ; multiplicateur modifié après placement → totaux changent, c'est voulu, à afficher.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 6c close` (hashes dans le JOURNAL). D6c.1 à D6c.3 : défauts (mode enchaîné) ; `uq_zone_id (id, project_id)` présent et testé. Critère prouvé par tests : projet avec Lobby ×1, Chambre type A ×12, Chambre type B ×8 ; renommage, réordonnancement ; archiver le client → 409 lisible ; clore le projet puis archiver → OK.
 
 ## Étape 7a — Lignes : modèle, calculs, service, routes (migration 0005)
 

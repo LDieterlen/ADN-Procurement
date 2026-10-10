@@ -324,7 +324,7 @@ Conteneur de tout le travail ; porte les défauts hérités par les lignes à le
 | start_on, due_on | DATE | oui | | `due_on IS NULL OR start_on IS NULL OR due_on >= start_on` | |
 | notes | TEXT | oui | | | |
 
-Index : `(client_id)`, `(status)`. Pas d'`archived_at` ni de suppression physique : `closed`/`cancelled` jouent le rôle de l'archivage (aucun `DELETE /projects/{id}`, API.md).
+Index : `(client_id)`, `(status)`. Pas d'`archived_at` ni de suppression physique : `closed`/`cancelled` jouent le rôle de l'archivage (aucun `DELETE /projects/{id}`, API.md). Étape 6c (testé) : un projet `closed`/`cancelled` est en lecture seule (projet et zones, 409) tant que son statut n'est pas changé ; un client avec un projet non clos ne s'archive pas (409) ; `code` généré par `MAX + 1` sur l'année sous `UNIQUE (code)`, préfixe `setting.project_code_prefix` ; `default_vat_bp` copié de `setting` à la création.
 
 Exemple : `('2026-003', 'Hôtel X — rénovation étages', 7, 'active', '1 place …, Lyon', NULL, NULL, 2000, 1000, '2026-11-01', '2027-06-30', NULL)`.
 
