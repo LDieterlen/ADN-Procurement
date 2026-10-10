@@ -9,6 +9,8 @@ import { ManufacturerEditPage } from './pages/manufacturers/ManufacturerEditPage
 import { ManufacturersPage } from './pages/manufacturers/ManufacturersPage'
 import { ProductEditPage } from './pages/products/ProductEditPage'
 import { ProductsPage } from './pages/products/ProductsPage'
+import { ProjectEditPage } from './pages/projects/ProjectEditPage'
+import { ProjectsPage } from './pages/projects/ProjectsPage'
 import { SupplierEditPage } from './pages/suppliers/SupplierEditPage'
 import { SuppliersPage } from './pages/suppliers/SuppliersPage'
 
@@ -16,7 +18,10 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/clients" replace />} />
+        <Route index element={<Navigate to="/projects" replace />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/new" element={<ProjectEditPage />} />
+        <Route path="/projects/:id" element={<ProjectEditPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/new" element={<ClientEditPage />} />
         <Route path="/clients/:id" element={<ClientEditPage />} />

@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useHealth } from '../api/queries/health'
 
 const LINKS = [
+  { to: '/projects', label: 'Projets' },
   { to: '/clients', label: 'Clients' },
   { to: '/products', label: 'Produits' },
   { to: '/suppliers', label: 'Fournisseurs' },

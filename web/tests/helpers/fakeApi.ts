@@ -10,6 +10,8 @@ type CategoryRead = components['schemas']['CategoryRead']
 type ProductRead = components['schemas']['ProductRead']
 type ProductFileRead = components['schemas']['ProductFileRead']
 type FileRead = components['schemas']['FileRead']
+type ProjectRead = components['schemas']['ProjectRead']
+type ZoneRead = components['schemas']['ZoneRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -21,6 +23,8 @@ export type FakeApi = {
   categories: CategoryRead[]
   products: ProductRead[]
   files: FileRead[]
+  projects: ProjectRead[]
+  zones: ZoneRead[]
   requests: { method: string; path: string; body: unknown }[]
   down: boolean
   restore: () => void
@@ -270,6 +274,114 @@ function handleProducts(state: FakeApi, url: URL, method: string, rest: string |
   return undefined
 }
 
+export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
+  return {
+    id,
+    code: `2026-${String(id).padStart(3, '0')}`,
+    name: 'Projet',
+    clientId: 1,
+    status: 'prospect',
+    siteAddress: null,
+    deliveryAddress: null,
+    deliveryContact: null,
+    defaultVatBp: 2000,
+    startOn: null,
+    dueOn: null,
+    notes: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...p,
+  }
+}
+
+export function zoneRow(z: Partial<ZoneRead>, id: number): ZoneRead {
+  return { id, projectId: 1, code: 'ZON', name: 'Zone', kind: null, multiplier: 1, sortOrder: id * 10, notes: null, ...base, ...z }
+}
+
+const CLOSED = ['closed', 'cancelled']
+
+function handleProjects(state: FakeApi, url: URL, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const payload = (body ?? {}) as Partial<ProjectRead>
+  if (rest === undefined && method === 'GET') {
+    const status = url.searchParams.get('status')
+    return json(
+      200,
+      state.projects.filter((p) => !status || p.status === status).sort((a, b) => b.code.localeCompare(a.code)),
+    )
+  }
+  if (rest === undefined && method === 'POST') {
+    if (!(payload.name ?? '').trim()) return validation('name', 'Champ obligatoire.')
+    if (!payload.clientId) return validation('clientId', 'Champ obligatoire.')
+    const id = state.projects.length + 1
+    const created = projectRow({ ...payload, code: payload.code ?? `2026-${String(id).padStart(3, '0')}`, defaultVatBp: payload.defaultVatBp ?? 2000 }, id)
+    state.projects.push(created)
+    return json(201, created)
+  }
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const project = state.projects.find((p) => p.id === Number(match[1]))
+  if (!project) return error(404, 'not_found', `Projet n° ${match[1]} introuvable.`)
+  const sub = match[2]
+  const readOnly = () => error(409, 'conflict', `Projet n° ${project.id} clos : le rouvrir (statut) avant de le modifier.`)
+  if (sub === 'status' && method === 'POST') {
+    project.status = (body as { status: ProjectRead['status'] }).status
+    return json(200, project)
+  }
+  if (sub === 'zones' && method === 'GET') {
+    const includeArchived = url.searchParams.get('includeArchived') === 'true'
+    return json(
+      200,
+      state.zones.filter((z) => z.projectId === project.id && (includeArchived || z.archivedAt === null)).sort((a, b) => a.sortOrder - b.sortOrder),
+    )
+  }
+  if (sub === 'zones' && method === 'POST') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    const z = body as Partial<ZoneRead>
+    if (!(z.code ?? '').trim()) return validation('code', 'Champ obligatoire.')
+    if (!(z.name ?? '').trim()) return validation('name', 'Champ obligatoire.')
+    if (state.zones.some((o) => o.projectId === project.id && o.code.toLowerCase() === z.code!.toLowerCase()))
+      return validation('code', 'Une zone de ce projet porte déjà ce code.')
+    const last = Math.max(0, ...state.zones.filter((o) => o.projectId === project.id).map((o) => o.sortOrder))
+    const created = zoneRow({ ...z, projectId: project.id, sortOrder: z.sortOrder ?? last + 10 }, state.zones.length + 1)
+    state.zones.push(created)
+    return json(201, created)
+  }
+  if (sub === 'zones/reorder' && method === 'POST') {
+    const ids = (body as { zoneIds: number[] }).zoneIds
+    ids.forEach((zoneId, index) => {
+      const zone = state.zones.find((o) => o.id === zoneId)
+      if (zone) zone.sortOrder = (index + 1) * 10
+    })
+    return json(
+      200,
+      state.zones.filter((z) => z.projectId === project.id && z.archivedAt === null).sort((a, b) => a.sortOrder - b.sortOrder),
+    )
+  }
+  if (!sub && method === 'GET') return json(200, project)
+  if (!sub && method === 'PATCH') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    Object.assign(project, body, { updatedAt: LATER })
+    return json(200, project)
+  }
+  return undefined
+}
+
+function handleZones(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(archive|unarchive))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const zone = state.zones.find((z) => z.id === Number(match[1]))
+  if (!zone) return error(404, 'not_found', `Zone n° ${match[1]} introuvable.`)
+  const action = match[2]
+  if (action === 'archive') zone.archivedAt = NOW
+  else if (action === 'unarchive') zone.archivedAt = null
+  else if (method === 'PATCH') Object.assign(zone, body, { updatedAt: LATER })
+  else if (method === 'DELETE') {
+    state.zones = state.zones.filter((z) => z.id !== zone.id)
+    return new Response(null, { status: 204 })
+  }
+  return json(200, zone)
+}
+
 export function categoryRow(c: Partial<CategoryRead>, id: number): CategoryRead {
   return { id, parentId: null, code: null, name: 'Catégorie', sortOrder: 0, ...base, ...c }
 }
@@ -391,6 +503,8 @@ export function installFakeApi(
     manufacturers?: Partial<ManufacturerRead>[]
     categories?: Partial<CategoryRead>[]
     products?: Partial<ProductRead>[]
+    projects?: Partial<ProjectRead>[]
+    zones?: Partial<ZoneRead>[]
   } = {},
 ): FakeApi {
   const originalFetch = globalThis.fetch
@@ -401,6 +515,8 @@ export function installFakeApi(
     categories: (seed.categories ?? []).map((c, i) => categoryRow(c, i + 1)),
     products: (seed.products ?? []).map((p, i) => productRow(p, i + 1)),
     files: [],
+    projects: (seed.projects ?? []).map((p, i) => projectRow(p, i + 1)),
+    zones: (seed.zones ?? []).map((z, i) => zoneRow(z, i + 1)),
     requests: [],
     down: false,
     restore: () => {
@@ -419,7 +535,7 @@ export function installFakeApi(
     if (url.pathname === '/api/v1/health') {
       return json(200, { ok: true, dbPath: '/tmp/ffe.sqlite', isDevDb: true, schemaRevision: '0002', lastBackupAt: null, backupDirOk: true })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files)(?:\/(.+))?$/.exec(url.pathname)
+    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones)(?:\/(.+))?$/.exec(url.pathname)
     if (route) {
       const [, collection, rest] = route
       let response: Response | undefined
@@ -429,6 +545,8 @@ export function installFakeApi(
       if (collection === 'categories') response = handleCategories(state.categories, url, method, rest, body)
       if (collection === 'products') response = handleProducts(state, url, method, rest, body)
       if (collection === 'files') response = await handleFiles(state, request, method, rest)
+      if (collection === 'projects') response = handleProjects(state, url, method, rest, body)
+      if (collection === 'zones') response = handleZones(state, method, rest, body)
       if (response) return response
     }
     return error(404, 'not_found', `Route inconnue : ${method} ${url.pathname}`)

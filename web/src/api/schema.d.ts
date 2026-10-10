@@ -370,6 +370,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Projects */
+        get: operations["listProjects"];
+        put?: never;
+        /** Create Project */
+        post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project */
+        get: operations["getProject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Project */
+        patch: operations["updateProject"];
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Project Status */
+        post: operations["changeProjectStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Zones */
+        get: operations["listZones"];
+        put?: never;
+        /** Create Zone */
+        post: operations["createZone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/zones/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder Zones */
+        post: operations["reorderZones"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suppliers": {
         parameters: {
             query?: never;
@@ -434,6 +522,59 @@ export interface paths {
         put?: never;
         /** Unarchive Supplier */
         post: operations["unarchiveSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zones/{zone_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Zone */
+        get: operations["getZone"];
+        put?: never;
+        post?: never;
+        /** Delete Zone */
+        delete: operations["deleteZone"];
+        options?: never;
+        head?: never;
+        /** Update Zone */
+        patch: operations["updateZone"];
+        trace?: never;
+    };
+    "/api/v1/zones/{zone_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Zone */
+        post: operations["archiveZone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/zones/{zone_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Zone */
+        post: operations["unarchiveZone"];
         delete?: never;
         options?: never;
         head?: never;
@@ -948,6 +1089,94 @@ export interface components {
             /** Widthmm */
             widthMm?: number | null;
         };
+        /** ProjectCreate */
+        ProjectCreate: {
+            /** Clientid */
+            clientId: number;
+            /** Code */
+            code?: string | null;
+            /** Defaultvatbp */
+            defaultVatBp?: number | null;
+            /** Deliveryaddress */
+            deliveryAddress?: string | null;
+            /** Deliverycontact */
+            deliveryContact?: string | null;
+            /** Dueon */
+            dueOn?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Siteaddress */
+            siteAddress?: string | null;
+            /** Starton */
+            startOn?: string | null;
+        };
+        /** ProjectRead */
+        ProjectRead: {
+            /** Clientid */
+            clientId: number;
+            /** Code */
+            code: string;
+            /** Createdat */
+            createdAt: string;
+            /** Defaultvatbp */
+            defaultVatBp: number;
+            /** Deliveryaddress */
+            deliveryAddress: string | null;
+            /** Deliverycontact */
+            deliveryContact: string | null;
+            /** Dueon */
+            dueOn: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /** Siteaddress */
+            siteAddress: string | null;
+            /** Starton */
+            startOn: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "prospect" | "active" | "delivered" | "closed" | "cancelled";
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** ProjectStatusChange */
+        ProjectStatusChange: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "prospect" | "active" | "delivered" | "closed" | "cancelled";
+        };
+        /** ProjectUpdate */
+        ProjectUpdate: {
+            /** Clientid */
+            clientId?: number | null;
+            /** Code */
+            code?: string | null;
+            /** Defaultvatbp */
+            defaultVatBp?: number | null;
+            /** Deliveryaddress */
+            deliveryAddress?: string | null;
+            /** Deliverycontact */
+            deliveryContact?: string | null;
+            /** Dueon */
+            dueOn?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Siteaddress */
+            siteAddress?: string | null;
+            /** Starton */
+            startOn?: string | null;
+        };
         /** SupplierCreate */
         SupplierCreate: {
             /** Addressline1 */
@@ -1094,6 +1323,69 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** ZoneCreate */
+        ZoneCreate: {
+            /** Code */
+            code: string;
+            /** Kind */
+            kind?: string | null;
+            /**
+             * Multiplier
+             * @default 1
+             */
+            multiplier: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+        };
+        /** ZoneRead */
+        ZoneRead: {
+            /** Archivedat */
+            archivedAt: string | null;
+            /** Code */
+            code: string;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string | null;
+            /** Multiplier */
+            multiplier: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /** Projectid */
+            projectId: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** ZoneReorder */
+        ZoneReorder: {
+            /** Zoneids */
+            zoneIds: number[];
+        };
+        /** ZoneUpdate */
+        ZoneUpdate: {
+            /** Code */
+            code?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
         };
     };
     responses: never;
@@ -2082,6 +2374,275 @@ export interface operations {
             };
         };
     };
+    listProjects: {
+        parameters: {
+            query?: {
+                status?: ("prospect" | "active" | "delivered" | "closed" | "cancelled") | null;
+                clientId?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    changeProjectStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listZones: {
+        parameters: {
+            query?: {
+                includeArchived?: boolean;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorderZones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneReorder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listSuppliers: {
         parameters: {
             query?: {
@@ -2266,6 +2827,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SupplierRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archiveZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchiveZone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneRead"];
                 };
             };
             /** @description Validation Error */
