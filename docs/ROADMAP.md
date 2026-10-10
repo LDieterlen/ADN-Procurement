@@ -86,7 +86,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : `curl` crée un produit avec photo ; même photo 2× → 1 fichier sur disque ; 5 produits réels saisis avec photo ; un produit arrêté est marqué dans la liste ; MIME refusé → 422, taille dépassée → 413.
 - **Décisions préalables** : D6b.1 limite 20 Mo par fichier (défaut) ; D6b.2 pas de vignette, le navigateur redimensionne (défaut) ; D6b.3 obligatoires : nom + catégorie (défaut) ; D6b.4 fichiers hors `ffe db backup` par défaut, option `--with-files` à l'étape 9 (défaut).
 - **Risques** : upload multipart FastAPI et limites de taille ; fichiers orphelins (ramasse-miettes = idée parquée).
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commits `fbe847f` (db), `e096704` (api), `27f353e` (web), `8ecee6d` + complément (docs). D6b.1 à D6b.14 : défauts (mode enchaîné à partir de cette étape). Dépendance ajoutée : `python-multipart` 0.0.32 (ADR-0001, JOURNAL). Critère prouvé par tests : 201 puis 200 pour la même photo (un fichier sur disque), MIME refusé → 422 `file`, taille → 413, produit arrêté marqué dans la liste.
 
 ## Étape 6c — Projets et zones (migration 0004)
 
