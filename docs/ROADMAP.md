@@ -59,7 +59,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : via `curl` : création ; champ invalide → 422 citant le champ ; doublon d'un client archivé → 409 avec `archivedId` ; doublon actif → 409 `duplicate` avec `existingId`, `?force=true` → 201 ; archive puis unarchive ; `updated_at` change ; `schema.d.ts` régénéré et test de fraîcheur vert.
 - **Décisions préalables** : D4.1 format d'erreur ci-dessus (défaut) ; D4.2 pas de pagination sur `/clients` (défaut ; le catalogue en aura une à 6a/6b, API.md §Listes) ; D4.3 ids entiers dans les URL (défaut) ; D4.4 champs client = `DATA_MODEL.md` (défaut).
 - **Risques** : CRUD générique prématuré → écrire `client` à la main ; divergence snake_case/camelCase entre Pydantic et le front.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commit `feat(api): …` puis `docs(repo): étape 4 close` (hashes dans le JOURNAL). D4.1 à D4.12 : défauts. Critère de fini rejoué en `curl` (JOURNAL). Divergence camelCase rencontrée et réglée : `BaseSchema` sans `serialize_by_alias`, FastAPI sérialise par alias, `model_dump()` reste snake_case.
 
 ## Étape 5 — Front `client` + composants de base
 

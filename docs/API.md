@@ -8,7 +8,7 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaq
 
 - Préfixe `/api/v1`. La version ne change que sur rupture du contrat consommé par un client externe (extension) ; front et API sont livrés ensemble.
 - Écoute `127.0.0.1:8000` seulement. CORS fermé (aucun en-tête `Access-Control-*`) jusqu'à l'extension, puis ouvert à sa seule origine, avec jeton local dans `Authorization: Bearer`.
-- Aucune authentification en v1 (outil mono-utilisateur local). Vérification de l'en-tête `Host` contre le DNS rebinding : à trancher à l'étape 4.
+- Aucune authentification en v1 (outil mono-utilisateur local). En-tête `Host` vérifié contre le DNS rebinding (D4.5, étape 4) : seuls `127.0.0.1` et `localhost` (avec ou sans port) sont acceptés, toute autre valeur reçoit 400 avant tout routage.
 
 ### Nommage
 
@@ -81,7 +81,7 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaq
 | Ressource | Routes (sous `/api/v1`) | Statut |
 |---|---|---|
 | Système | `GET /health` → `{ok, dbPath, isDevDb, schemaRevision, lastBackupAt, backupDirOk}` (`operationId: getHealth` ; `dbPath`/`schemaRevision` à `null` sans base, c'est-à-dire seulement lors de la génération du contrat) | livrée (étape 1, enrichie étape 3) |
-| Clients | `GET/POST /clients` · `GET/PATCH /clients/{id}` · `POST /clients/{id}/archive` · `POST /clients/{id}/unarchive` | prévue (étape 4) |
+| Clients | `GET /clients?q=&includeArchived=` · `POST /clients?force=` · `GET/PATCH /clients/{id}` · `POST /clients/{id}/archive` · `POST /clients/{id}/unarchive` (`operationId` : `listClients`, `createClient`, `getClient`, `updateClient`, `archiveClient`, `unarchiveClient`) | livrée (étape 4) |
 | Réglages | `GET/PATCH /settings` (ressource unique, sans id) | prévue (étape 9) |
 | Fournisseurs | `GET/POST /suppliers` (paginé) · `GET/PATCH /suppliers/{id}` · `POST …/archive` · `POST …/unarchive` | prévue (étape 6a) |
 | Fabricants | `GET/POST /manufacturers` (paginé) · `GET/PATCH /manufacturers/{id}` · `POST …/archive` · `POST …/unarchive` | prévue (étape 6a) |

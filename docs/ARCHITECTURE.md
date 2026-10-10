@@ -258,6 +258,19 @@ Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire**
 9. `queries/<ressource>.ts`, page, formulaire avec les champs typés existants.
 10. `API.md` : routes marquées « livrée (étape N) » ; `JOURNAL.md` : compte rendu ≤ 10 lignes ; `./check.sh` ; commit.
 
+### Anatomie d'une ressource (gabarit `client`, étape 4 — à recopier telle quelle)
+
+| Couche | Fichier | Contenu et règles |
+|---|---|---|
+| Schémas | `schemas/client.py` | `ClientCreate` (champs + défauts, validateurs `strip`), `ClientUpdate` (tous optionnels ; `null` sur un champ obligatoire refusé par un validateur `mode="before"` qui lève `fr.FIELD_REQUIRED`), `ClientRead` (DTO complet, `from_attributes`). Types réutilisables en haut du module (`Name`, `Short`, `Siren`…). `BaseSchema` : alias camelCase en JSON, `model_dump()` en snake_case pour les modèles |
+| Service | `services/client.py` | Fonctions `(session, …, clock)` ; chaque écriture ouvre `with session.begin()` ; `stamp(clock)` pose `created_at`/`updated_at` ; doublons par `normalize_key` (services/base.py) ; règles d'archivage ; lève `NotFoundError`, `DuplicateError`, `ArchivedDuplicateError`, `ConflictError` (`errors.py`), messages de `i18n/fr.py` |
+| Routeur | `api/v1/client.py` | Une ligne par route : `ClientRead.model_validate(service.xxx(...))` ; dépendances `SessionDep`, `DepsDep` (`deps.py`), jamais SQLAlchemy ; `operationId` explicites (noms des fonctions générées côté front) ; enregistrement dans `api/v1/router.py` |
+| Erreurs | `errors.py` + `api/handlers.py` | `AppError` → `{code, message, details}` (+ `existingId`/`archivedId`) ; `RequestValidationError` → 422 avec `details[].field` camelCase et messages français (`fr.PYDANTIC_MESSAGES` par type) ; `IntegrityError` converti en `IntegrityConflictError` (409) dans `get_session` ; toute autre exception → 500 journalisé, corps `internal_error` ; `Cache-Control: no-store` sur les erreurs |
+| Tests | `tests/test_api_client.py`, `tests/test_services_client.py` | Liste CLAUDE.md « Tests » ; factory `make_client(session, clock, **overrides)` dans `conftest.py` via le service ; `TestClient(..., base_url="http://127.0.0.1")` (hôte accepté par D4.5) |
+| Contrat | `uv run ffe openapi` puis `npm run gen:api` | Les deux tests de fraîcheur (§4) échouent tant que ce n'est pas fait |
+
+Ce que la prochaine ressource copie sans réfléchir : les trois schémas, les six fonctions de service, le routeur à six routes, les tests par comportement. Ce qui se factorise à l'étape 6a (D6a.3) : `list`/`get`/`archive`/`unarchive` seulement.
+
 ## 10. Points d'extension (emplacements réservés, aucun code avant l'étape)
 
 | Fonction | Étape | Emplacement prévu | Ce que la v1 garantit |
