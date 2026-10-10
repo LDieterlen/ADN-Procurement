@@ -46,17 +46,17 @@
       "Bash(env:*)",
       "Bash(time:*)",
       "Bash(sleep:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Read(~/.persist/ffe/**)",
+      "Edit(~/.persist/ffe/**)",
+      "Write(~/.persist/ffe/**)"
     ],
     "ask": ["Bash(git push:*)", "Bash(kill:*)", "Bash(pkill:*)"],
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
-      "Bash(git clean:*)",
-      "Read(~/.persist/ffe/**)",
-      "Edit(~/.persist/ffe/**)",
-      "Write(~/.persist/ffe/**)"
+      "Bash(git clean:*)"
     ]
   }
 }
