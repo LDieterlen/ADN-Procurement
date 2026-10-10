@@ -4,7 +4,11 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
-## 2026-10-09 — Étape 3 : infrastructure base — EN COURS (pause, reprise le lendemain)
+## 2026-10-09 / 2026-10-10 — Étape 3 : infrastructure base (migration 0001)
+
+**Compte rendu** : base SQLite STRICT migrée (`setting`, `client`), cycle de démarrage complet (ext4 → verrou → quick_check → sauvegarde si migration ou > 24 h → upgrade → foreign_key_check → quick_check), sauvegardes par l'API `sqlite3.backup()` avec rotation et restauration, export/import JSON, CLI `ffe db` et `--prod`, `/health` enrichi ; 51 tests. Commits : `d56edc6` (code), `78bd39e` (point de reprise), `docs(repo): étape 3 close` (clôture). **À vérifier (5 min)** : `cd api && uv run ffe db check` (tables STRICT, révision 0001) ; `FFE_DATA_DIR=/workspaces/x uv run ffe serve` → refus « overlay/9p » ; `uv run ffe serve` puis dans un autre terminal `uv run ffe db backup` → « FFE tourne déjà ». **Parqué** : rien. **Reste** : `.claude/settings.json` (gardes `~/.persist/ffe/**` passées de `deny` à `allow` sur disque, non commité) et le bloc `env` utilisateur de Racoon à déplacer dans Racoon (ARCHITECTURE §11) — deux choix de l'utilisateur. Prochaine étape : 4 — API `client` (D4.1 à D4.4).
+
+Détail de la session du 2026-10-09 (code) ci-dessous ; clôture documentaire le 2026-10-10.
 
 **Fait** (commit `d56edc6`, `./check.sh` vert, 51 tests pytest) : `db/` (engine + pragmas, `fs_check` ext4, `lock` flock, `migrate` Alembic programmatique, `backup` + rotation + restore, `json_io`, `startup`), modèles `setting`/`client`, Alembic (`alembic.ini`, `env.py`, migration `0001_setting_client` écrite à la main), `schemas/base.py` + `schemas/health.py`, `deps.py` (Deps + `get_deps`), `/health` enrichi, CLI `ffe db migrate|backup|restore|check|export-json|import-json` et `ffe serve --prod`, `.env.example`, `tests/test_integrity|migrations|backup|startup|json_io|architecture`, `openapi.json` et `schema.d.ts` régénérés. Critère de fini rejoué en commandes : base créée sous `~/.persist/ffe-dev/` (sauvegarde `ffe-20261009-215246.sqlite`), `FFE_DATA_DIR=/workspaces/x` refusé (« overlay », pas ext4), second démarrage refusé par le verrou, `uv run alembic check` → « No new upgrade operations detected », `ffe db check` lit les tables et leur drapeau STRICT.
 
@@ -12,7 +16,7 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 **Incident** : ma session shell portait encore `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` (le bloc `env` du projet ne vaut que pour une nouvelle session) : un `uv sync` a resynchronisé le venv de Racoon sur le lock de FFE ; réparé aussitôt par `uv sync` dans Racoon sur son propre lock (dépôt Racoon intact). Règle pour la suite : exporter `UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv UV_FROZEN=0` dans chaque commande tant que la session n'a pas été relancée.
 
-**Reste pour clore l'étape** : CLAUDE.md (commandes `ffe db`), ARCHITECTURE §2/§5 (modules ajoutés, STRICT et batch D3.7), API.md (`/health` livrée étape 3), ROADMAP (cocher), compte rendu final ici ; `.claude/settings.json` modifié sur disque par l'utilisateur (gardes `~/.persist/ffe/**` passées de `deny` à `allow`), non commité, à trancher par lui.
+**Clôture (2026-10-10)** : CLAUDE.md, ARCHITECTURE §1/§2/§5/§11, DATA_MODEL §3, API.md et ROADMAP mis à jour. Constat de la session neuve : le bloc `env` du projet n'écrase pas celui du réglage utilisateur (`UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` toujours présent) et `check.sh` sans rustine a de nouveau resynchronisé le venv de Racoon (réparé). Protection remise dans `check.sh` (exports explicites) + règle de préfixe dans CLAUDE.md.
 
 ## 2026-10-09 — Étape 2 : modèle de données validé (aucun code)
 

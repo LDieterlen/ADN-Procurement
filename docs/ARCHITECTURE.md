@@ -23,7 +23,7 @@ Deux modes d'exécution :
 | URL dans le navigateur Windows | `http://localhost:5180` | `http://127.0.0.1:8000` |
 | Badge « BASE DE DEV » | Affiché (`health.isDevDb = true`) | Absent |
 
-Sélection de la base : défaut proposé `FFE_ENV=dev` implicite et `ffe serve --prod` pour la base réelle, afin qu'aucune commande lancée par réflexe ne touche les données réelles ; à trancher à l'étape 3 (ROADMAP D3.4).
+Sélection de la base (D3.4, tranché à l'étape 3) : `FFE_ENV=dev` implicite → `~/.persist/ffe-dev` ; `--prod` sur `ffe serve` et sur chaque `ffe db …` → `~/.persist/ffe`, afin qu'aucune commande lancée par réflexe ne touche les données réelles. `FFE_DATA_DIR` surcharge explicitement le dossier (refusé hors ext4).
 
 ### CLI `ffe` (Typer, `api/src/ffe/cli.py`)
 
@@ -38,7 +38,7 @@ Sélection de la base : défaut proposé `FFE_ENV=dev` implicite et `ffe serve -
 | `ffe db export-json [sortie]` · `ffe db import-json <fichier> [--replace]` | 3 | Copie lisible indépendante du format, et son retour |
 | `ffe db seed` | 6a | Catégories de départ dans une base vide (dev) |
 
-Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe `FFE_`, aucune n'est obligatoire ; ce paragraphe est le maître) : `FFE_HOST` (`127.0.0.1`) et `FFE_PORT` (`8000`), `FFE_WEB_DIST` (dossier statique servi en usage réel, défaut `web/dist/`) — étape 1 ; `FFE_DATA_DIR` (surcharge du dossier de données, refusé hors ext4), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, absent = avertissement) ; `FFE_ENV` (`dev` par défaut) et `--prod` : proposition, à trancher à l'étape 3 (D3.4). Aucun `.env` versionné ; `.env.example` documente les noms retenus (étape 3).
+Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe `FFE_`, aucune n'est obligatoire ; ce paragraphe est le maître) : `FFE_HOST` (`127.0.0.1`) et `FFE_PORT` (`8000`), `FFE_WEB_DIST` (dossier statique servi en usage réel, défaut `web/dist/`) — étape 1 ; `FFE_DATA_DIR` (surcharge du dossier de données, refusé hors ext4), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, absent = avertissement) ; `FFE_ENV` (`dev` par défaut ; `--prod` le force à `prod`) — étape 3 (D3.4). Aucun `.env` versionné ; `api/.env.example` documente les noms retenus.
 
 ## 2. Arborescence cible
 
@@ -51,13 +51,15 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   └── RUNBOOK.md                          # étape 9 : procédures (restauration, perte de base, déplacement)
 ├── api/                                    # étape 1 : projet uv
 │   ├── pyproject.toml · uv.lock · .python-version · README.md
-│   ├── alembic.ini · alembic/env.py        # étape 3 : render_as_batch, compare_type, naming_convention
+│   ├── .env.example                        # étape 3 : noms des variables FFE_* (jamais chargé automatiquement)
+│   ├── alembic.ini · alembic/env.py        # étape 3 : render_as_batch, compare_type, naming_convention ; env.py accepte une connexion injectée (ffe.db.migrate) ou ouvre la base de config.py (CLI alembic)
 │   ├── alembic/versions/                   # étape 3 : 0001_setting_client … une migration par étape
 │   ├── openapi.json                        # étape 1 : instantané du contrat, commité, testé (§4)
 │   ├── src/ffe/
-│   │   ├── config.py                       # étape 1 : pydantic-settings (FFE_DATA_DIR, FFE_BACKUP_DIR, FFE_ENV, port)
+│   │   ├── config.py                       # étape 1 : pydantic-settings (FFE_DATA_DIR, FFE_BACKUP_DIR, FFE_ENV, port) ; étape 3 : chemins dérivés (db_path, backups_dir, lock_path)
+│   │   ├── deps.py                         # étape 3 : Deps (settings, engine, horloge, callbacks d'arrêt) + get_deps (dépendance FastAPI) ; module séparé d'app.py pour éviter l'import circulaire avec les routeurs
 │   │   ├── app.py                          # étape 1 : create_app(deps) sans E/S au chargement ; statique web/dist
-│   │   ├── main.py                         # étape 1 : point d'entrée uvicorn (cycle de démarrage §5 dès l'étape 3)
+│   │   ├── main.py                         # étape 1 : point d'entrée uvicorn ; étape 3 : exécute le cycle de démarrage §5 à l'import, SystemExit(1) sans servir en cas d'échec
 │   │   ├── cli.py                          # étape 1 : Typer `ffe serve|openapi` ; étape 3 : `ffe db …`
 │   │   ├── money.py                        # étape 7a : toutes les formules, entiers seulement
 │   │   ├── transitions.py                  # étape 7a : table des transitions de statut et préconditions (DATA_MODEL §5)
@@ -69,10 +71,11 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   │   ├── lock.py                     #   verrou mono-instance (ffe.lock)
 │   │   │   ├── startup.py                  #   cycle de démarrage §5
 │   │   │   ├── backup.py                   #   backup(), quick_check, rotation, copie FFE_BACKUP_DIR, restore()
+│   │   │   ├── migrate.py                  #   Alembic programmatique : head_revision, current_revision, has_pending, upgrade_head, downgrade_base, check
 │   │   │   ├── json_io.py                  #   export_json() / import_json()
 │   │   │   └── seed.py                     #   catégories de départ (étape 6a)
 │   │   ├── models/                         # étape 3 : base.py (naming_convention), un fichier par table
-│   │   ├── schemas/                        # étape 4 : Pydantic par ressource : XxxCreate, XxxUpdate, XxxRead
+│   │   ├── schemas/                        # étape 3 : base.py (BaseSchema camelCase), health.py ; étape 4 : par ressource : XxxCreate, XxxUpdate, XxxRead
 │   │   ├── services/                       # étape 4 : logique métier, transactions, journal
 │   │   └── api/v1/                         # étape 1 : router.py, health.py ; étape 4 : client.py …
 │   └── tests/                              # étape 1 : conftest.py ; étape 3 : test_startup, test_integrity,
@@ -141,9 +144,9 @@ Règles :
 
 ### Pragmas et verrou
 
-Posés à chaque connexion par un événement `connect` de l'engine : `journal_mode=WAL`, `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout=5000`, `trusted_schema=OFF`. Vérification `sqlite3.sqlite_version >= 3.37` (STRICT). Tables créées `STRICT` via `Table(..., sqlite_strict=True)` (SQLAlchemy 2.0.x, vérifié le 2026-10-09) ; conservation du mot-clé lors d'une recréation Alembic batch à vérifier à l'étape 3 (sinon `op.execute`).
+Posés à chaque connexion par un événement `connect` de l'engine : `journal_mode=WAL`, `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout=5000`, `trusted_schema=OFF`. Vérification `sqlite3.sqlite_version >= 3.37` (STRICT). Tables créées `STRICT` via `Table(..., sqlite_strict=True)` (SQLAlchemy 2.0.54, vérifié le 2026-10-09 ; dans une migration : `op.create_table(..., sqlite_strict=True)`). Le mode batch d'Alembic 1.20 ignore `sqlite_strict` (D3.7, constaté) : toute recréation future passe `table_kwargs={"sqlite_strict": True}` à `batch_alter_table`, et `test_migrations` prouve après chaque `upgrade head` que toutes les tables sont STRICT (`alembic_version`, table d'Alembic, est la seule exception).
 
-Verrou mono-instance : `ffe.lock` dans le répertoire de données, pris par `fcntl.flock` (mécanisme à confirmer à l'étape 3) ; un second `ffe serve` s'arrête avec « FFE tourne déjà ». Le verrou est relâché à l'arrêt propre.
+Verrou mono-instance (D3.5) : `ffe.lock` dans le répertoire de données, pris par `fcntl.flock(LOCK_EX | LOCK_NB)` ; un second `ffe serve` ou toute commande `ffe db …` s'arrête avec « FFE tourne déjà ». Relâché à l'arrêt propre (lifespan FastAPI → `Started.close()`) et par le noyau si le processus meurt.
 
 ### Cycle de démarrage exact (`startup.py`, ordre immuable)
 
@@ -169,7 +172,7 @@ Tout échec d'une étape 1–7 = arrêt sans servir, base intacte. Les tests ne 
 
 - Méthode unique, `backup.py` : `wal_checkpoint(TRUNCATE)` → `sqlite3.Connection.backup()` (stdlib, cohérent même pendant une écriture) vers `backups/tmp/` → `quick_check` du fichier produit → `rename` dans `backups/ffe-YYYYMMDD-HHMMSS[-label].sqlite` → copie séquentielle vers `FFE_BACKUP_DIR` (fiable sur 9p). **Règle dure : ne jamais copier `ffe.sqlite` à chaud** (`cp`, explorateur Windows) : le WAL contient des écritures non intégrées.
 - Déclencheurs : démarrage (règle 24 h ou pre-migrate), avant `ffe db migrate`, `ffe db restore`, `ffe db import-json --replace`, à la demande (`ffe db backup`) ; à l'étape 9 : arrêt, timer horaire appliquant la règle 24 h, `POST /api/v1/system/backup`, copie vers `FFE_BACKUP_DIR` (ADR-0002).
-- Rotation (défaut à confirmer à l'étape 3) : 14 quotidiennes + 8 hebdomadaires + 12 mensuelles ; `pre-migrate-*` conservées 90 jours ; même rotation dans `FFE_BACKUP_DIR`.
+- Rotation (D3.2, `backup.rotate`) : par date calendaire, dernière sauvegarde de chacun des 14 derniers jours, des 8 dernières semaines ISO et des 12 derniers mois présents ; fichiers libellés (`pre-migrate-*`, `pre-restore-*`, `pre-import`, libellé manuel) conservés 90 jours ; même rotation dans `FFE_BACKUP_DIR` à l'étape 9.
 - `ffe db restore <fichier>` : `quick_check` de la source, sauvegarde `pre-restore` de la base courante, remplacement atomique par `rename`, serveur arrêté (le verrou le garantit).
 - `ffe db check` : `integrity_check`, `foreign_key_check`, liste des tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`), comptages par table, orphelins `files/` ↔ table `file`.
 
@@ -275,6 +278,6 @@ Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire**
 - **Accès depuis Windows** : Vite `server.host: true` ; l'API écoute `127.0.0.1` seulement et reste joignable depuis le navigateur Windows par la redirection de ports de WSL/devcontainer.
 - **Persistance** : seul `~/.persist` survit au rebuild. Base, fichiers, sauvegardes, verrou et logs y vivent ; `FFE_BACKUP_DIR` sur le disque Windows est la seule copie hors conteneur.
 - **Proxy TLS** : `uv` avec `system-certs = true` (comme Racoon) ; côté npm, `cafile`/`strict-ssl` dans `.npmrc` local si `npm install` échoue (jamais versionné). Constaté à l'étape 1 : `uv` et `npm` passent sans réglage supplémentaire.
-- **Venv Python (maître)** : `api/.venv` est un **lien symbolique vers `~/.venvs/ffe`** (ext4). Mesuré à l'étape 1 : la suite pytest prend 3,9 s avec un venv sur 9p, 0,6–0,8 s sur ext4. `uv` suit le lien sans réglage ; `.venv` est ignoré par git ; après reconstruction du devcontainer, recréer le lien (README « Lancer »). Les shells de Claude Code héritent du bloc `env` de `~/.persist/claude/settings.json` écrit pour Racoon (`UV_PROJECT_ENVIRONMENT=~/.venvs/racoon`, `UV_FROZEN=1`, `UV_PYTHON_PREFERENCE=only-managed`) ; le terminal de l'utilisateur n'y est pas soumis. Le bloc `env` de `.claude/settings.json` du projet le neutralise (`UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv`, `UV_FROZEN=0`). `npm create vite` a échoué sans TTY : `web/` a été écrit à la main (mêmes fichiers).
+- **Venv Python (maître)** : `api/.venv` est un **lien symbolique vers `~/.venvs/ffe`** (ext4). Mesuré à l'étape 1 : la suite pytest prend 3,9 s avec un venv sur 9p, 0,6–0,8 s sur ext4. `uv` suit le lien sans réglage ; `.venv` est ignoré par git ; après reconstruction du devcontainer, recréer le lien (README « Lancer »). Les shells de Claude Code héritent du bloc `env` de `~/.persist/claude/settings.json` écrit pour Racoon (`UV_PROJECT_ENVIRONMENT=~/.venvs/racoon`, `UV_FROZEN=1`, `UV_PYTHON_PREFERENCE=only-managed`) ; le terminal de l'utilisateur n'y est pas soumis. Le bloc `env` de `.claude/settings.json` du projet (`UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv`, `UV_FROZEN=0`) **ne le neutralise pas** (constaté le 2026-10-10 sur une session neuve : le réglage utilisateur l'emporte). Conséquence : tout `uv run` lancé par Claude sans préfixe resynchronise le venv de Racoon sur le lock de FFE (arrivé deux fois, réparé par `uv sync` dans Racoon). Protections : `check.sh` exporte lui-même `UV_PROJECT_ENVIRONMENT="$PWD/api/.venv"` et `UV_FROZEN=0` ; toute autre commande `uv` de Claude porte ce préfixe (CLAUDE.md). Correction définitive, à la main de l'utilisateur : déplacer ce bloc `env` du réglage utilisateur vers `.claude/settings.json` de Racoon. `npm create vite` a échoué sans TTY : `web/` a été écrit à la main (mêmes fichiers).
 - **Outils absents** : pas de `sqlite3` CLI dans le conteneur ; inspection par `ffe db check` et l'extension VS Code SQLite.
 - **Sécurité locale** : écoute `127.0.0.1:8000`, CORS fermé jusqu'à l'extension, aucune authentification tant que l'outil n'est pas partagé.

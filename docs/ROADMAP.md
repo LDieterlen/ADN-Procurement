@@ -50,7 +50,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : base créée sous `~/.persist/ffe-dev/` ; `FFE_DATA_DIR=/workspaces/x uv run ffe serve` refuse en citant « 9p » ; deuxième démarrage refusé par le verrou ; `uv run ffe db check` vert et liste les tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`) en montrant `setting` et `client` (pas de `sqlite3` CLI dans le conteneur, ARCHITECTURE §11).
 - **Décisions préalables** : D3.1 valeurs initiales de `setting` (`default_vat_bp` 2000, `base_currency` 'EUR' ; `default_contingency_bp` et `project_code_prefix` à trancher) ; D3.2 rotation des sauvegardes par date calendaire : 14 jours + 8 semaines + 12 mois (défaut) ; D3.3 sauvegarde automatique avant tout `upgrade` (défaut, non négociable) ; D3.4 sélection de la base : `FFE_ENV` (`dev` par défaut) + `ffe serve --prod` pour la base réelle (défaut, ARCHITECTURE §1).
 - **Risques** : Alembic batch sur SQLite recrée des tables → relecture ligne à ligne ; pragmas définis mais non vérifiés → rôle de `test_integrity` ; `fs_check` trompé par un lien symbolique → `realpath`.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-10 — commits `d56edc6` (code), `78bd39e` (point de reprise) puis le commit de docs de clôture. D3.1 à D3.11 : défauts. Critère de fini rejoué en commandes (JOURNAL). Écart : `db/migrate.py`, `deps.py`, `schemas/base.py` nés à l'étape 3 (ARCHITECTURE §2).
 
 ## Étape 4 — API `client` (gabarit)
 

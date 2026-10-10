@@ -8,8 +8,8 @@ Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARC
 
 ## Commandes
 
-**Étape 1 (2026-10-09) : `api/` et `web/` existent ; `ffe serve`, `ffe openapi`, `GET /api/v1/health`, page « API OK ».** La CLI `ffe db …` naît à l'étape 3. Mettre cette liste à jour à chaque étape.
-**Venv Python** : `api/.venv` est un lien symbolique vers `~/.venvs/ffe` (ext4, hors 9p ; ARCHITECTURE §11, maître). Les shells de Claude Code héritent d'un bloc `env` utilisateur écrit pour Racoon (`UV_PROJECT_ENVIRONMENT`, `UV_FROZEN=1`) : le bloc `env` de `.claude/settings.json` du projet le neutralise ; si `uv run` cible `~/.venvs/racoon` ou refuse de verrouiller, c'est ce bloc qui manque.
+**Étape 3 (2026-10-10) : base SQLite migrée (`setting`, `client`), cycle de démarrage, sauvegardes, CLI `ffe db …`.** Mettre cette liste à jour à chaque étape.
+**Venv Python — règle dure pour Claude** : `api/.venv` est un lien symbolique vers `~/.venvs/ffe` (ext4 ; ARCHITECTURE §11, maître). Les shells de Claude Code héritent de `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` (réglage utilisateur, **non neutralisé** par le bloc `env` du projet, constaté le 2026-10-10) : tout `uv run` lancé tel quel **resynchronise le venv de Racoon sur le lock de FFE**. Donc : `check.sh` exporte lui-même les bonnes valeurs, et toute commande `uv` hors `check.sh` se lance avec `UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv UV_FROZEN=0 uv …` (préfixe obligatoire). Si le venv de Racoon a été touché : `cd /workspaces/Perso/Racoon && UV_PROJECT_ENVIRONMENT=~/.venvs/racoon UV_FROZEN=1 uv sync` le restaure.
 
 ```
 ./check.sh                         # LA porte avant commit : api (ruff format --check, ruff check, pyright, pytest) + web (npm run check)
@@ -28,7 +28,7 @@ cd web && npm run format | build   # prettier --write . | vite build
 ```
 
 Données hors dépôt : `~/.persist/ffe/` (réel) et `~/.persist/ffe-dev/` (dev) = `ffe.sqlite` (+ `-wal`, `-shm`), `files/`, `backups/`, `logs/`, `ffe.lock`.
-Variables d'environnement : `FFE_DATA_DIR` (refusé si le FS n'est pas ext4) et `FFE_BACKUP_DIR` ; liste et défauts : ARCHITECTURE §1 (maître). Mécanisme de choix réel/dev : à trancher à l'étape 3 (D3.4).
+Variables d'environnement : `FFE_DATA_DIR` (refusé si le FS n'est pas ext4) et `FFE_BACKUP_DIR` ; liste et défauts : ARCHITECTURE §1 (maître). Choix réel/dev (D3.4) : `FFE_ENV=dev` par défaut → `~/.persist/ffe-dev` ; `--prod` sur `ffe serve` et `ffe db …` → `~/.persist/ffe`.
 Le dépôt est sur 9p (`/workspaces`) : jamais une base SQLite dedans ; `uv` avec `system-certs = true` (nouveau nom de `native-tls`) ; `vitest run` et `pytest` sans watch.
 
 ## Avant de committer
@@ -53,7 +53,7 @@ Ce qui est prouvé par couche, fichiers et étapes : ARCHITECTURE §7 (maître).
 ```
 CLAUDE.md · README.md · check.sh · .claude/settings.json · .gitignore · .gitattributes · .editorconfig   # étape 0
 docs/        ARCHITECTURE · DATA_MODEL · API · ROADMAP · GLOSSARY · JOURNAL · RUNBOOK (étape 9) · decisions/ADR-NNNN-*.md
-api/         étape 1, projet uv : src/ffe/ (config, app, main, cli, api/v1/{router,health}) · tests/ · openapi.json ; étape 3 : db/, models/, alembic/ ; étape 4 : errors, i18n/fr.py, schemas/, services/ ; étape 7a : money, transitions
+api/         étape 1, projet uv : src/ffe/ (config, app, main, cli, api/v1/{router,health}) · tests/ · openapi.json ; étape 3 : deps, db/{engine,fs_check,lock,migrate,startup,backup,json_io}, models/{base,setting,client}, schemas/{base,health}, alembic/, .env.example ; étape 4 : errors, i18n/fr.py, schemas/client, services/ ; étape 7a : money, transitions
 web/         étape 1, paquet npm : src/ (api/{schema.d.ts, client.ts, queries/health.ts}, pages/HealthPage.tsx, main.tsx, styles.css) · scripts/gen-api.ts · tests/ ; étape 5 : routes.tsx, components/{ui,forms,tables}
 extension/   étape F6 seulement ; n'existe pas avant
 ```

@@ -260,7 +260,7 @@ Diagramme réduit aux colonnes structurantes ; les tables §4 font foi. Rendu à
 | Migrations | Une par étape ; brouillon `--autogenerate` relu ligne à ligne, index d'expression ou partiels et STRICT ajoutés à la main et déclarés dans les métadonnées ; `alembic check` en test ; sauvegarde avant `upgrade` | Règles maîtresses : ARCHITECTURE §5 |
 | Validation | Pydantic v2 valide longueurs, formats, règles inter-champs ; les CHECK sont le filet exact de dernier recours | SQLite ignore les longueurs de TEXT |
 
-Point à vérifier à l'étape 3 : la conservation du mot-clé `STRICT` (émis par `Table(..., sqlite_strict=True)`, SQLAlchemy 2.0.x, vérifié le 2026-10-09) lors d'une recréation de table par Alembic batch ; sinon la migration écrit le DDL à la main (`op.execute`).
+Vérifié à l'étape 3 (D3.7) : `sqlite_strict=True` émet bien `STRICT` (SQLAlchemy 2.0.54), mais le mode batch d'Alembic l'ignore lors d'une recréation ; règle et filet de test : ARCHITECTURE §5 (maître).
 
 ---
 

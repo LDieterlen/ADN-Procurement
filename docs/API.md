@@ -80,7 +80,7 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaq
 
 | Ressource | Routes (sous `/api/v1`) | Statut |
 |---|---|---|
-| Système | `GET /health` → `{ok}` (`operationId: getHealth`), enrichi `dbPath, isDevDb, schemaRevision, lastBackupAt, backupDirOk` à l'étape 3 | livrée (étape 1) ; enrichissement prévu (étape 3) |
+| Système | `GET /health` → `{ok, dbPath, isDevDb, schemaRevision, lastBackupAt, backupDirOk}` (`operationId: getHealth` ; `dbPath`/`schemaRevision` à `null` sans base, c'est-à-dire seulement lors de la génération du contrat) | livrée (étape 1, enrichie étape 3) |
 | Clients | `GET/POST /clients` · `GET/PATCH /clients/{id}` · `POST /clients/{id}/archive` · `POST /clients/{id}/unarchive` | prévue (étape 4) |
 | Réglages | `GET/PATCH /settings` (ressource unique, sans id) | prévue (étape 9) |
 | Fournisseurs | `GET/POST /suppliers` (paginé) · `GET/PATCH /suppliers/{id}` · `POST …/archive` · `POST …/unarchive` | prévue (étape 6a) |
