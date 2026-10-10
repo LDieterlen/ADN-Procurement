@@ -3,6 +3,7 @@ on ext4 (so `fs_check` and WAL behave as in production), never the real data und
 Factories go through the services (journal and timestamps guaranteed), never through raw SQL.
 """
 
+import itertools
 import shutil
 import tempfile
 from collections.abc import Iterator
@@ -20,23 +21,28 @@ from ffe.config import PERSIST_ROOT, Settings
 from ffe.db.engine import create_db_engine
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock, Deps
-from ffe.models import Category, Client, File, Manufacturer, Product, Supplier
+from ffe.models import Category, Client, File, Manufacturer, Product, Project, Supplier, Zone
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.manufacturer import ManufacturerCreate
 from ffe.schemas.product import ProductCreate
+from ffe.schemas.project import ProjectCreate
 from ffe.schemas.supplier import SupplierCreate
+from ffe.schemas.zone import ZoneCreate
 from ffe.services.category import create_category
 from ffe.services.client import create_client
 from ffe.services.file import store_upload
 from ffe.services.manufacturer import create_manufacturer
 from ffe.services.product import create_product
+from ffe.services.project import create_project
 from ffe.services.supplier import create_supplier
+from ffe.services.zone import create_zone
 
 TESTS_ROOT = PERSIST_ROOT / ".ffe-tests"
 FIXED_NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
 # The API only answers to its own host names (D4.5): the test client must present one.
 BASE_URL = "http://127.0.0.1"
+_counter = itertools.count(1)
 
 
 @pytest.fixture
@@ -144,3 +150,18 @@ def make_file(
         session, settings.files_dir, iter([data]), name, settings.max_upload_bytes, clock
     )
     return stored
+
+
+def make_project(session: Session, clock: Clock, **overrides: Any) -> Project:
+    """A project for a fresh client unless `client_id` is given."""
+    if "client_id" not in overrides:
+        overrides["client_id"] = make_client(session, clock, name=f"Client {next(_counter)}").id
+    data: dict[str, Any] = {"name": "Hôtel X"}
+    data.update(overrides)
+    return create_project(session, ProjectCreate(**data), clock)
+
+
+def make_zone(session: Session, clock: Clock, project_id: int, **overrides: Any) -> Zone:
+    data: dict[str, Any] = {"code": "CHA", "name": "Chambre type A", "multiplier": 12}
+    data.update(overrides)
+    return create_zone(session, project_id, ZoneCreate(**data), clock)

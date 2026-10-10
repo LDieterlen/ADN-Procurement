@@ -20,7 +20,9 @@ from ffe.schemas.category import CategoryRead
 from ffe.schemas.client import ClientRead
 from ffe.schemas.file import FileRead
 from ffe.schemas.manufacturer import ManufacturerRead
+from ffe.schemas.project import ProjectRead
 from ffe.schemas.supplier import SupplierRead
+from ffe.schemas.zone import ZoneRead
 
 FORMAT = "ffe-export"
 VERSION = 1
@@ -34,6 +36,8 @@ TABLE_ORDER: tuple[str, ...] = (
     "file",
     "product",
     "product_file",
+    "project",
+    "zone",
 )
 # Row validation before insert (D4.11); `setting` gets its schema with its API (step 9);
 # `product` and `product_file` rows are validated by the database (STRICT, CHECK, FK) only.
@@ -43,6 +47,8 @@ ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
     "manufacturer": ManufacturerRead,
     "supplier": SupplierRead,
     "file": FileRead,
+    "project": ProjectRead,
+    "zone": ZoneRead,
 }
 
 

@@ -14,7 +14,7 @@ def test_health_exposes_database_facts(client: TestClient, settings: Settings) -
         "ok": True,
         "dbPath": str(settings.db_path),
         "isDevDb": True,
-        "schemaRevision": "0003",
+        "schemaRevision": "0004",
         "lastBackupAt": None,
         "backupDirOk": True,
     }
