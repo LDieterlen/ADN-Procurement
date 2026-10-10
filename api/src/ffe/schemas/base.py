@@ -9,3 +9,10 @@ class BaseSchema(BaseModel):
     `model_dump()` stays snake_case so services can hand the result to SQLAlchemy models."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
+
+
+class Page[T](BaseSchema):
+    """Paginated catalogue list (API.md « Listes ») : `{items, total}`."""
+
+    items: list[T]
+    total: int

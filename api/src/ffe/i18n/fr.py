@@ -2,7 +2,20 @@
 
 RESOURCE_LABELS: dict[str, str] = {
     "client": "client",
+    "supplier": "fournisseur",
+    "manufacturer": "fabricant",
+    "category": "catégorie",
 }
+
+CATEGORY_CODE_REQUIRED = "Une catégorie de niveau 1 porte un code (2 à 4 lettres majuscules)."
+CATEGORY_CODE_ON_CHILD = "Une sous-catégorie n'a pas de code : elle hérite de celui de son parent."
+CATEGORY_PARENT_NOT_FOUND = "Catégorie parente introuvable."
+CATEGORY_PARENT_IS_CHILD = "Deux niveaux seulement : une sous-catégorie ne peut pas avoir d'enfant."
+CATEGORY_PARENT_ARCHIVED = "La catégorie parente est archivée."
+CATEGORY_DIV_PROTECTED = "La catégorie « Divers » (DIV) ne s'archive pas."
+CATEGORY_HAS_ACTIVE_CHILDREN = "Archiver d'abord les sous-catégories actives."
+CATEGORY_NAME_TAKEN = "Une catégorie porte déjà ce nom sous le même parent."
+CATEGORY_CODE_TAKEN = "Ce code est déjà utilisé."
 
 NOT_FOUND = "{resource} n° {id} introuvable."
 VALIDATION = "Données invalides."

@@ -20,9 +20,15 @@ from ffe.config import PERSIST_ROOT, Settings
 from ffe.db.engine import create_db_engine
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock, Deps
-from ffe.models import Client
+from ffe.models import Category, Client, Manufacturer, Supplier
+from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
+from ffe.schemas.manufacturer import ManufacturerCreate
+from ffe.schemas.supplier import SupplierCreate
+from ffe.services.category import create_category
 from ffe.services.client import create_client
+from ffe.services.manufacturer import create_manufacturer
+from ffe.services.supplier import create_supplier
 
 TESTS_ROOT = PERSIST_ROOT / ".ffe-tests"
 FIXED_NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
@@ -89,3 +95,21 @@ def make_client(session: Session, clock: Clock, **overrides: Any) -> Client:
     data: dict[str, Any] = {"name": "Famille Martin", "city": "Paris"}
     data.update(overrides)
     return create_client(session, ClientCreate(**data), clock)
+
+
+def make_supplier(session: Session, clock: Clock, **overrides: Any) -> Supplier:
+    data: dict[str, Any] = {"name": "Tom Dixon Ltd", "country_code": "GB", "currency": "GBP"}
+    data.update(overrides)
+    return create_supplier(session, SupplierCreate(**data), clock)
+
+
+def make_manufacturer(session: Session, clock: Clock, **overrides: Any) -> Manufacturer:
+    data: dict[str, Any] = {"name": "Flos"}
+    data.update(overrides)
+    return create_manufacturer(session, ManufacturerCreate(**data), clock)
+
+
+def make_category(session: Session, clock: Clock, **overrides: Any) -> Category:
+    data: dict[str, Any] = {"name": "Luminaires", "code": "LUM"}
+    data.update(overrides)
+    return create_category(session, CategoryCreate(**data), clock)
