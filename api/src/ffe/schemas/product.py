@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator, model_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, IsoDate
 
 Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
 TaxMode = Literal["ht", "ttc"]
@@ -17,7 +17,6 @@ Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]
 Currency = Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
 Gtin = Annotated[str | None, Field(pattern=r"^[0-9]{8,14}$")]
-Date = Annotated[str | None, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]
 Cents = Annotated[int | None, Field(ge=0)]
 Bp = Annotated[int | None, Field(ge=0, le=10000)]
 Mm = Annotated[int | None, Field(ge=0)]
@@ -45,7 +44,7 @@ class ProductCreate(BaseSchema):
     list_price_currency: Currency = "EUR"
     list_price_tax_mode: TaxMode = "ht"
     list_price_vat_bp: Bp = None
-    list_price_on: Date = None
+    list_price_on: IsoDate = None
     lead_time_weeks: Weeks = None
     width_mm: Mm = None
     depth_mm: Mm = None
@@ -56,7 +55,7 @@ class ProductCreate(BaseSchema):
     color: Short = None
     source_url: Url = None
     source_kind: SourceKind = "manual"
-    discontinued_on: Date = None
+    discontinued_on: IsoDate = None
     notes: Long = None
 
     @field_validator(*STRIPPED, mode="before")
@@ -85,7 +84,7 @@ class ProductUpdate(BaseSchema):
     list_price_currency: Currency | None = None
     list_price_tax_mode: TaxMode | None = None
     list_price_vat_bp: Bp = None
-    list_price_on: Date = None
+    list_price_on: IsoDate = None
     lead_time_weeks: Weeks = None
     width_mm: Mm = None
     depth_mm: Mm = None
@@ -96,7 +95,7 @@ class ProductUpdate(BaseSchema):
     color: Short = None
     source_url: Url = None
     source_kind: SourceKind | None = None
-    discontinued_on: Date = None
+    discontinued_on: IsoDate = None
     notes: Long = None
 
     @field_validator(

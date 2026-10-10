@@ -7,7 +7,26 @@ RESOURCE_LABELS: dict[str, str] = {
     "category": "catégorie",
     "product": "produit",
     "file": "fichier",
+    "project": "projet",
+    "zone": "zone",
 }
+
+PROJECT_STATUS_LABELS: dict[str, str] = {
+    "prospect": "Prospect",
+    "active": "Actif",
+    "delivered": "Livré",
+    "closed": "Clos",
+    "cancelled": "Annulé",
+}
+PROJECT_READ_ONLY = "Projet n° {id} {status} : le rouvrir (statut) avant de le modifier."
+PROJECT_CODE_TAKEN = "Ce code de projet est déjà utilisé."
+PROJECT_CLIENT_MUST_BE_ACTIVE = "Le client est archivé."
+CLIENT_HAS_OPEN_PROJECTS = (
+    "Le client n° {id} a {count} projet(s) non clos : les clore ou les annuler avant d'archiver."
+)
+ZONE_CODE_TAKEN = "Une zone de ce projet porte déjà ce code."
+ZONE_NOT_EMPTY = "La zone contient des lignes ou un budget : l'archiver plutôt que la supprimer."
+ZONE_REORDER_MISMATCH = "La liste doit contenir exactement les zones actives du projet."
 
 PAYLOAD_TOO_LARGE = "Fichier trop volumineux : {mb} Mo au plus."
 FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seulement."

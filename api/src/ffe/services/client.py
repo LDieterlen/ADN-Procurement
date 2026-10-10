@@ -9,6 +9,7 @@ from ffe.i18n import fr
 from ffe.models import Client
 from ffe.schemas.client import ClientCreate, ClientUpdate
 from ffe.services.base import normalize_key, stamp
+from ffe.services.project import open_project_count
 
 RESOURCE = "client"
 
@@ -78,6 +79,11 @@ def archive_client(session: Session, client_id: int, clock: Clock) -> Client:
         if client.archived_at is not None:
             raise ConflictError(
                 fr.ALREADY_ARCHIVED.format(resource=fr.resource_label(RESOURCE), id=client_id)
+            )
+        open_projects = open_project_count(session, client_id)
+        if open_projects:
+            raise ConflictError(
+                fr.CLIENT_HAS_OPEN_PROJECTS.format(id=client_id, count=open_projects)
             )
         client.archived_at = client.updated_at = stamp(clock)
     return client
