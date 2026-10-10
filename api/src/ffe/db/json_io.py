@@ -9,16 +9,21 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import Engine, Table, delete, insert, select
 
 from ffe.db import DbError
 from ffe.db.migrate import current_revision, revision_chain
 from ffe.models.base import Base
+from ffe.schemas.base import BaseSchema
+from ffe.schemas.client import ClientRead
 
 FORMAT = "ffe-export"
 VERSION = 1
 # Dependency order: parents before children (import), same order on export.
 TABLE_ORDER: tuple[str, ...] = ("setting", "client")
+# Row validation before insert (D4.11); `setting` gets its schema with its API (step 9).
+ROW_SCHEMAS: dict[str, type[BaseSchema]] = {"client": ClientRead}
 
 
 class JsonIoError(DbError):
@@ -93,11 +98,21 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                     f"La table {table.name} n'est pas vide : utiliser --replace (sauvegarde d'abord)."
                 )
             columns = set(table.c.keys())
-            for row in rows:
+            schema = ROW_SCHEMAS.get(table.name)
+            for index, row in enumerate(rows):
                 data = {to_snake(k): v for k, v in row.items()}
                 unknown = set(data) - columns
                 if unknown:
                     raise JsonIoError(f"Colonnes inconnues pour {table.name} : {sorted(unknown)}.")
+                if schema is not None:
+                    try:
+                        schema.model_validate(row)
+                    except ValidationError as error:
+                        first = error.errors()[0]
+                        raise JsonIoError(
+                            f"{table.name}[{index}] : {'.'.join(str(p) for p in first['loc'])} "
+                            f"— {first['msg']}"
+                        ) from None
                 conn.execute(insert(table).values(**data))
             imported[table.name] = len(rows)
     return imported

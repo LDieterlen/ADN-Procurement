@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from conftest import BASE_URL
 from ffe.app import Deps, create_app
 from ffe.config import Settings
 
@@ -13,7 +14,7 @@ def make_client(tmp_path: Path) -> TestClient:
     (dist / "assets").mkdir(parents=True)
     (dist / "index.html").write_text("<html>API OK</html>", encoding="utf-8")
     (dist / "assets" / "app.js").write_text("console.log(1)", encoding="utf-8")
-    return TestClient(create_app(Deps(settings=Settings(web_dist=dist))))
+    return TestClient(create_app(Deps(settings=Settings(web_dist=dist))), base_url=BASE_URL)
 
 
 def test_root_serves_index(tmp_path: Path) -> None:

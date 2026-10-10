@@ -95,10 +95,16 @@ def test_import_refuses_bad_documents(
         import_json(engine, document)
 
 
-def test_import_lets_the_database_enforce_its_constraints(engine: Engine, clock: Clock) -> None:
+def test_import_validates_each_row_with_the_read_schema(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
-    document["tables"]["client"] = [
-        {"id": 1, "name": "", "createdAt": NOW, "updatedAt": NOW},
-    ]
-    with pytest.raises(Exception, match="ck_client_name_not_empty|CHECK"):
+    document["tables"]["client"] = [{"id": 1, "name": "x", "createdAt": NOW}]  # fields missing
+    with pytest.raises(DbError, match=r"client\[0\]"):
         import_json(engine, document)
+
+
+def test_import_lets_the_database_enforce_its_constraints(engine: Engine, clock: Clock) -> None:
+    seed(engine)
+    document = export_json(engine, clock)
+    document["tables"]["client"][0]["name"] = ""  # complete row, passes the schema, fails the CHECK
+    with pytest.raises(Exception, match="ck_client_name_not_empty|CHECK"):
+        import_json(engine, document, replace=True)

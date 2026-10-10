@@ -1,5 +1,6 @@
 """Shared fixtures (ARCHITECTURE §7): each database test gets its own migrated temporary file,
 on ext4 (so `fs_check` and WAL behave as in production), never the real data under ~/.persist/ffe.
+Factories go through the services (journal and timestamps guaranteed), never through raw SQL.
 """
 
 import shutil
@@ -7,19 +8,26 @@ import tempfile
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
 from ffe.app import create_app
 from ffe.config import PERSIST_ROOT, Settings
 from ffe.db.engine import create_db_engine
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock, Deps
+from ffe.models import Client
+from ffe.schemas.client import ClientCreate
+from ffe.services.client import create_client
 
 TESTS_ROOT = PERSIST_ROOT / ".ffe-tests"
 FIXED_NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
+# The API only answers to its own host names (D4.5): the test client must present one.
+BASE_URL = "http://127.0.0.1"
 
 
 @pytest.fixture
@@ -67,4 +75,17 @@ def deps(settings: Settings, engine: Engine, clock: Clock) -> Deps:
 
 @pytest.fixture
 def client(deps: Deps) -> TestClient:
-    return TestClient(create_app(deps))
+    return TestClient(create_app(deps), base_url=BASE_URL)
+
+
+@pytest.fixture
+def session(engine: Engine) -> Iterator[Session]:
+    with Session(engine, expire_on_commit=False) as session:
+        yield session
+
+
+def make_client(session: Session, clock: Clock, **overrides: Any) -> Client:
+    """Factory through the service: a valid client with sensible defaults."""
+    data: dict[str, Any] = {"name": "Famille Martin", "city": "Paris"}
+    data.update(overrides)
+    return create_client(session, ClientCreate(**data), clock)

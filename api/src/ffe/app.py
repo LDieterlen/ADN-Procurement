@@ -4,13 +4,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from ffe.api.handlers import register_error_handlers
 from ffe.api.v1.router import router as v1_router
 from ffe.deps import Deps
 
 API_PREFIX = "/api/v1"
+# DNS-rebinding guard (D4.5): the API only answers to its own names, with or without a port.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 def create_app(deps: Deps | None = None) -> FastAPI:
@@ -24,6 +28,8 @@ def create_app(deps: Deps | None = None) -> FastAPI:
 
     app = FastAPI(title="FFE", version="0.1.0", openapi_url="/openapi.json", lifespan=lifespan)
     app.state.deps = deps
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+    register_error_handlers(app)
     app.include_router(v1_router, prefix=API_PREFIX)
 
     dist = deps.settings.web_dist
