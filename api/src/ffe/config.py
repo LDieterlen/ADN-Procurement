@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     port: int = 8000
     # Served as static files by the API when it exists (production mode, ARCHITECTURE §1).
     web_dist: Path = WEB_DIST
+    # Upload limit (D6b.1): above it, POST /files answers 413.
+    max_upload_bytes: int = 20 * 1024 * 1024
 
     @property
     def is_dev_db(self) -> bool:
@@ -47,6 +49,11 @@ class Settings(BaseSettings):
     @property
     def lock_path(self) -> Path:
         return self.resolved_data_dir / LOCK_FILENAME
+
+    @property
+    def files_dir(self) -> Path:
+        """Attached files, one per sha256 (`<sha256>.<ext>`, DATA_MODEL §4.9)."""
+        return self.resolved_data_dir / "files"
 
 
 def load_settings() -> Settings:

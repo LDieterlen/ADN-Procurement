@@ -20,14 +20,17 @@ from ffe.config import PERSIST_ROOT, Settings
 from ffe.db.engine import create_db_engine
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock, Deps
-from ffe.models import Category, Client, Manufacturer, Supplier
+from ffe.models import Category, Client, File, Manufacturer, Product, Supplier
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.manufacturer import ManufacturerCreate
+from ffe.schemas.product import ProductCreate
 from ffe.schemas.supplier import SupplierCreate
 from ffe.services.category import create_category
 from ffe.services.client import create_client
+from ffe.services.file import store_upload
 from ffe.services.manufacturer import create_manufacturer
+from ffe.services.product import create_product
 from ffe.services.supplier import create_supplier
 
 TESTS_ROOT = PERSIST_ROOT / ".ffe-tests"
@@ -113,3 +116,31 @@ def make_category(session: Session, clock: Clock, **overrides: Any) -> Category:
     data: dict[str, Any] = {"name": "Luminaires", "code": "LUM"}
     data.update(overrides)
     return create_category(session, CategoryCreate(**data), clock)
+
+
+def make_product(session: Session, clock: Clock, **overrides: Any) -> Product:
+    """A product in a fresh category unless `category_id` is given."""
+    if "category_id" not in overrides:
+        overrides["category_id"] = make_category(session, clock, name="Divers", code="DIV").id
+    data: dict[str, Any] = {"name": "Beat Light Fat", "list_price_cents": 125000}
+    data.update(overrides)
+    return create_product(session, ProductCreate(**data), clock)
+
+
+# Tiny valid files for upload tests (signatures only: the API sniffs magic bytes).
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 64
+PDF_BYTES = b"%PDF-1.4\n" + b"%" * 64
+
+
+def make_file(
+    session: Session,
+    settings: Settings,
+    clock: Clock,
+    data: bytes = PNG_BYTES,
+    name: str = "photo.png",
+) -> File:
+    stored, _created = store_upload(
+        session, settings.files_dir, iter([data]), name, settings.max_upload_bytes, clock
+    )
+    return stored

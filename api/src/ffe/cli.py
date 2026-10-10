@@ -11,6 +11,7 @@ from typing import Annotated
 import typer
 import uvicorn
 from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
 from ffe.app import create_app
 from ffe.config import Settings, load_settings
@@ -31,6 +32,7 @@ from ffe.db.migrate import current_revision, has_pending, head_revision, upgrade
 from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
 from ffe.deps import Deps, utcnow
+from ffe.services.file import orphans as file_orphans
 
 OPENAPI_PATH = Path(__file__).resolve().parents[2] / "openapi.json"
 
@@ -168,6 +170,16 @@ def check(prod: ProdFlag = False) -> None:
             typer.echo(
                 f"  {name:<24} {'STRICT' if strict else 'NON STRICT':<11} {counts[name]} ligne(s)"
             )
+        with Session(engine) as session:
+            on_disk_only, rows_only = file_orphans(session, settings.files_dir)
+        typer.echo(
+            f"fichiers : {len(on_disk_only)} sur disque sans ligne, "
+            f"{len(rows_only)} ligne(s) sans fichier (jamais supprimés automatiquement)"
+        )
+        for name in on_disk_only:
+            typer.echo(f"  disque seul : {name}")
+        for name in rows_only:
+            typer.echo(f"  ligne seule : {name}")
 
 
 @db.command("export-json")
