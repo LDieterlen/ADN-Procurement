@@ -141,6 +141,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload File
+         * @description 201 when the bytes are new, 200 when the same sha256 already exists (same body).
+         */
+        post: operations["uploadFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/{file_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get File Content */
+        get: operations["getFileContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -228,6 +265,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Products */
+        get: operations["listProducts"];
+        put?: never;
+        /** Create Product */
+        post: operations["createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Product */
+        get: operations["getProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Product */
+        patch: operations["updateProduct"];
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Product */
+        post: operations["archiveProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach Product File */
+        post: operations["attachProductFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Detach Product File */
+        delete: operations["detachProductFile"];
+        options?: never;
+        head?: never;
+        /** Update Product File */
+        patch: operations["updateProductFile"];
+        trace?: never;
+    };
+    "/api/v1/products/{product_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Product */
+        post: operations["unarchiveProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suppliers": {
         parameters: {
             query?: never;
@@ -302,6 +444,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_uploadFile */
+        Body_uploadFile: {
+            /** File */
+            file: string;
+        };
         /** CategoryCreate */
         CategoryCreate: {
             /** Code */
@@ -447,6 +594,25 @@ export interface components {
             /** Siren */
             siren?: string | null;
         };
+        /** FileRead */
+        FileRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Ext */
+            ext: string;
+            /** Id */
+            id: number;
+            /** Mimetype */
+            mimeType: string;
+            /** Originalname */
+            originalName: string;
+            /** Sha256 */
+            sha256: string;
+            /** Sizebytes */
+            sizeBytes: number;
+            /** Sourceurl */
+            sourceUrl: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -509,12 +675,278 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[ProductRead] */
+        Page_ProductRead_: {
+            /** Items */
+            items: components["schemas"]["ProductRead"][];
+            /** Total */
+            total: number;
+        };
         /** Page[SupplierRead] */
         Page_SupplierRead_: {
             /** Items */
             items: components["schemas"]["SupplierRead"][];
             /** Total */
             total: number;
+        };
+        /** ProductCreate */
+        ProductCreate: {
+            /** Categoryid */
+            categoryId: number;
+            /** Color */
+            color?: string | null;
+            /** Depthmm */
+            depthMm?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Diametermm */
+            diameterMm?: number | null;
+            /** Discontinuedon */
+            discontinuedOn?: string | null;
+            /** Finish */
+            finish?: string | null;
+            /** Gtin */
+            gtin?: string | null;
+            /** Heightmm */
+            heightMm?: number | null;
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Listpricecents */
+            listPriceCents?: number | null;
+            /**
+             * Listpricecurrency
+             * @default EUR
+             */
+            listPriceCurrency: string;
+            /** Listpriceon */
+            listPriceOn?: string | null;
+            /**
+             * Listpricetaxmode
+             * @default ht
+             * @enum {string}
+             */
+            listPriceTaxMode: "ht" | "ttc";
+            /** Listpricevatbp */
+            listPriceVatBp?: number | null;
+            /** Manufacturerid */
+            manufacturerId?: number | null;
+            /** Manufacturerref */
+            manufacturerRef?: string | null;
+            /** Materials */
+            materials?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Sourcekind
+             * @default manual
+             * @enum {string}
+             */
+            sourceKind: "manual" | "url";
+            /** Sourceurl */
+            sourceUrl?: string | null;
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Supplierref */
+            supplierRef?: string | null;
+            /**
+             * Unit
+             * @default piece
+             * @enum {string}
+             */
+            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
+            /** Widthmm */
+            widthMm?: number | null;
+        };
+        /** ProductFileAttach */
+        ProductFileAttach: {
+            /** Caption */
+            caption?: string | null;
+            /** Fileid */
+            fileId: number;
+            /**
+             * Isprimary
+             * @default false
+             */
+            isPrimary: boolean;
+            /**
+             * Kind
+             * @default image
+             * @enum {string}
+             */
+            kind: "image" | "datasheet" | "drawing" | "other";
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
+        };
+        /** ProductFileRead */
+        ProductFileRead: {
+            /** Caption */
+            caption: string | null;
+            /** Ext */
+            ext: string;
+            /** Fileid */
+            fileId: number;
+            /** Isprimary */
+            isPrimary: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "datasheet" | "drawing" | "other";
+            /** Mimetype */
+            mimeType: string;
+            /** Originalname */
+            originalName: string;
+            /** Sha256 */
+            sha256: string;
+            /** Sizebytes */
+            sizeBytes: number;
+            /** Sortorder */
+            sortOrder: number;
+        };
+        /** ProductFileUpdate */
+        ProductFileUpdate: {
+            /** Caption */
+            caption?: string | null;
+            /** Isprimary */
+            isPrimary?: boolean | null;
+            /** Kind */
+            kind?: ("image" | "datasheet" | "drawing" | "other") | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+        };
+        /** ProductRead */
+        ProductRead: {
+            /** Archivedat */
+            archivedAt: string | null;
+            /** Categoryid */
+            categoryId: number;
+            /** Color */
+            color: string | null;
+            /** Createdat */
+            createdAt: string;
+            /** Depthmm */
+            depthMm: number | null;
+            /** Description */
+            description: string | null;
+            /** Diametermm */
+            diameterMm: number | null;
+            /** Discontinuedon */
+            discontinuedOn: string | null;
+            /** Files */
+            files: components["schemas"]["ProductFileRead"][];
+            /** Finish */
+            finish: string | null;
+            /** Gtin */
+            gtin: string | null;
+            /** Heightmm */
+            heightMm: number | null;
+            /** Id */
+            id: number;
+            /** Leadtimeweeks */
+            leadTimeWeeks: number | null;
+            /** Listpricecents */
+            listPriceCents: number | null;
+            /** Listpricecurrency */
+            listPriceCurrency: string;
+            /** Listpriceon */
+            listPriceOn: string | null;
+            /**
+             * Listpricetaxmode
+             * @enum {string}
+             */
+            listPriceTaxMode: "ht" | "ttc";
+            /** Listpricevatbp */
+            listPriceVatBp: number | null;
+            /** Manufacturerid */
+            manufacturerId: number | null;
+            /** Manufacturerref */
+            manufacturerRef: string | null;
+            /** Materials */
+            materials: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Sourcekind
+             * @enum {string}
+             */
+            sourceKind: "manual" | "url";
+            /** Sourceurl */
+            sourceUrl: string | null;
+            /** Supplierid */
+            supplierId: number | null;
+            /** Supplierref */
+            supplierRef: string | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
+            /** Updatedat */
+            updatedAt: string;
+            /** Widthmm */
+            widthMm: number | null;
+        };
+        /** ProductUpdate */
+        ProductUpdate: {
+            /** Categoryid */
+            categoryId?: number | null;
+            /** Color */
+            color?: string | null;
+            /** Depthmm */
+            depthMm?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Diametermm */
+            diameterMm?: number | null;
+            /** Discontinuedon */
+            discontinuedOn?: string | null;
+            /** Finish */
+            finish?: string | null;
+            /** Gtin */
+            gtin?: string | null;
+            /** Heightmm */
+            heightMm?: number | null;
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Listpricecents */
+            listPriceCents?: number | null;
+            /** Listpricecurrency */
+            listPriceCurrency?: string | null;
+            /** Listpriceon */
+            listPriceOn?: string | null;
+            /** Listpricetaxmode */
+            listPriceTaxMode?: ("ht" | "ttc") | null;
+            /** Listpricevatbp */
+            listPriceVatBp?: number | null;
+            /** Manufacturerid */
+            manufacturerId?: number | null;
+            /** Manufacturerref */
+            manufacturerRef?: string | null;
+            /** Materials */
+            materials?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Sourcekind */
+            sourceKind?: ("manual" | "url") | null;
+            /** Sourceurl */
+            sourceUrl?: string | null;
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Supplierref */
+            supplierRef?: string | null;
+            /** Unit */
+            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
+            /** Widthmm */
+            widthMm?: number | null;
         };
         /** SupplierCreate */
         SupplierCreate: {
@@ -1059,6 +1491,77 @@ export interface operations {
             };
         };
     };
+    uploadFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uploadFile"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileRead"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getFileContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -1263,6 +1766,309 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManufacturerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProducts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                includeArchived?: boolean;
+                categoryId?: number | null;
+                manufacturerId?: number | null;
+                supplierId?: number | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ProductRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProduct: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archiveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachProductFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductFileAttach"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detachProductFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProductFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductFileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchiveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductRead"];
                 };
             };
             /** @description Validation Error */

@@ -4,6 +4,7 @@ import { useHealth } from '../api/queries/health'
 
 const LINKS = [
   { to: '/clients', label: 'Clients' },
+  { to: '/products', label: 'Produits' },
   { to: '/suppliers', label: 'Fournisseurs' },
   { to: '/manufacturers', label: 'Fabricants' },
   { to: '/categories', label: 'Catégories' },

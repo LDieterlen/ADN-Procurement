@@ -7,6 +7,8 @@ import { ClientEditPage } from './pages/clients/ClientEditPage'
 import { ClientsPage } from './pages/clients/ClientsPage'
 import { ManufacturerEditPage } from './pages/manufacturers/ManufacturerEditPage'
 import { ManufacturersPage } from './pages/manufacturers/ManufacturersPage'
+import { ProductEditPage } from './pages/products/ProductEditPage'
+import { ProductsPage } from './pages/products/ProductsPage'
 import { SupplierEditPage } from './pages/suppliers/SupplierEditPage'
 import { SuppliersPage } from './pages/suppliers/SuppliersPage'
 
@@ -24,6 +26,9 @@ export function AppRoutes() {
         <Route path="/manufacturers" element={<ManufacturersPage />} />
         <Route path="/manufacturers/new" element={<ManufacturerEditPage />} />
         <Route path="/manufacturers/:id" element={<ManufacturerEditPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/new" element={<ProductEditPage />} />
+        <Route path="/products/:id" element={<ProductEditPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/new" element={<CategoryEditPage />} />
         <Route path="/categories/:id" element={<CategoryEditPage />} />
