@@ -465,6 +465,8 @@ Jointure produit ↔ fichier : photos, fiches techniques, dessins.
 
 Index : `(file_id)`. Après suppression d'une jointure, `unlink` du fichier seulement si `SELECT count(*)` sur les deux tables de jointure vaut 0, puis `DELETE FROM file`.
 
+Étape 6b (D6b.5–D6b.11, testé) : extension et MIME déduits de la signature des octets (JPEG, PNG, WebP, PDF), jamais du nom client ; même sha256 → une seule ligne et un seul fichier ; `is_primary` posé retire l'ancienne principale (`flush` avant l'insertion pour l'index partiel) ; `PATCH …/files/{fileId}` modifie `kind`, `is_primary`, `caption`, `sort_order`.
+
 ### 4.11 `project_item` — étape 7a (pivot)
 
 Une spécification dans un projet : quoi, en quelle finition, à quel prix figé dans quelle devise, à quel stade. Tolère les brouillons. Tout export lit cette table.

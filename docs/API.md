@@ -48,7 +48,7 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaq
 | 400 | Corps illisible (JSON invalide, `Content-Type` manquant) |
 | 404 | Introuvable (un archivé reste lisible par id) |
 | 409 | Conflit métier : doublon, FK `RESTRICT`, transition interdite, parent archivé |
-| 413 | Fichier au-delà de la limite (20 Mo, `POST /files`, étape 6b) |
+| 413 | Fichier au-delà de la limite (`FFE_MAX_UPLOAD_BYTES`, 20 Mo par défaut, `POST /files`) ; code `payload_too_large` |
 | 422 | Validation champ par champ (Pydantic ou règle de service portant sur un champ) |
 | 500 | Erreur interne, loguée avec sa trace, sans détail au client |
 
@@ -86,8 +86,8 @@ Conventions de l'API HTTP servie par `api/` et tableau des routes prévues. Chaq
 | Fournisseurs | `GET /suppliers?q=&includeArchived=&limit=50&offset=0` → `{items, total}` · `POST /suppliers?force=` · `GET/PATCH /suppliers/{id}` · `POST …/archive` · `POST …/unarchive` (`listSuppliers`, `createSupplier`, `getSupplier`, `updateSupplier`, `archiveSupplier`, `unarchiveSupplier`) | livrée (étape 6a) |
 | Fabricants | `GET /manufacturers?q=&includeArchived=&limit=50&offset=0` → `{items, total}` · `POST /manufacturers?force=` · `GET/PATCH /manufacturers/{id}` · `POST …/archive` · `POST …/unarchive` (`listManufacturers` …) | livrée (étape 6a) |
 | Catégories | `GET /categories?includeArchived=` (arbre à 2 niveaux rendu à plat : niveau 1 par `sortOrder`, chacun suivi de ses enfants) · `POST /categories` (`code` requis sans `parentId`, interdit avec) · `GET /categories/{id}` · `PATCH /categories/{id}` (`name`, `sortOrder` seulement) · `POST /categories/{id}/archive` (refusé : `DIV`, parent avec enfants actifs) · `unarchive` (refusé si le parent est archivé) (`listCategories` …) | livrée (étape 6a) |
-| Produits | `GET/POST /products` (paginé) · `GET/PATCH /products/{id}` · `POST …/archive` · `POST …/unarchive` | prévue (étape 6b) |
-| Fichiers | `POST /files` (multipart) · `GET /files/{id}/content` · `POST /products/{id}/files` `{fileId, kind, isPrimary}` · `DELETE /products/{id}/files/{fileId}` | prévue (étape 6b) |
+| Produits | `GET /products?q=&categoryId=&manufacturerId=&supplierId=&includeArchived=&limit=&offset=` → `{items, total}` (chaque produit porte `files[]`, D6b.7) · `POST /products?force=` (doublon = même `manufacturerId` + `manufacturerRef`, D6b.9) · `GET/PATCH /products/{id}` · `POST …/archive` · `POST …/unarchive` (`listProducts` …) | livrée (étape 6b) |
+| Fichiers | `POST /files` (multipart `file` ; 201 nouveau, 200 si le sha256 existe déjà ; 422 `file` si MIME refusé, 413 au-delà de `FFE_MAX_UPLOAD_BYTES`) · `GET /files/{id}/content` (`Cache-Control: immutable`) · `POST /products/{id}/files` `{fileId, kind, isPrimary, caption?, sortOrder?}` (une seule principale, image seulement) · `PATCH /products/{id}/files/{fileId}` · `DELETE /products/{id}/files/{fileId}` (`unlink` si plus aucune jointure) ; réponses = le produit complet (`uploadFile`, `getFileContent`, `attachProductFile`, `updateProductFile`, `detachProductFile`) | livrée (étape 6b) |
 | Projets | `GET/POST /projects` · `GET/PATCH /projects/{id}` · `POST /projects/{id}/status` `{status}` (prospect/active/delivered/closed/cancelled ; pas d'archivage : `closed`/`cancelled` en tiennent lieu, DATA_MODEL §4.3) | prévue (étape 6c) |
 | Zones | `GET/POST /projects/{id}/zones` · `GET/PATCH/DELETE /zones/{id}` (DELETE si vide) · `POST /zones/{id}/archive` · `unarchive` · `POST /projects/{id}/zones/reorder` | prévue (étape 6c) |
 | Lignes | `GET/POST /projects/{id}/project-items` (filtres `zoneId`, `status`, `categoryId`, `supplierId`, `kind`, `q`) · `GET/PATCH/DELETE /project-items/{id}` (DELETE si brouillon sans événement) | prévue (étape 7a) |
