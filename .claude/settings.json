@@ -1,8 +1,4 @@
 {
-  "env": {
-    "UV_PROJECT_ENVIRONMENT": "/workspaces/Perso/FFE/api/.venv",
-    "UV_FROZEN": "0"
-  },
   "permissions": {
     "allow": [
       "Bash(./check.sh)",
@@ -46,10 +42,7 @@
       "Bash(env:*)",
       "Bash(time:*)",
       "Bash(sleep:*)",
-      "Bash(python3:*)",
-      "Read(~/.persist/ffe/**)",
-      "Edit(~/.persist/ffe/**)",
-      "Write(~/.persist/ffe/**)"
+      "Bash(python3:*)"
     ],
     "ask": ["Bash(git push:*)", "Bash(kill:*)", "Bash(pkill:*)"],
     "deny": [
