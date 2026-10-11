@@ -13,6 +13,7 @@ from ffe.models.po_sequence import PoSequence
 from ffe.models.product import Product
 from ffe.models.product_file import ProductFile
 from ffe.models.project import Project
+from ffe.models.project_file import ProjectFile
 from ffe.models.project_item import ProjectItem
 from ffe.models.project_item_event import ProjectItemEvent
 from ffe.models.project_item_file import ProjectItemFile
@@ -41,6 +42,7 @@ __all__ = [
     "Product",
     "ProductFile",
     "Project",
+    "ProjectFile",
     "ProjectItem",
     "ProjectItemEvent",
     "ProjectItemFile",

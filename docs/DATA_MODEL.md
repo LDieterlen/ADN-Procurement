@@ -69,6 +69,8 @@ erDiagram
     delivery ||--o{ delivery_line : "qte recue"
     purchase_order_line ||--o{ delivery_line : "recue par"
     purchase_order ||--o{ supplier_invoice : "factures"
+    project ||--o{ project_file : "exports emis"
+    file ||--o{ project_file : "fichier"
 
     setting {
         INTEGER id PK "CHECK id = 1"
@@ -736,6 +738,20 @@ Factures et paiements en une table (D10c.1). Montants **tels que portés par la 
 
 Budget (§6) : Facturé = Σ `net_unit_eur_cents(amount_ht_cents, po.fx_rate_micro)` ; Payé = idem sur `paid_on IS NOT NULL`.
 
+### 4.27 `project_file` — étape F1 (ADR-0009)
+
+Chaque export émis d'un projet, conservé tel qu'envoyé.
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| project_id | INTEGER | non | — | FK `project` RESTRICT | |
+| file_id | INTEGER | non | — | FK `file` RESTRICT | octets du classeur (sha256) |
+| kind | TEXT | non | — | `IN ('schedule_xlsx','book_pdf')` | `book_pdf` à l'étape F2 |
+| variant | TEXT | non | — | `IN ('internal','client')` | |
+| issued_at | TS | non | — | | |
+
+Pas d'`updated_at`. Exemple : `(3, 41, 'schedule_xlsx', 'client', '2026-10-11T15:02:00Z')`.
+
 ## 5. Statuts et transitions
 
 `STATUS_RANK` : `draft` 0 < `specified` 1 < `quoted` 2 < `approved` 3 < `ordered` 4 < `delivered` 5 < `installed` 6 ; `cancelled` et `replaced` terminaux (rang −1). `on_hold` est un booléen indépendant.
@@ -996,7 +1012,7 @@ GROUP BY pr.id, pr.code, pr.name, c.name, pr.status, pr.due_on
 ORDER BY pr.due_on IS NULL, pr.due_on, pr.code;
 ```
 
-Vingt-six tables (seize + devis 10a + bons de commande 10b + réceptions et factures 10c), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
+Vingt-sept tables (seize + devis 10a + bons de commande 10b + réceptions et factures 10c + exports émis F1), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
 
 ---
 
@@ -1014,7 +1030,7 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 | Snapshot dans la devise de la ligne (D2.9 : EUR seul en v1) | `project_item.approved_unit_net_currency_cents`, `approved_fx_rate_micro` nullables |
 | Recherche d'entreprises (DINUM, INSEE, VIES) | `supplier.activity_code`, `legal_form_code`, `admin_status`, `registry_source`, `registry_synced_at`, `vat_status`, `vat_checked_at` ; table `supplier_registry_snapshot(supplier_id, source, fetched_at, raw_json)` ; aucun dirigeant |
 | Capture produit / import tarifs | `product_source(product_id, url, url_hash UNIQUE, domain, captured_at, method, raw_json)`, `price_observation(product_id, price_cents, currency, tax_mode, observed_on, source)`, `import_batch`, `capture_inbox`, `setting.api_token` |
-| Exports émis | `project_file(project_id, file_id, kind, variant, issued_at)` ; révisions de schedule `schedule_revision(project_id, label, issued_on, snapshot_json)` |
+| Révisions de schedule (`project_file` livrée en F1, §4.27) | `schedule_revision(project_id, label, issued_on, snapshot_json)` |
 | Zones hiérarchiques | `zone.parent_id INTEGER NULL` + CTE récursive ; `zone.required_on_site` par phase |
 | Multi-fournisseurs, variantes, composants | `product_supplier`, `product_variant` + `project_item.variant_id`, `project_item.parent_item_id` |
 | Multi-utilisateur, bureau | `app_user` ; `created_by`, `updated_by`, `project_item_event.changed_by` nullables ; `public_id` UUID si synchronisation |
