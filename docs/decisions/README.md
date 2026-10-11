@@ -40,3 +40,4 @@ Comment revenir en arrière ou faire évoluer, et à quel coût.
 | [ADR-0005](ADR-0005-lignes-placements-prix.md) | Lignes, placements, prix figés et statuts | à confirmer (étape 2) | 2026-10-09 |
 | [ADR-0006](ADR-0006-devis-fournisseurs.md) | Devis fournisseurs : un devis par fournisseur et projet, une ligne retenue par article | à confirmer (étape 10a) | 2026-10-11 |
 | [ADR-0007](ADR-0007-bons-de-commande.md) | Bons de commande : mono-projet, mono-fournisseur, numérotés par année, émission = lignes commandées | à confirmer (étape 10b) | 2026-10-11 |
+| [ADR-0008](ADR-0008-receptions-et-factures.md) | Réceptions et factures fournisseur : par bon de commande, réception partielle, factures et paiements en une table | à confirmer (étape 10c) | 2026-10-11 |

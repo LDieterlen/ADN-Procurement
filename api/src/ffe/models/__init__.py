@@ -5,6 +5,8 @@ from ffe.models.budget_line import BudgetLine
 from ffe.models.category import Category
 from ffe.models.client import Client
 from ffe.models.code_sequence import CodeSequence
+from ffe.models.delivery import Delivery
+from ffe.models.delivery_line import DeliveryLine
 from ffe.models.file import File
 from ffe.models.manufacturer import Manufacturer
 from ffe.models.po_sequence import PoSequence
@@ -23,6 +25,7 @@ from ffe.models.quote_file import QuoteFile
 from ffe.models.quote_line import QuoteLine
 from ffe.models.setting import Setting
 from ffe.models.supplier import Supplier
+from ffe.models.supplier_invoice import SupplierInvoice
 from ffe.models.zone import Zone
 
 __all__ = [
@@ -31,6 +34,8 @@ __all__ = [
     "Category",
     "Client",
     "CodeSequence",
+    "Delivery",
+    "DeliveryLine",
     "File",
     "Manufacturer",
     "Product",
@@ -49,5 +54,6 @@ __all__ = [
     "QuoteLine",
     "Setting",
     "Supplier",
+    "SupplierInvoice",
     "Zone",
 ]
