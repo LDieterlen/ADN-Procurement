@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
 import { DashboardPage } from './pages/DashboardPage'
 import { HealthPage } from './pages/HealthPage'
+import { ProductImportPage } from './pages/imports/ProductImportPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { CategoriesPage } from './pages/categories/CategoriesPage'
 import { CategoryEditPage } from './pages/categories/CategoryEditPage'
@@ -39,6 +40,7 @@ export function AppRoutes() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/new" element={<CategoryEditPage />} />
         <Route path="/categories/:id" element={<CategoryEditPage />} />
+        <Route path="/imports/products" element={<ProductImportPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/health" element={<HealthPage />} />
         <Route path="*" element={<p className="text-neutral-600">Page introuvable.</p>} />

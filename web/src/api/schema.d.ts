@@ -229,6 +229,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/products/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Batches */
+        get: operations["listProductImportBatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/products/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit Import */
+        post: operations["commitProductImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/products/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Mapping */
+        get: operations["getProductImportMapping"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/products/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Import */
+        post: operations["previewProductImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/{invoice_id}": {
         parameters: {
             query?: never;
@@ -1346,6 +1414,29 @@ export interface components {
             /** Quickcheck */
             quickCheck: string;
         };
+        /** Body_commitProductImport */
+        Body_commitProductImport: {
+            /** File */
+            file: string;
+            /** Mapping */
+            mapping?: string | null;
+            /**
+             * Markmissingdiscontinued
+             * @default false
+             */
+            markMissingDiscontinued: boolean;
+            /** Supplierid */
+            supplierId: number;
+        };
+        /** Body_previewProductImport */
+        Body_previewProductImport: {
+            /** File */
+            file: string;
+            /** Mapping */
+            mapping?: string | null;
+            /** Supplierid */
+            supplierId: number;
+        };
         /** Body_uploadFile */
         Body_uploadFile: {
             /** File */
@@ -1744,6 +1835,100 @@ export interface components {
             /** Schemarevision */
             schemaRevision: string | null;
         };
+        /** ImportBatchRead */
+        ImportBatchRead: {
+            /** Fileid */
+            fileId: number;
+            /** Id */
+            id: number;
+            /** Importedat */
+            importedAt: string;
+            /** Originalname */
+            originalName: string;
+            /** Rowscreated */
+            rowsCreated: number;
+            /** Rowsdiscontinued */
+            rowsDiscontinued: number;
+            /** Rowsskipped */
+            rowsSkipped: number;
+            /** Rowstotal */
+            rowsTotal: number;
+            /** Rowsunchanged */
+            rowsUnchanged: number;
+            /** Rowsupdated */
+            rowsUpdated: number;
+            /** Supplierid */
+            supplierId: number;
+        };
+        /** ImportCommitRead */
+        ImportCommitRead: {
+            batch: components["schemas"]["ImportBatchRead"];
+            counts: components["schemas"]["ImportCounts"];
+            /** Createdproductids */
+            createdProductIds: number[];
+            /** Updatedproductids */
+            updatedProductIds: number[];
+        };
+        /** ImportCounts */
+        ImportCounts: {
+            /** Create */
+            create: number;
+            /**
+             * Discontinued
+             * @default 0
+             */
+            discontinued: number;
+            /** Skip */
+            skip: number;
+            /** Total */
+            total: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Update */
+            update: number;
+        };
+        /** ImportMapping */
+        ImportMapping: {
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+            /** Currency */
+            currency?: string | null;
+            /** Defaultcategoryid */
+            defaultCategoryId?: number | null;
+            /**
+             * Taxmode
+             * @enum {string}
+             */
+            taxMode: "ht" | "ttc";
+            /** Vatbp */
+            vatBp?: number | null;
+        };
+        /** ImportPreviewRead */
+        ImportPreviewRead: {
+            /** Columns */
+            columns: string[];
+            counts: components["schemas"]["ImportCounts"];
+            /** Filename */
+            filename: string;
+            mapping: components["schemas"]["ImportMapping"];
+            /**
+             * Mappingsource
+             * @enum {string}
+             */
+            mappingSource: "given" | "saved" | "guessed";
+            /** Missingsupplierrefs */
+            missingSupplierRefs: string[];
+            /** Rows */
+            rows: components["schemas"]["PlanRowRead"][];
+            /** Sample */
+            sample: {
+                [key: string]: string;
+            }[];
+            /** Supplierid */
+            supplierId: number;
+        };
         /** InvoiceCreate */
         InvoiceCreate: {
             /** Amounthtcents */
@@ -2070,6 +2255,40 @@ export interface components {
             /** Zoneid */
             zoneId?: number | null;
         };
+        /** PlanRowRead */
+        PlanRowRead: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "unchanged" | "skip";
+            /** Finish */
+            finish: string | null;
+            /** Gtin */
+            gtin: string | null;
+            /** Leadtimeweeks */
+            leadTimeWeeks: number | null;
+            /** Manufacturername */
+            manufacturerName: string | null;
+            /** Manufacturerref */
+            manufacturerRef: string | null;
+            /** Matchedby */
+            matchedBy: string | null;
+            /** Name */
+            name: string | null;
+            /** Newpricecents */
+            newPriceCents: number | null;
+            /** Oldpricecents */
+            oldPriceCents: number | null;
+            /** Productid */
+            productId: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Rowindex */
+            rowIndex: number;
+            /** Supplierref */
+            supplierRef: string | null;
+        };
         /** PoCreate */
         PoCreate: {
             /** Expecteddeliveryon */
@@ -2310,7 +2529,7 @@ export interface components {
              * @default manual
              * @enum {string}
              */
-            sourceKind: "manual" | "url";
+            sourceKind: "manual" | "url" | "import";
             /** Sourceurl */
             sourceUrl?: string | null;
             /** Supplierid */
@@ -2447,7 +2666,7 @@ export interface components {
              * Sourcekind
              * @enum {string}
              */
-            sourceKind: "manual" | "url";
+            sourceKind: "manual" | "url" | "import";
             /** Sourceurl */
             sourceUrl: string | null;
             /** Supplierid */
@@ -2507,7 +2726,7 @@ export interface components {
             /** Notes */
             notes?: string | null;
             /** Sourcekind */
-            sourceKind?: ("manual" | "url") | null;
+            sourceKind?: ("manual" | "url" | "import") | null;
             /** Sourceurl */
             sourceUrl?: string | null;
             /** Supplierid */
@@ -3890,6 +4109,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthRead"];
+                };
+            };
+        };
+    };
+    listProductImportBatches: {
+        parameters: {
+            query?: {
+                supplierId?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBatchRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commitProductImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_commitProductImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProductImportMapping: {
+        parameters: {
+            query: {
+                supplierId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportMapping"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    previewProductImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_previewProductImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

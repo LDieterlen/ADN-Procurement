@@ -24,6 +24,7 @@ type PoLineRead = components['schemas']['PoLineRead']
 type DeliveryRead = components['schemas']['DeliveryRead']
 type InvoiceRead = components['schemas']['InvoiceRead']
 type ProjectFileRead = components['schemas']['ProjectFileRead']
+type ImportBatchRead = components['schemas']['ImportBatchRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -45,6 +46,7 @@ export type FakeApi = {
   deliveries: DeliveryRead[]
   invoices: InvoiceRead[]
   exports: ProjectFileRead[]
+  importBatches: ImportBatchRead[]
   lastBackupAt: string | null
   backupDirOk: boolean
   events: {
@@ -1142,6 +1144,7 @@ export function installFakeApi(
     deliveries: [],
     invoices: [],
     exports: [],
+    importBatches: [],
     requests: [],
     down: false,
     restore: () => {
@@ -1195,6 +1198,7 @@ export function installFakeApi(
         at: '2026-10-10T08:00:00Z',
       })
     }
+    if (url.pathname.startsWith('/api/v1/imports/products/')) return handleImports(state, url, method, request)
     const route =
       /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines|purchase-orders|purchase-order-lines|deliveries|invoices)(?:\/(.+))?$/.exec(
         url.pathname,
@@ -1771,4 +1775,100 @@ function handleInvoices(state: FakeApi, method: string, rest: string | undefined
     return new Response(null, { status: 204 })
   }
   return undefined
+}
+
+async function handleImports(state: FakeApi, url: URL, method: string, request: Request): Promise<Response> {
+  const sub = url.pathname.slice('/api/v1/imports/products/'.length)
+  if (sub === 'mapping' && method === 'GET') return json(200, null)
+  if (sub === 'batches' && method === 'GET') return json(200, state.importBatches)
+  if ((sub === 'preview' || sub === 'commit') && method === 'POST') {
+    const part = await readMultipartFile(request)
+    if (!part) return validation('file', 'Fichier attendu : xlsx ou CSV.')
+    const columns = ['Réf', 'Désignation', 'Prix HT']
+    const rows = [
+      {
+        rowIndex: 1,
+        action: 'update' as const,
+        reason: null,
+        matchedBy: 'supplierRef',
+        productId: 1,
+        name: 'Beat Light Fat',
+        supplierRef: 'BLS01',
+        manufacturerRef: null,
+        manufacturerName: null,
+        gtin: null,
+        oldPriceCents: 125_000,
+        newPriceCents: 118_000,
+        leadTimeWeeks: null,
+        finish: null,
+      },
+      {
+        rowIndex: 2,
+        action: 'create' as const,
+        reason: null,
+        matchedBy: null,
+        productId: null,
+        name: 'Beat Light Tall',
+        supplierRef: 'BLT01',
+        manufacturerRef: null,
+        manufacturerName: null,
+        gtin: null,
+        oldPriceCents: null,
+        newPriceCents: 145_000,
+        leadTimeWeeks: null,
+        finish: null,
+      },
+      {
+        rowIndex: 3,
+        action: 'skip' as const,
+        reason: 'prix illisible : « n/a »',
+        matchedBy: null,
+        productId: null,
+        name: 'Beat Wide',
+        supplierRef: 'BLX01',
+        manufacturerRef: null,
+        manufacturerName: null,
+        gtin: null,
+        oldPriceCents: null,
+        newPriceCents: null,
+        leadTimeWeeks: null,
+        finish: null,
+      },
+    ]
+    const counts = { total: 3, create: 1, update: 1, unchanged: 0, skip: 1, discontinued: 0 }
+    if (sub === 'preview')
+      return json(200, {
+        supplierId: 1,
+        filename: part.filename,
+        columns,
+        sample: [{ Réf: 'BLS01', Désignation: 'Beat Light Fat', 'Prix HT': '1 180,00' }],
+        mapping: {
+          columns: { supplierRef: 'Réf', name: 'Désignation', listPrice: 'Prix HT' },
+          taxMode: 'ht',
+          vatBp: null,
+          defaultCategoryId: 1,
+          currency: null,
+        },
+        mappingSource: 'guessed',
+        counts,
+        rows,
+        missingSupplierRefs: ['OLD99'],
+      })
+    const batch = {
+      id: state.importBatches.length + 1,
+      supplierId: 1,
+      fileId: 1,
+      originalName: part.filename,
+      importedAt: LATER,
+      rowsTotal: 3,
+      rowsCreated: 1,
+      rowsUpdated: 1,
+      rowsUnchanged: 0,
+      rowsSkipped: 1,
+      rowsDiscontinued: 0,
+    }
+    state.importBatches.unshift(batch)
+    return json(201, { batch, counts, createdProductIds: [2], updatedProductIds: [1] })
+  }
+  return error(404, 'not_found', `Route inconnue : ${method} ${url.pathname}`)
 }
