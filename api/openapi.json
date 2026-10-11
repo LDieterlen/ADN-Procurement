@@ -1051,6 +1051,21 @@
             "title": "Netuniteurcents",
             "type": "integer"
           },
+          "orderBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderby"
+          },
+          "orderOverdue": {
+            "title": "Orderoverdue",
+            "type": "boolean"
+          },
           "projectItemId": {
             "title": "Projectitemid",
             "type": "integer"
@@ -1090,7 +1105,9 @@
           "netUnitCents",
           "netUnitEurCents",
           "totalHtCents",
-          "approvedCents"
+          "approvedCents",
+          "orderBy",
+          "orderOverdue"
         ],
         "title": "LineAmountsRead",
         "type": "object"

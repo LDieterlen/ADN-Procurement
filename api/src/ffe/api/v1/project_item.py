@@ -64,8 +64,9 @@ def create_item(
 
 
 @router.get("/projects/{project_id}/summary", operation_id="getProjectSummary")
-def get_summary(project_id: ProjectId, session: SessionDep) -> ProjectSummaryRead:
-    return ProjectSummaryRead.model_validate(service.summary(session, project_id))
+def get_summary(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectSummaryRead:
+    today = deps.clock().date()
+    return ProjectSummaryRead.model_validate(service.summary(session, project_id, today))
 
 
 @router.get("/project-items/{item_id}", operation_id="getProjectItem")

@@ -5,6 +5,7 @@ quantities, product and placements are journaled once the line has been approved
 """
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -851,7 +852,7 @@ def detach_file(
 # --- summary (money.py only; budgets join at step 8) -----------------------------------------
 
 
-def summary(session: Session, project_id: int) -> dict[str, Any]:
+def summary(session: Session, project_id: int, today: date) -> dict[str, Any]:
     get_project(session, project_id)
     items = list_items(session, project_id)
     zones = {z.id: z for z in session.scalars(select(Zone).where(Zone.project_id == project_id))}
@@ -892,6 +893,15 @@ def summary(session: Session, project_id: int) -> dict[str, Any]:
                         amounts.net_unit_eur_cents, placement.qty_milli, multiplier
                     )
                     zone_totals[placement.zone_id] = zone_totals.get(placement.zone_id, 0) + share
+        order_by = (
+            money.order_by(date.fromisoformat(item.required_on_site), item.lead_time_weeks)
+            if item.required_on_site
+            and item.kind != "fee"
+            and money.STATUS_RANK[item.status] < money.STATUS_RANK["ordered"]
+            and counted
+            else None
+        )
+        order_overdue = order_by is not None and order_by <= today and not item.on_hold
         lines.append(
             {
                 "project_item_id": item.id,
@@ -905,6 +915,8 @@ def summary(session: Session, project_id: int) -> dict[str, Any]:
                 "net_unit_eur_cents": amounts.net_unit_eur_cents,
                 "total_ht_cents": amounts.total_ht_cents,
                 "approved_cents": approved_line,
+                "order_by": order_by.isoformat() if order_by else None,
+                "order_overdue": order_overdue,
             }
         )
     vat = money.vat_totals(vat_lines)

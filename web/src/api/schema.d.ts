@@ -1066,6 +1066,10 @@ export interface components {
             netUnitCents: number;
             /** Netuniteurcents */
             netUnitEurCents: number;
+            /** Orderby */
+            orderBy: string | null;
+            /** Orderoverdue */
+            orderOverdue: boolean;
             /** Projectitemid */
             projectItemId: number;
             /**

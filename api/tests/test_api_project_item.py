@@ -540,3 +540,31 @@ def test_list_filters(
     assert [i["name"] for i in client.get(url, params={"q": "ride"}).json()] == ["Rideau"]
     assert client.get(url, params={"status": "quoted"}).json() == []
     assert client.get("/api/v1/projects/999/project-items").status_code == 404
+
+
+def test_summary_computes_the_latest_order_date_and_the_overdue_flag(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    p = world["project"].id
+    soon = post_item(
+        client,
+        p,
+        {"productId": world["lamp"].id, "fxRateMicro": GBP, "requiredOnSite": "2026-12-01"},
+    ).json()
+    late = post_item(
+        client, p, {"productId": world["lamp"].id, "requiredOnSite": "2027-06-01"}
+    ).json()
+    unknown = post_item(client, p, {"categoryId": world["lum"].id, "name": "Sans date"}).json()
+    lines = {
+        line["projectItemId"]: line
+        for line in client.get(f"/api/v1/projects/{p}/summary").json()["lines"]
+    }
+    assert (
+        lines[soon["id"]]["orderBy"] == "2026-09-22" and lines[soon["id"]]["orderOverdue"] is True
+    )  # 8 weeks + 14 days before, clock = 2026-10-09
+    assert (
+        lines[late["id"]]["orderBy"] == "2027-03-23" and lines[late["id"]]["orderOverdue"] is False
+    )
+    assert lines[unknown["id"]]["orderBy"] is None and lines[unknown["id"]]["orderOverdue"] is False
+    client.patch(f"/api/v1/project-items/{soon['id']}", json={"onHold": True})
+    assert client.get(f"/api/v1/projects/{p}/summary").json()["lines"][0]["orderOverdue"] is False

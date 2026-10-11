@@ -320,6 +320,8 @@ class LineAmountsRead(BaseSchema):
     net_unit_eur_cents: int
     total_ht_cents: int
     approved_cents: int | None
+    order_by: str | None  # latest order date (D7.5), None when unknown
+    order_overdue: bool
 
 
 class ZoneAmountsRead(BaseSchema):
