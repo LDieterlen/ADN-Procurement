@@ -12,6 +12,8 @@ type ProductFileRead = components['schemas']['ProductFileRead']
 type FileRead = components['schemas']['FileRead']
 type ProjectRead = components['schemas']['ProjectRead']
 type ZoneRead = components['schemas']['ZoneRead']
+type ProjectItemRead = components['schemas']['ProjectItemRead']
+type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -25,6 +27,7 @@ export type FakeApi = {
   files: FileRead[]
   projects: ProjectRead[]
   zones: ZoneRead[]
+  items: ProjectItemRead[]
   requests: { method: string; path: string; body: unknown }[]
   down: boolean
   restore: () => void
@@ -327,6 +330,59 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     project.status = (body as { status: ProjectRead['status'] }).status
     return json(200, project)
   }
+  if (sub === 'project-items' && method === 'GET') {
+    return json(
+      200,
+      state.items.filter((i) => i.projectId === project.id),
+    )
+  }
+  if (sub === 'project-items' && method === 'POST') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    const p = body as Record<string, unknown>
+    const product = typeof p.productId === 'number' ? state.products.find((x) => x.id === p.productId) : undefined
+    if (p.productId && !product) return validation('productId', 'Produit introuvable.')
+    if (!product && !p.categoryId) return validation('categoryId', 'Une catégorie est nécessaire sans produit.')
+    if (!product && !p.name) return validation('name', 'Un libellé est nécessaire sans produit.')
+    const currency = (p.currency as string | null) ?? product?.listPriceCurrency ?? 'EUR'
+    if (currency !== 'EUR' && !p.fxRateMicro && !state.items.some((i) => i.currency === currency))
+      return validation('fxRateMicro', "Un taux de change est nécessaire pour une devise autre que l'euro.")
+    const supplier = product?.supplierId ? state.suppliers.find((s) => s.id === product.supplierId) : undefined
+    const id = state.items.length + 1
+    const placements = ((p.placements as { zoneId: number | null; qtyMilli: number }[] | null) ?? [{ zoneId: null, qtyMilli: 1000 }]).map((pl) => ({
+      id: placementSeq++,
+      projectItemId: id,
+      zoneId: pl.zoneId,
+      qtyMilli: pl.qtyMilli,
+      sortOrder: 0,
+      notes: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    }))
+    const created = itemRow(
+      {
+        projectId: project.id,
+        itemCode: `LUM-${String(id).padStart(3, '0')}`,
+        productId: product?.id ?? null,
+        categoryId: (p.categoryId as number | null) ?? product?.categoryId ?? 1,
+        supplierId: (p.supplierId as number | null) ?? product?.supplierId ?? null,
+        name: (p.name as string | null) ?? product?.name ?? 'Ligne',
+        kind: (p.kind as ProjectItemRead['kind']) ?? 'ffe',
+        unit: product?.unit ?? 'piece',
+        finish: product?.finish ?? null,
+        unitCostCents: (p.unitCostCents as number | null) ?? product?.listPriceCents ?? 0,
+        currency,
+        fxRateMicro:
+          (p.fxRateMicro as number | null) ?? (currency === 'EUR' ? 1_000_000 : (state.items.find((i) => i.currency === currency)?.fxRateMicro ?? 1_000_000)),
+        discountBp: (p.discountBp as number | null) ?? supplier?.defaultDiscountBp ?? 0,
+        leadTimeWeeks: product?.leadTimeWeeks ?? null,
+        placements,
+      },
+      id,
+    )
+    state.items.push(created)
+    return json(201, created)
+  }
+  if (sub === 'summary' && method === 'GET') return json(200, summaryOf(state, project.id))
   if (sub === 'zones' && method === 'GET') {
     const includeArchived = url.searchParams.get('includeArchived') === 'true'
     return json(
@@ -380,6 +436,194 @@ function handleZones(state: FakeApi, method: string, rest: string | undefined, b
     return new Response(null, { status: 204 })
   }
   return json(200, zone)
+}
+
+export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRead {
+  return {
+    id,
+    projectId: 1,
+    itemCode: `LUM-${String(id).padStart(3, '0')}`,
+    categoryId: 1,
+    productId: null,
+    supplierId: null,
+    name: 'Ligne',
+    clientDescription: null,
+    kind: 'ffe',
+    unit: 'piece',
+    finish: null,
+    color: null,
+    materials: null,
+    widthMm: null,
+    depthMm: null,
+    heightMm: null,
+    diameterMm: null,
+    unitCostCents: 0,
+    currency: 'EUR',
+    fxRateMicro: 1_000_000,
+    discountBp: 0,
+    vatRateBp: 2000,
+    leadTimeWeeks: null,
+    requiredOnSite: null,
+    quotedOn: null,
+    quoteValidUntil: null,
+    expectedDeliveryOn: null,
+    quoteRef: null,
+    orderRef: null,
+    status: 'draft',
+    onHold: false,
+    replacedById: null,
+    approvedAt: null,
+    approvedUnitNetCents: null,
+    approvedTotalQtyMilli: null,
+    sortOrder: 0,
+    internalNotes: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    placements: [],
+    files: [],
+    ...i,
+  }
+}
+
+// Integer formulas of money.py, replicated so the fake summary matches the real API.
+const divRound = (n: number, d: number) => Math.floor((n + Math.floor(d / 2)) / d)
+let placementSeq = 1000
+
+function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
+  const zones = state.zones.filter((z) => z.projectId === projectId)
+  const mult = (zoneId: number | null) => zones.find((z) => z.id === zoneId)?.multiplier ?? 1
+  const lines = state.items.filter((i) => i.projectId === projectId)
+  const zoneTotals = new Map<number | null, number>()
+  let specified = 0
+  let approved = 0
+  let ose = 0
+  const result = lines.map((i) => {
+    const qty = i.placements.reduce((sum, p) => sum + p.qtyMilli * mult(p.zoneId), 0)
+    const counted = i.status !== 'cancelled' && i.status !== 'replaced'
+    const amountCounted = counted && i.kind !== 'existing'
+    const net = i.kind === 'existing' ? 0 : divRound(i.unitCostCents * (10000 - i.discountBp), 10000)
+    const eur = i.kind === 'existing' ? 0 : divRound(net * i.fxRateMicro, 1_000_000)
+    const total = i.kind === 'existing' ? 0 : divRound(eur * qty, 1000)
+    const approvedCents =
+      i.approvedUnitNetCents !== null && i.approvedTotalQtyMilli !== null ? divRound(i.approvedUnitNetCents * i.approvedTotalQtyMilli, 1000) : null
+    if (amountCounted) {
+      if (i.kind === 'ose') ose += total
+      else {
+        specified += total
+        if (approvedCents !== null && ['approved', 'ordered', 'delivered', 'installed'].includes(i.status)) approved += approvedCents
+        for (const p of i.placements) zoneTotals.set(p.zoneId, (zoneTotals.get(p.zoneId) ?? 0) + divRound(eur * p.qtyMilli * mult(p.zoneId), 1000))
+      }
+    }
+    return {
+      projectItemId: i.id,
+      itemCode: i.itemCode,
+      status: i.status,
+      kind: i.kind,
+      counted,
+      amountCounted,
+      totalQtyMilli: qty,
+      netUnitCents: net,
+      netUnitEurCents: eur,
+      totalHtCents: total,
+      approvedCents,
+    }
+  })
+  const vat = divRound(specified * 2000, 10000)
+  const zoneRows: ProjectSummaryRead['zones'] = zones.map((z) => ({
+    zoneId: z.id,
+    zoneCode: z.code,
+    zoneName: z.name,
+    multiplier: z.multiplier,
+    specifiedCents: zoneTotals.get(z.id) ?? 0,
+  }))
+  if (zoneTotals.get(null)) zoneRows.push({ zoneId: null, zoneCode: null, zoneName: 'Non affecté', multiplier: 1, specifiedCents: zoneTotals.get(null)! })
+  return {
+    projectId,
+    lines: result,
+    zones: zoneRows,
+    specifiedCents: specified,
+    approvedCents: approved,
+    oseCents: ose,
+    vatByRateBp: { 2000: vat },
+    vatCents: vat,
+    ttcCents: specified + vat,
+  }
+}
+
+function handleItems(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const item = state.items.find((i) => i.id === Number(match[1]))
+  if (!item) return error(404, 'not_found', `Ligne n° ${match[1]} introuvable.`)
+  const sub = match[2]
+  const payload = (body ?? {}) as Record<string, unknown>
+  if (!sub && method === 'GET') return json(200, item)
+  if (!sub && method === 'PATCH') {
+    if (typeof payload.fxRateMicro === 'number' && payload.currency === 'EUR' && payload.fxRateMicro !== 1_000_000)
+      return validation('fxRateMicro', 'En euros, le taux de change vaut 1 000 000 (parité).')
+    Object.assign(item, payload, { updatedAt: LATER })
+    return json(200, item)
+  }
+  if (!sub && method === 'DELETE') {
+    if (item.status !== 'draft') return error(409, 'conflict', 'Seul un brouillon sans historique se supprime ; annuler la ligne sinon.')
+    state.items = state.items.filter((i) => i.id !== item.id)
+    return new Response(null, { status: 204 })
+  }
+  if (sub === 'placements' && method === 'POST') {
+    const p = payload as { zoneId: number | null; qtyMilli: number }
+    if (item.placements.some((x) => x.zoneId === p.zoneId)) return validation('zoneId', 'La ligne est déjà placée dans cette zone.')
+    if (item.unit === 'piece' && p.qtyMilli % 1000) return validation('qtyMilli', 'Quantité entière attendue pour cette unité (multiple de 1 000 millièmes).')
+    item.placements.push({
+      id: placementSeq++,
+      projectItemId: item.id,
+      zoneId: p.zoneId,
+      qtyMilli: p.qtyMilli,
+      sortOrder: 0,
+      notes: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
+    return json(201, item)
+  }
+  if (sub === 'status' && method === 'POST') {
+    const s = payload as { status: ProjectItemRead['status']; note?: string | null }
+    if (s.status === 'cancelled' && !s.note) return validation('note', 'Une note est obligatoire pour cette transition.')
+    if (['ordered', 'delivered', 'installed'].includes(item.status) && s.status === 'draft')
+      return error(409, 'conflict', 'Commandée ou au-delà : aucun retour en arrière, seulement « annulé » avec une note.')
+    if (s.status === 'ordered' && !item.orderRef) return validation('orderRef', 'Une référence de commande est nécessaire pour passer en « commandé ».')
+    item.status = s.status
+    if (s.status === 'approved') {
+      const zones = state.zones
+      const qty = item.placements.reduce((sum, p) => sum + p.qtyMilli * (zones.find((z) => z.id === p.zoneId)?.multiplier ?? 1), 0)
+      item.approvedAt = NOW
+      item.approvedUnitNetCents = divRound(divRound(item.unitCostCents * (10000 - item.discountBp), 10000) * item.fxRateMicro, 1_000_000)
+      item.approvedTotalQtyMilli = qty
+    }
+    return json(200, item)
+  }
+  if (sub === 'events' && method === 'GET')
+    return json(200, [
+      { id: 1, projectItemId: item.id, kind: 'created', fromStatus: null, toStatus: 'draft', oldValue: null, newValue: null, changedAt: NOW, note: null },
+    ])
+  if (sub === 'refresh' && method === 'POST') return json(200, item)
+  return undefined
+}
+
+function handlePlacements(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const id = Number(rest)
+  const item = state.items.find((i) => i.placements.some((p) => p.id === id))
+  const placement = item?.placements.find((p) => p.id === id)
+  if (!item || !placement) return error(404, 'not_found', 'Placement introuvable.')
+  if (method === 'PATCH') {
+    Object.assign(placement, body)
+    return json(200, item)
+  }
+  if (method === 'DELETE') {
+    if (item.placements.length <= 1) return error(409, 'conflict', 'Une ligne garde au moins un placement : modifier celui-ci plutôt que le supprimer.')
+    item.placements = item.placements.filter((p) => p.id !== id)
+    return json(200, item)
+  }
+  return undefined
 }
 
 export function categoryRow(c: Partial<CategoryRead>, id: number): CategoryRead {
@@ -505,6 +749,7 @@ export function installFakeApi(
     products?: Partial<ProductRead>[]
     projects?: Partial<ProjectRead>[]
     zones?: Partial<ZoneRead>[]
+    items?: Partial<ProjectItemRead>[]
   } = {},
 ): FakeApi {
   const originalFetch = globalThis.fetch
@@ -517,6 +762,7 @@ export function installFakeApi(
     files: [],
     projects: (seed.projects ?? []).map((p, i) => projectRow(p, i + 1)),
     zones: (seed.zones ?? []).map((z, i) => zoneRow(z, i + 1)),
+    items: (seed.items ?? []).map((it, i) => itemRow(it, i + 1)),
     requests: [],
     down: false,
     restore: () => {
@@ -535,7 +781,9 @@ export function installFakeApi(
     if (url.pathname === '/api/v1/health') {
       return json(200, { ok: true, dbPath: '/tmp/ffe.sqlite', isDevDb: true, schemaRevision: '0002', lastBackupAt: null, backupDirOk: true })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones)(?:\/(.+))?$/.exec(url.pathname)
+    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements)(?:\/(.+))?$/.exec(
+      url.pathname,
+    )
     if (route) {
       const [, collection, rest] = route
       let response: Response | undefined
@@ -547,6 +795,8 @@ export function installFakeApi(
       if (collection === 'files') response = await handleFiles(state, request, method, rest)
       if (collection === 'projects') response = handleProjects(state, url, method, rest, body)
       if (collection === 'zones') response = handleZones(state, method, rest, body)
+      if (collection === 'project-items') response = handleItems(state, method, rest, body)
+      if (collection === 'placements') response = handlePlacements(state, method, rest, body)
       if (response) return response
     }
     return error(404, 'not_found', `Route inconnue : ${method} ${url.pathname}`)

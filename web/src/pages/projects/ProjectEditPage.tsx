@@ -18,9 +18,10 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
 import { ProjectForm, toPayload, type ProjectFormValues } from './ProjectForm'
 import { StatusBadge } from './ProjectsPage'
+import { ItemsTab } from './ItemsTab'
 import { ZonesTab } from './ZonesTab'
 
-type Tab = 'infos' | 'zones'
+type Tab = 'infos' | 'zones' | 'items'
 
 export function ProjectEditPage() {
   const params = useParams<{ id: string }>()
@@ -128,7 +129,7 @@ export function ProjectEditPage() {
       {errors.banner && !project && null}
       {project && (
         <nav className="flex gap-1 border-b border-neutral-200" aria-label="Onglets du projet">
-          {(['infos', 'zones'] as Tab[]).map((t) => (
+          {(['infos', 'zones', 'items'] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -136,7 +137,7 @@ export function ProjectEditPage() {
               className={`px-3 py-1.5 text-sm ${tab === t ? 'border-b-2 border-neutral-900 font-medium' : 'text-neutral-600'}`}
               aria-current={tab === t ? 'page' : undefined}
             >
-              {t === 'infos' ? 'Infos' : 'Zones'}
+              {t === 'infos' ? 'Infos' : t === 'zones' ? 'Zones' : 'Lignes'}
             </button>
           ))}
         </nav>
@@ -159,6 +160,7 @@ export function ProjectEditPage() {
         />
       )}
       {project && tab === 'zones' && <ZonesTab projectId={project.id} readOnly={readOnly} />}
+      {project && tab === 'items' && <ItemsTab projectId={project.id} readOnly={readOnly} />}
       <ConfirmDialog open={errors.dialog !== null} title={errors.dialog?.title ?? ''} actions={errors.dialog?.actions ?? []}>
         {errors.dialog?.message}
       </ConfirmDialog>
