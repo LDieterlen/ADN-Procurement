@@ -1,6 +1,6 @@
 """`project`: the container of all work; no archiving, `closed`/`cancelled` play that role (DATA_MODEL §4.3)."""
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
@@ -19,6 +19,7 @@ class Project(TimestampedMixin, Base):
         CheckConstraint("length(name) > 0", name="name_not_empty"),
         CheckConstraint(f"status IN ({PROJECT_STATUSES_SQL})", name="status_enum"),
         CheckConstraint("default_vat_bp BETWEEN 0 AND 10000", name="default_vat_bp_range"),
+        CheckConstraint("contingency_bp BETWEEN 0 AND 10000", name="contingency_bp_range"),
         CheckConstraint(f"start_on IS NULL OR start_on {DATE_GLOB}", name="start_on_date"),
         CheckConstraint(f"due_on IS NULL OR due_on {DATE_GLOB}", name="due_on_date"),
         CheckConstraint(
@@ -40,6 +41,8 @@ class Project(TimestampedMixin, Base):
     delivery_address: Mapped[str | None] = mapped_column(Text)
     delivery_contact: Mapped[str | None] = mapped_column(Text)
     default_vat_bp: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Step 8 (migration 0006): contingency applied to the global budget (D2.6, D8.2).
+    contingency_bp: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     start_on: Mapped[str | None] = mapped_column(Text)
     due_on: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)

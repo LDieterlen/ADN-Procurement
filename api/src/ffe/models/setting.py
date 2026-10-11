@@ -27,3 +27,7 @@ class Setting(TimestampedMixin, Base):
     )
     # Step 6c (migration 0004): prefix of generated project codes, e.g. 'P' → 'P2026-001'.
     project_code_prefix: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    # Step 8 (migration 0006): contingency copied onto new projects.
+    default_contingency_bp: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("1000")
+    )

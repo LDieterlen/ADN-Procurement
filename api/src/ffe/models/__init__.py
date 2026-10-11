@@ -1,6 +1,7 @@
 """SQLAlchemy models, one module per table. Import every model here so `Base.metadata` is complete."""
 
 from ffe.models.base import Base
+from ffe.models.budget_line import BudgetLine
 from ffe.models.category import Category
 from ffe.models.client import Client
 from ffe.models.code_sequence import CodeSequence
@@ -19,6 +20,7 @@ from ffe.models.zone import Zone
 
 __all__ = [
     "Base",
+    "BudgetLine",
     "Category",
     "Client",
     "CodeSequence",
