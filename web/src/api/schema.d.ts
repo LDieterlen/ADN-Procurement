@@ -493,6 +493,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/project-items/{item_id}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Item Quotes */
+        get: operations["listProjectItemQuotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/project-items/{item_id}/refresh": {
         parameters: {
             query?: never;
@@ -633,6 +650,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Quotes */
+        get: operations["listQuotes"];
+        put?: never;
+        /** Create Quote */
+        post: operations["createQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/status": {
         parameters: {
             query?: never;
@@ -696,6 +731,128 @@ export interface paths {
         put?: never;
         /** Reorder Zones */
         post: operations["reorderZones"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quote-lines/{line_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Line */
+        delete: operations["deleteQuoteLine"];
+        options?: never;
+        head?: never;
+        /** Update Line */
+        patch: operations["updateQuoteLine"];
+        trace?: never;
+    };
+    "/api/v1/quote-lines/{line_id}/retain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retain Line */
+        post: operations["retainQuoteLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Quote */
+        get: operations["getQuote"];
+        put?: never;
+        post?: never;
+        /** Delete Quote */
+        delete: operations["deleteQuote"];
+        options?: never;
+        head?: never;
+        /** Update Quote */
+        patch: operations["updateQuote"];
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline Quote */
+        post: operations["declineQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach File */
+        post: operations["attachQuoteFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Detach File */
+        delete: operations["detachQuoteFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quotes/{quote_id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Line */
+        post: operations["addQuoteLine"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1288,6 +1445,46 @@ export interface components {
             kind?: ("image" | "quote" | "approval" | "drawing" | "other") | null;
             /** Sortorder */
             sortOrder?: number | null;
+        };
+        /**
+         * ItemQuoteRead
+         * @description One row of the comparison of `GET /project-items/{id}/quotes`.
+         */
+        ItemQuoteRead: {
+            /** Currency */
+            currency: string;
+            /** Declined */
+            declined: boolean;
+            /** Description */
+            description: string | null;
+            /** Discountbp */
+            discountBp: number;
+            /** Fxratemicro */
+            fxRateMicro: number;
+            /** Leadtimeweeks */
+            leadTimeWeeks: number | null;
+            /** Netunitcents */
+            netUnitCents: number;
+            /** Netuniteurcents */
+            netUnitEurCents: number;
+            /** Quoteid */
+            quoteId: number;
+            /** Quotelineid */
+            quoteLineId: number;
+            /** Quotedon */
+            quotedOn: string | null;
+            /** Reference */
+            reference: string;
+            /** Retained */
+            retained: boolean;
+            /** Supplierid */
+            supplierId: number;
+            /** Suppliername */
+            supplierName: string;
+            /** Unitcostcents */
+            unitCostCents: number;
+            /** Validuntil */
+            validUntil: string | null;
         };
         /** LineAmountsRead */
         LineAmountsRead: {
@@ -2034,6 +2231,164 @@ export interface components {
             siteAddress?: string | null;
             /** Starton */
             startOn?: string | null;
+        };
+        /** QuoteCreate */
+        QuoteCreate: {
+            /** Currency */
+            currency?: string | null;
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /**
+             * Lines
+             * @default []
+             */
+            lines: components["schemas"]["QuoteLineCreate"][];
+            /** Notes */
+            notes?: string | null;
+            /** Quotedon */
+            quotedOn?: string | null;
+            /** Reference */
+            reference: string;
+            /** Supplierid */
+            supplierId: number;
+            /** Validuntil */
+            validUntil?: string | null;
+        };
+        /** QuoteFileAttach */
+        QuoteFileAttach: {
+            /** Caption */
+            caption?: string | null;
+            /** Fileid */
+            fileId: number;
+        };
+        /** QuoteFileRead */
+        QuoteFileRead: {
+            /** Caption */
+            caption: string | null;
+            /** Ext */
+            ext: string;
+            /** Fileid */
+            fileId: number;
+            /** Mimetype */
+            mimeType: string;
+            /** Originalname */
+            originalName: string;
+            /** Sha256 */
+            sha256: string;
+            /** Sizebytes */
+            sizeBytes: number;
+        };
+        /** QuoteLineCreate */
+        QuoteLineCreate: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Discountbp
+             * @default 0
+             */
+            discountBp: number;
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Projectitemid */
+            projectItemId: number;
+            /** Unitcostcents */
+            unitCostCents: number;
+        };
+        /** QuoteLineRead */
+        QuoteLineRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Description */
+            description: string | null;
+            /** Discountbp */
+            discountBp: number;
+            /** Id */
+            id: number;
+            /** Itemcode */
+            itemCode: string;
+            /** Itemname */
+            itemName: string;
+            /** Leadtimeweeks */
+            leadTimeWeeks: number | null;
+            /** Netunitcents */
+            netUnitCents: number;
+            /** Netuniteurcents */
+            netUnitEurCents: number;
+            /** Notes */
+            notes: string | null;
+            /** Projectitemid */
+            projectItemId: number;
+            /** Quoteid */
+            quoteId: number;
+            /** Retainedat */
+            retainedAt: string | null;
+            /** Unitcostcents */
+            unitCostCents: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** QuoteLineUpdate */
+        QuoteLineUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Discountbp */
+            discountBp?: number | null;
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Unitcostcents */
+            unitCostCents?: number | null;
+        };
+        /** QuoteRead */
+        QuoteRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Currency */
+            currency: string;
+            /** Declinedat */
+            declinedAt: string | null;
+            /** Files */
+            files: components["schemas"]["QuoteFileRead"][];
+            /** Fxratemicro */
+            fxRateMicro: number;
+            /** Id */
+            id: number;
+            /** Lines */
+            lines: components["schemas"]["QuoteLineRead"][];
+            /** Notes */
+            notes: string | null;
+            /** Projectid */
+            projectId: number;
+            /** Quotedon */
+            quotedOn: string | null;
+            /** Reference */
+            reference: string;
+            /** Retainedcount */
+            retainedCount: number;
+            /** Supplierid */
+            supplierId: number;
+            /** Suppliername */
+            supplierName: string;
+            /** Updatedat */
+            updatedAt: string;
+            /** Validuntil */
+            validUntil: string | null;
+        };
+        /** QuoteUpdate */
+        QuoteUpdate: {
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Quotedon */
+            quotedOn?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /** Validuntil */
+            validUntil?: string | null;
         };
         /**
          * ReplaceProduct
@@ -3677,6 +4032,37 @@ export interface operations {
             };
         };
     };
+    listProjectItemQuotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemQuoteRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     refreshProjectItemFromCatalogue: {
         parameters: {
             query?: never;
@@ -4079,6 +4465,72 @@ export interface operations {
             };
         };
     };
+    listQuotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     changeProjectStatus: {
         parameters: {
             query?: never;
@@ -4235,6 +4687,331 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ZoneRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteQuoteLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateQuoteLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteLineUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retainQuoteLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    declineQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachQuoteFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteFileAttach"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detachQuoteFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addQuoteLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteLineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteRead"];
                 };
             };
             /** @description Validation Error */

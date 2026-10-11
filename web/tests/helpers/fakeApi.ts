@@ -17,6 +17,8 @@ type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 type BudgetLineRead = components['schemas']['BudgetLineRead']
 type BudgetRowRead = components['schemas']['BudgetRowRead']
 type SettingRead = components['schemas']['SettingRead']
+type QuoteRead = components['schemas']['QuoteRead']
+type QuoteLineRead = components['schemas']['QuoteLineRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -33,6 +35,7 @@ export type FakeApi = {
   items: ProjectItemRead[]
   budgets: BudgetLineRead[]
   setting: SettingRead
+  quotes: QuoteRead[]
   lastBackupAt: string | null
   backupDirOk: boolean
   events: {
@@ -421,6 +424,50 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     return json(201, created)
   }
   if (sub === 'summary' && method === 'GET') return json(200, summaryOf(state, project.id))
+  if (sub === 'quotes' && method === 'GET')
+    return json(
+      200,
+      state.quotes.filter((q) => q.projectId === project.id),
+    )
+  if (sub === 'quotes' && method === 'POST') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    const q = body as {
+      supplierId: number
+      reference: string
+      quotedOn: string | null
+      validUntil: string | null
+      currency: string | null
+      fxRateMicro: number | null
+    }
+    const supplier = state.suppliers.find((s) => s.id === q.supplierId)
+    if (!supplier) return validation('supplierId', 'Fournisseur introuvable.')
+    if (state.quotes.some((x) => x.projectId === project.id && x.supplierId === q.supplierId && x.reference === q.reference.trim()))
+      return validation('reference', 'Ce fournisseur a déjà un devis portant cette référence dans le projet.')
+    const currency = q.currency ?? supplier.currency
+    const known = state.items.find((i) => i.projectId === project.id && i.currency === currency)?.fxRateMicro
+    const fx = currency === 'EUR' ? 1_000_000 : (q.fxRateMicro ?? known)
+    if (fx === undefined) return validation('fxRateMicro', 'Un taux de change est nécessaire pour une devise autre que l’euro.')
+    const quote: QuoteRead = {
+      id: state.quotes.length + 1,
+      projectId: project.id,
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      reference: q.reference.trim(),
+      quotedOn: q.quotedOn,
+      validUntil: q.validUntil,
+      currency,
+      fxRateMicro: fx,
+      declinedAt: null,
+      notes: null,
+      retainedCount: 0,
+      lines: [],
+      files: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    state.quotes.push(quote)
+    return json(201, quote)
+  }
   if (sub === 'budget-lines' && method === 'GET')
     return json(
       200,
@@ -773,6 +820,33 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
     }
     return json(200, item)
   }
+  if (sub === 'quotes' && method === 'GET')
+    return json(
+      200,
+      state.quotes.flatMap((q) =>
+        q.lines
+          .filter((l) => l.projectItemId === item.id)
+          .map((l) => ({
+            quoteId: q.id,
+            quoteLineId: l.id,
+            supplierId: q.supplierId,
+            supplierName: q.supplierName,
+            reference: q.reference,
+            quotedOn: q.quotedOn,
+            validUntil: q.validUntil,
+            currency: q.currency,
+            fxRateMicro: q.fxRateMicro,
+            unitCostCents: l.unitCostCents,
+            discountBp: l.discountBp,
+            leadTimeWeeks: l.leadTimeWeeks,
+            description: l.description,
+            netUnitCents: l.netUnitCents,
+            netUnitEurCents: l.netUnitEurCents,
+            retained: l.retainedAt !== null,
+            declined: q.declinedAt !== null,
+          })),
+      ),
+    )
   if (sub === 'events' && method === 'GET')
     return json(200, [
       { id: 0, projectItemId: item.id, kind: 'created', fromStatus: null, toStatus: 'draft', oldValue: null, newValue: null, changedAt: NOW, note: null },
@@ -993,6 +1067,7 @@ export function installFakeApi(
     },
     lastBackupAt: null,
     backupDirOk: true,
+    quotes: [],
     requests: [],
     down: false,
     restore: () => {
@@ -1046,9 +1121,10 @@ export function installFakeApi(
         at: '2026-10-10T08:00:00Z',
       })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard)(?:\/(.+))?$/.exec(
-      url.pathname,
-    )
+    const route =
+      /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines)(?:\/(.+))?$/.exec(
+        url.pathname,
+      )
     if (route) {
       const [, collection, rest] = route
       let response: Response | undefined
@@ -1062,6 +1138,8 @@ export function installFakeApi(
       if (collection === 'zones') response = handleZones(state, method, rest, body)
       if (collection === 'project-items') response = handleItems(state, method, rest, body)
       if (collection === 'placements') response = handlePlacements(state, method, rest, body)
+      if (collection === 'quotes') response = handleQuotes(state, method, rest, body)
+      if (collection === 'quote-lines') response = handleQuoteLines(state, method, rest, body)
       if (collection === 'dashboard' && method === 'GET') {
         response = json(
           200,
@@ -1095,4 +1173,159 @@ export function installFakeApi(
   }
 
   return state
+}
+
+let quoteLineSeq = 1
+
+function quoteLineRow(
+  state: FakeApi,
+  quote: QuoteRead,
+  l: { projectItemId: number; unitCostCents: number; discountBp?: number; leadTimeWeeks?: number | null },
+): QuoteLineRead {
+  const item = state.items.find((i) => i.id === l.projectItemId)!
+  const net = divRound(l.unitCostCents * (10000 - (l.discountBp ?? 0)), 10000)
+  return {
+    id: quoteLineSeq++,
+    quoteId: quote.id,
+    projectItemId: item.id,
+    itemCode: item.itemCode,
+    itemName: item.name,
+    unitCostCents: l.unitCostCents,
+    discountBp: l.discountBp ?? 0,
+    leadTimeWeeks: l.leadTimeWeeks ?? null,
+    description: null,
+    notes: null,
+    retainedAt: null,
+    netUnitCents: net,
+    netUnitEurCents: divRound(net * quote.fxRateMicro, 1_000_000),
+    createdAt: NOW,
+    updatedAt: NOW,
+  }
+}
+
+function handleQuotes(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const quote = state.quotes.find((q) => q.id === Number(match[1]))
+  if (!quote) return error(404, 'not_found', `Devis n° ${match[1]} introuvable.`)
+  const sub = match[2]
+  if (!sub && method === 'GET') return json(200, quote)
+  if (!sub && method === 'PATCH') {
+    Object.assign(quote, body, { updatedAt: LATER })
+    return json(200, quote)
+  }
+  if (!sub && method === 'DELETE') {
+    if (quote.retainedCount > 0) return error(409, 'conflict', 'Ce devis a une ligne retenue : l’écarter plutôt que le supprimer.')
+    state.quotes = state.quotes.filter((q) => q.id !== quote.id)
+    return new Response(null, { status: 204 })
+  }
+  if (sub === 'decline' && method === 'POST') {
+    quote.declinedAt = LATER
+    return json(200, quote)
+  }
+  if (sub === 'lines' && method === 'POST') {
+    const l = body as { projectItemId: number; unitCostCents: number; discountBp?: number; leadTimeWeeks?: number | null }
+    const item = state.items.find((i) => i.id === l.projectItemId)
+    if (!item || item.projectId !== quote.projectId) return validation('projectItemId', 'La ligne n’appartient pas à ce projet.')
+    if (quote.lines.some((x) => x.projectItemId === l.projectItemId)) return validation('projectItemId', 'Ce devis a déjà une ligne pour cet article.')
+    quote.lines.push(quoteLineRow(state, quote, l))
+    quote.updatedAt = LATER
+    return json(201, quote)
+  }
+  if (sub === 'files' && method === 'POST') {
+    const f = body as { fileId: number; caption: string | null }
+    const file = state.files.find((x) => x.id === f.fileId)
+    if (!file) return error(404, 'not_found', `Fichier n° ${f.fileId} introuvable.`)
+    quote.files.push({
+      fileId: file.id,
+      caption: f.caption,
+      sha256: file.sha256,
+      ext: file.ext,
+      mimeType: file.mimeType,
+      originalName: file.originalName,
+      sizeBytes: file.sizeBytes,
+    })
+    return json(201, quote)
+  }
+  const fileMatch = /^files\/(\d+)$/.exec(sub ?? '')
+  if (fileMatch && method === 'DELETE') {
+    quote.files = quote.files.filter((f) => f.fileId !== Number(fileMatch[1]))
+    return json(200, quote)
+  }
+  return undefined
+}
+
+function handleQuoteLines(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const quote = state.quotes.find((q) => q.lines.some((l) => l.id === Number(match[1])))
+  const line = quote?.lines.find((l) => l.id === Number(match[1]))
+  if (!quote || !line) return error(404, 'not_found', `Ligne de devis n° ${match[1]} introuvable.`)
+  const sub = match[2]
+  if (!sub && method === 'PATCH') {
+    Object.assign(line, body, { updatedAt: LATER })
+    line.netUnitCents = divRound(line.unitCostCents * (10000 - line.discountBp), 10000)
+    line.netUnitEurCents = divRound(line.netUnitCents * quote.fxRateMicro, 1_000_000)
+    return json(200, quote)
+  }
+  if (!sub && method === 'DELETE') {
+    if (line.retainedAt) return error(409, 'conflict', 'Cette ligne de devis est retenue : retenir une autre ligne avant de la supprimer.')
+    quote.lines = quote.lines.filter((l) => l.id !== line.id)
+    return json(200, quote)
+  }
+  if (sub === 'retain' && method === 'POST') {
+    if (quote.declinedAt) return error(409, 'conflict', 'Ce devis est écarté.')
+    const item = state.items.find((i) => i.id === line.projectItemId)!
+    if (['ordered', 'delivered', 'installed'].includes(item.status))
+      return error(409, 'conflict', 'Ligne commandée : commandée ou au-delà, un devis ne se retient plus.')
+    for (const q of state.quotes)
+      for (const l of q.lines)
+        if (l.projectItemId === item.id && l.retainedAt) {
+          l.retainedAt = null
+          q.retainedCount -= 1
+        }
+    line.retainedAt = LATER
+    quote.retainedCount += 1
+    const before = JSON.stringify({ cost: item.unitCostCents, currency: item.currency, fx: item.fxRateMicro, discount: item.discountBp, vat: item.vatRateBp })
+    Object.assign(item, {
+      supplierId: quote.supplierId,
+      unitCostCents: line.unitCostCents,
+      discountBp: line.discountBp,
+      currency: quote.currency,
+      fxRateMicro: quote.fxRateMicro,
+      leadTimeWeeks: line.leadTimeWeeks ?? item.leadTimeWeeks,
+      quotedOn: quote.quotedOn,
+      quoteValidUntil: quote.validUntil,
+      quoteRef: quote.reference,
+      updatedAt: LATER,
+    })
+    const after = JSON.stringify({ cost: item.unitCostCents, currency: item.currency, fx: item.fxRateMicro, discount: item.discountBp, vat: item.vatRateBp })
+    state.events.push({
+      id: state.events.length + 1,
+      projectItemId: item.id,
+      kind: 'quote',
+      fromStatus: null,
+      toStatus: null,
+      oldValue: before,
+      newValue: after,
+      changedAt: LATER,
+      note: `Devis ${quote.reference} (${quote.supplierName}) retenu.`,
+    })
+    if (['draft', 'specified'].includes(item.status)) {
+      state.events.push({
+        id: state.events.length + 1,
+        projectItemId: item.id,
+        kind: 'status',
+        fromStatus: item.status,
+        toStatus: 'quoted',
+        oldValue: null,
+        newValue: null,
+        changedAt: LATER,
+        note: null,
+      })
+      item.status = 'quoted'
+    }
+    return json(200, item)
+  }
+  return undefined
 }

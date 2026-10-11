@@ -23,6 +23,7 @@ import {
   type ProjectItemUpdate,
 } from '../../api/queries/projectItem'
 import { useProducts } from '../../api/queries/product'
+import { useItemQuotes, useRetainQuoteLine } from '../../api/queries/quote'
 import { useSuppliers } from '../../api/queries/supplier'
 import { BpField } from '../../components/forms/BpField'
 import { DateField } from '../../components/forms/DateField'
@@ -483,7 +484,7 @@ function describeEvent(e: { kind: string; fromStatus: string | null; toStatus: s
       return e.newValue
     }
   }
-  if (e.kind === 'price' && e.newValue) {
+  if ((e.kind === 'price' || e.kind === 'quote') && e.newValue) {
     try {
       const o = e.oldValue ? (JSON.parse(e.oldValue) as { cost: number; currency: string }) : null
       const n = JSON.parse(e.newValue) as { cost: number; currency: string; discount: number }
@@ -493,6 +494,66 @@ function describeEvent(e: { kind: string; fromStatus: string | null; toStatus: s
     }
   }
   return [e.oldValue, e.newValue].filter(Boolean).join(' → ')
+}
+
+function QuotesSection({ item, readOnly }: { item: ProjectItemRead; readOnly: boolean }) {
+  const quotes = useItemQuotes(item.id)
+  const retain = useRetainQuoteLine()
+  const toast = useToast()
+  const canRetain = !readOnly && !['ordered', 'delivered', 'installed', 'cancelled', 'replaced'].includes(item.status)
+  if (!quotes.data || quotes.data.length === 0) return null
+  return (
+    <section className="space-y-1 border-t border-neutral-200 pt-3" aria-label="Devis de la ligne">
+      <h3 className="text-sm font-medium">Devis</h3>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left uppercase text-neutral-500">
+            <th className="px-1">Fournisseur</th>
+            <th className="px-1">Réf.</th>
+            <th className="px-1 text-right">Net</th>
+            <th className="px-1 text-right">Net €</th>
+            <th className="px-1 text-right">Délai</th>
+            <th className="px-1"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {quotes.data.map((q) => (
+            <tr key={q.quoteLineId} className={q.retained ? 'bg-green-50 font-medium' : q.declined ? 'text-neutral-400 line-through' : ''}>
+              <td className="px-1">{q.supplierName}</td>
+              <td className="px-1 font-mono">{q.reference}</td>
+              <td className="px-1 text-right">
+                {centsToText(q.netUnitCents)} {q.currency}
+              </td>
+              <td className="px-1 text-right">{centsToText(q.netUnitEurCents)}</td>
+              <td className="px-1 text-right">{q.leadTimeWeeks !== null ? `${q.leadTimeWeeks} sem.` : ''}</td>
+              <td className="px-1 text-right">
+                {q.retained ? (
+                  <span className="text-green-800">retenu</span>
+                ) : (
+                  canRetain &&
+                  !q.declined && (
+                    <Button
+                      onClick={() =>
+                        retain
+                          .mutateAsync(q.quoteLineId)
+                          .then(() => toast.show({ kind: 'success', message: `Devis ${q.reference} retenu.` }))
+                          .catch((e: unknown) =>
+                            toast.show({ kind: 'error', message: isApiError(e) ? (e.details[0]?.message ?? e.message) : String(e), persistent: true }),
+                          )
+                      }
+                      aria-label={`Retenir le devis ${q.reference}`}
+                    >
+                      Retenir
+                    </Button>
+                  )
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )
 }
 
 function HistorySection({ itemId }: { itemId: number }) {
@@ -588,6 +649,7 @@ export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: {
             readOnly={readOnly}
           />
           <PlacementsEditor item={item.data} zones={zones} readOnly={readOnly || item.data.status === 'cancelled' || item.data.status === 'replaced'} />
+          <QuotesSection item={item.data} readOnly={readOnly} />
           <StatusSection item={item.data} readOnly={readOnly} />
           {!readOnly && <ReplaceSection item={item.data} onReplaced={setItemId} />}
           <HistorySection itemId={item.data.id} />
