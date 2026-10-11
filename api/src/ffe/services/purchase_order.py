@@ -89,8 +89,13 @@ def _line_amounts(po: PurchaseOrder, line: PurchaseOrderLine) -> money.PoLineAmo
 
 
 def to_read(session: Session, po: PurchaseOrder) -> PoRead:
+    from ffe.services.delivery import list_deliveries, received_by_line  # noqa: PLC0415
+    from ffe.services.supplier_invoice import list_invoices  # noqa: PLC0415
+
     supplier = session.get(Supplier, po.supplier_id)
     assert supplier is not None
+    received = received_by_line(session, po.id)
+    invoices = list_invoices(session, po.id)
     lines: list[PoLineRead] = []
     for_totals: list[tuple[money.PoLineAmounts, int]] = []
     for line in po.lines:
@@ -115,6 +120,7 @@ def to_read(session: Session, po: PurchaseOrder) -> PoRead:
                 total_cents=amounts.total_cents,
                 net_unit_eur_cents=amounts.net_unit_eur_cents,
                 total_eur_cents=amounts.total_eur_cents,
+                received_qty_milli=received.get(line.id, 0),
             )
         )
     totals = money.po_totals(for_totals)
@@ -140,6 +146,9 @@ def to_read(session: Session, po: PurchaseOrder) -> PoRead:
         vat_by_rate_bp=totals.vat_by_rate_bp,
         vat_cents=totals.vat_cents,
         ttc_eur_cents=totals.ttc_eur_cents,
+        invoiced_ht_cents=sum(i.amount_ht_cents for i in invoices),
+        paid_ht_cents=sum(i.amount_ht_cents for i in invoices if i.paid_on is not None),
+        deliveries_count=len(list_deliveries(session, po.id)),
         lines=lines,
         files=[
             PoFileRead(

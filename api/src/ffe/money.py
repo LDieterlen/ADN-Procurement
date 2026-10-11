@@ -186,6 +186,11 @@ def po_totals(lines: Iterable[tuple[PoLineAmounts, int]]) -> PoTotals:
     return PoTotals(total, vat.ht_cents, vat.vat_by_rate_bp, vat.vat_cents, vat.ttc_cents)
 
 
+def invoice_ttc_cents(amount_ht_cents: int, vat_cents: int) -> int:
+    """A supplier invoice is a document: TTC = HT + VAT as printed (DATA_MODEL §4.26)."""
+    return amount_ht_cents + vat_cents
+
+
 def order_by(required_on_site: date | None, lead_time_weeks: int | None) -> date | None:
     """Latest order date: on-site date − lead time − 14-day margin (D7.5); None when unknown."""
     if required_on_site is None or lead_time_weeks is None:

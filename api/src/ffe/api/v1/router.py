@@ -6,6 +6,7 @@ from ffe.api.v1 import (
     budget,
     category,
     client,
+    delivery,
     file,
     health,
     manufacturer,
@@ -16,6 +17,7 @@ from ffe.api.v1 import (
     quote,
     setting,
     supplier,
+    supplier_invoice,
     system,
     zone,
 )
@@ -34,5 +36,7 @@ router.include_router(project_item.router)
 router.include_router(budget.router)
 router.include_router(quote.router)
 router.include_router(purchase_order.router)
+router.include_router(delivery.router)
+router.include_router(supplier_invoice.router)
 router.include_router(setting.router)
 router.include_router(system.router)

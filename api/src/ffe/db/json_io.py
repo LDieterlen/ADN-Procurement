@@ -55,6 +55,9 @@ TABLE_ORDER: tuple[str, ...] = (
     "purchase_order",
     "purchase_order_line",
     "purchase_order_file",
+    "delivery",
+    "delivery_line",
+    "supplier_invoice",
 )
 # Row validation before insert (D4.11); `product` and `product_file` rows are validated by the
 # database (STRICT, CHECK, FK) only.

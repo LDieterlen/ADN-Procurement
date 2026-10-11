@@ -78,6 +78,7 @@ class PoLineRead(BaseSchema):
     total_cents: int
     net_unit_eur_cents: int
     total_eur_cents: int
+    received_qty_milli: int  # étape 10c : Σ des réceptions
 
 
 class PoFileRead(BaseSchema):
@@ -112,6 +113,9 @@ class PoRead(BaseSchema):
     vat_by_rate_bp: dict[int, int]
     vat_cents: int
     ttc_eur_cents: int
+    invoiced_ht_cents: int  # étape 10c, devise du BC, telles que facturées
+    paid_ht_cents: int
+    deliveries_count: int
     lines: list[PoLineRead]
     files: list[PoFileRead]
     created_at: str

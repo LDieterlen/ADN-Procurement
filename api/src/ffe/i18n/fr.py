@@ -13,6 +13,8 @@ RESOURCE_LABELS: dict[str, str] = {
     "quote_line": "ligne de devis",
     "purchase_order": "bon de commande",
     "purchase_order_line": "ligne de bon de commande",
+    "delivery": "réception",
+    "supplier_invoice": "facture fournisseur",
 }
 
 PROJECT_STATUS_LABELS: dict[str, str] = {
@@ -100,6 +102,23 @@ PO_NOTE_REQUIRED = "Une note est obligatoire pour annuler un bon de commande ém
 PO_CANCELLED_NOTE = "BC {number} annulé : {note}"
 PO_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au bon de commande."
 PO_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au bon de commande."
+INVOICE_KIND_LABELS: dict[str, str] = {"deposit": "Acompte", "balance": "Solde", "other": "Autre"}
+DELIVERY_PO_NOT_ISSUED = (
+    "Bon de commande {number} {status} : réception possible après émission seulement."
+)
+DELIVERY_LINE_NOT_IN_PO = "La ligne {id} n'appartient pas à ce bon de commande."
+DELIVERY_LINE_DUPLICATE = "Deux quantités pour la même ligne de bon de commande."
+DELIVERY_QTY_EXCEEDS = (
+    "Ligne {code} : {received} déjà reçu(s) sur {ordered} commandé(s), {asked} de trop."
+)
+DELIVERY_NO_LINES = "Une réception porte au moins une ligne."
+DELIVERY_NOTE = "Réception {reference} du {on}."
+DELIVERY_DELETED_NOTE = "Réception {reference} du {on} supprimée (correction de saisie)."
+DELIVERY_LINE_INSTALLED = "Ligne {code} installée : cette réception ne se supprime plus."
+INVOICE_PO_CANCELLED = "Bon de commande {number} annulé : plus de facture."
+INVOICE_REFERENCE_TAKEN = "Ce bon de commande a déjà une facture portant cette référence."
+INVOICE_PAID_FROZEN = "Facture {reference} payée le {on} : plus aucune modification."
+INVOICE_PAID_ON_REQUIRED = "La date de paiement est nécessaire."
 QUOTE_REFERENCE_TAKEN = "Ce fournisseur a déjà un devis portant cette référence dans le projet."
 QUOTE_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
 QUOTE_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."

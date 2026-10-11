@@ -18,6 +18,7 @@ from ffe.services.base import stamp
 from ffe.services.project import ensure_open, get_project
 from ffe.services.project_item import summary as lines_summary
 from ffe.services.purchase_order import engaged as engaged_by_item
+from ffe.services.supplier_invoice import invoiced_and_paid
 
 WARNING_BP = 9_000  # D8.4: orange at 90 %
 OVER_BP = 10_000  # red at 100 %
@@ -205,6 +206,7 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
             key=lambda cid: (categories[cid].sort_order, cid),
         )
     ]
+    invoiced, paid = invoiced_and_paid(session, project_id)  # ADR-0008, EUR at the order's rate
     global_budget = budgets.get((None, None))
     contingency = (
         money.div_round(global_budget * project.contingency_bp, money.BP_SCALE)
@@ -218,6 +220,8 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
         "specified_cents": base["specified_cents"],
         "approved_cents": base["approved_cents"],
         "engaged_cents": engaged_total,
+        "invoiced_cents": invoiced,
+        "paid_cents": paid,
         "remaining_cents": global_budget - base["specified_cents"]
         if global_budget is not None
         else None,

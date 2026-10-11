@@ -395,6 +395,14 @@
             ],
             "title": "Globalcents"
           },
+          "invoicedCents": {
+            "title": "Invoicedcents",
+            "type": "integer"
+          },
+          "paidCents": {
+            "title": "Paidcents",
+            "type": "integer"
+          },
           "remainingCents": {
             "anyOf": [
               {
@@ -418,6 +426,8 @@
           "specifiedCents",
           "approvedCents",
           "engagedCents",
+          "invoicedCents",
+          "paidCents",
           "remainingCents",
           "alert",
           "byZone",
@@ -1130,6 +1140,188 @@
         "title": "DashboardProjectRead",
         "type": "object"
       },
+      "DeliveryCreate": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "receivedOn": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Receivedon",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "receivedOn",
+          "lines"
+        ],
+        "title": "DeliveryCreate",
+        "type": "object"
+      },
+      "DeliveryLineIn": {
+        "properties": {
+          "purchaseOrderLineId": {
+            "title": "Purchaseorderlineid",
+            "type": "integer"
+          },
+          "qtyMilli": {
+            "minimum": 1.0,
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          }
+        },
+        "required": [
+          "purchaseOrderLineId",
+          "qtyMilli"
+        ],
+        "title": "DeliveryLineIn",
+        "type": "object"
+      },
+      "DeliveryLineRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCode": {
+            "title": "Itemcode",
+            "type": "string"
+          },
+          "purchaseOrderLineId": {
+            "title": "Purchaseorderlineid",
+            "type": "integer"
+          },
+          "qtyMilli": {
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          }
+        },
+        "required": [
+          "id",
+          "purchaseOrderLineId",
+          "itemCode",
+          "qtyMilli",
+          "remarks"
+        ],
+        "title": "DeliveryLineRead",
+        "type": "object"
+      },
+      "DeliveryRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryLineRead"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "purchaseOrderId": {
+            "title": "Purchaseorderid",
+            "type": "integer"
+          },
+          "receivedOn": {
+            "title": "Receivedon",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "purchaseOrderId",
+          "receivedOn",
+          "reference",
+          "notes",
+          "lines",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "DeliveryRead",
+        "type": "object"
+      },
       "EventRead": {
         "properties": {
           "changedAt": {
@@ -1372,6 +1564,334 @@
           "logPath"
         ],
         "title": "HealthRead",
+        "type": "object"
+      },
+      "InvoiceCreate": {
+        "properties": {
+          "amountHtCents": {
+            "minimum": 0.0,
+            "title": "Amounthtcents",
+            "type": "integer"
+          },
+          "dueOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dueon"
+          },
+          "invoicedOn": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Invoicedon",
+            "type": "string"
+          },
+          "kind": {
+            "default": "balance",
+            "enum": [
+              "deposit",
+              "balance",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reference": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "vatCents": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Vatcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reference",
+          "invoicedOn",
+          "amountHtCents"
+        ],
+        "title": "InvoiceCreate",
+        "type": "object"
+      },
+      "InvoicePay": {
+        "properties": {
+          "paidOn": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Paidon",
+            "type": "string"
+          },
+          "paymentRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paymentref"
+          }
+        },
+        "required": [
+          "paidOn"
+        ],
+        "title": "InvoicePay",
+        "type": "object"
+      },
+      "InvoiceRead": {
+        "properties": {
+          "amountHtCents": {
+            "title": "Amounthtcents",
+            "type": "integer"
+          },
+          "amountHtEurCents": {
+            "title": "Amounthteurcents",
+            "type": "integer"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "dueOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dueon"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invoicedOn": {
+            "title": "Invoicedon",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "deposit",
+              "balance",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "paidOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paidon"
+          },
+          "paymentRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paymentref"
+          },
+          "purchaseOrderId": {
+            "title": "Purchaseorderid",
+            "type": "integer"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "ttcCents": {
+            "title": "Ttccents",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "vatCents": {
+            "title": "Vatcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "purchaseOrderId",
+          "kind",
+          "reference",
+          "invoicedOn",
+          "dueOn",
+          "amountHtCents",
+          "vatCents",
+          "ttcCents",
+          "amountHtEurCents",
+          "paidOn",
+          "paymentRef",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "InvoiceRead",
+        "type": "object"
+      },
+      "InvoiceUpdate": {
+        "properties": {
+          "amountHtCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amounthtcents"
+          },
+          "dueOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dueon"
+          },
+          "invoicedOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoicedon"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "deposit",
+                  "balance",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "paidOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paidon"
+          },
+          "paymentRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paymentref"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "vatCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vatcents"
+          }
+        },
+        "title": "InvoiceUpdate",
         "type": "object"
       },
       "ItemFileAttach": {
@@ -2315,6 +2835,10 @@
             "title": "Qtymilli",
             "type": "integer"
           },
+          "receivedQtyMilli": {
+            "title": "Receivedqtymilli",
+            "type": "integer"
+          },
           "sortOrder": {
             "title": "Sortorder",
             "type": "integer"
@@ -2351,7 +2875,8 @@
           "netUnitCents",
           "totalCents",
           "netUnitEurCents",
-          "totalEurCents"
+          "totalEurCents",
+          "receivedQtyMilli"
         ],
         "title": "PoLineRead",
         "type": "object"
@@ -2462,6 +2987,10 @@
             "title": "Currency",
             "type": "string"
           },
+          "deliveriesCount": {
+            "title": "Deliveriescount",
+            "type": "integer"
+          },
           "deliveryAddress": {
             "anyOf": [
               {
@@ -2521,6 +3050,10 @@
             ],
             "title": "Internalnotes"
           },
+          "invoicedHtCents": {
+            "title": "Invoicedhtcents",
+            "type": "integer"
+          },
           "issuedOn": {
             "anyOf": [
               {
@@ -2553,6 +3086,10 @@
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "paidHtCents": {
+            "title": "Paidhtcents",
+            "type": "integer"
           },
           "paymentTerms": {
             "anyOf": [
@@ -2650,6 +3187,9 @@
           "vatByRateBp",
           "vatCents",
           "ttcEurCents",
+          "invoicedHtCents",
+          "paidHtCents",
+          "deliveriesCount",
           "lines",
           "files",
           "createdAt",
@@ -8067,6 +8607,49 @@
         ]
       }
     },
+    "/api/v1/deliveries/{delivery_id}": {
+      "delete": {
+        "operationId": "deleteDelivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Delivery Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Delivery",
+        "tags": [
+          "deliveries"
+        ]
+      }
+    },
     "/api/v1/files": {
       "post": {
         "description": "201 when the bytes are new, 200 when the same sha256 already exists (same body).",
@@ -8173,6 +8756,146 @@
         "summary": "Get Health",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/invoices/{invoice_id}": {
+      "delete": {
+        "operationId": "deleteInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Invoice",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "patch": {
+        "operationId": "updateInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Invoice",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/{invoice_id}/pay": {
+      "post": {
+        "operationId": "payInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoicePay"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pay Invoice",
+        "tags": [
+          "invoices"
         ]
       }
     },
@@ -10961,6 +11684,104 @@
         ]
       }
     },
+    "/api/v1/purchase-orders/{po_id}/deliveries": {
+      "get": {
+        "operationId": "listDeliveries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeliveryRead"
+                  },
+                  "title": "Response Listdeliveries",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Deliveries",
+        "tags": [
+          "deliveries"
+        ]
+      },
+      "post": {
+        "operationId": "createDelivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Delivery",
+        "tags": [
+          "deliveries"
+        ]
+      }
+    },
     "/api/v1/purchase-orders/{po_id}/files": {
       "post": {
         "operationId": "attachPurchaseOrderFile",
@@ -11064,6 +11885,104 @@
         "summary": "Detach File",
         "tags": [
           "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/invoices": {
+      "get": {
+        "operationId": "listInvoices",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InvoiceRead"
+                  },
+                  "title": "Response Listinvoices",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invoices",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "post": {
+        "operationId": "createInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Invoice",
+        "tags": [
+          "invoices"
         ]
       }
     },

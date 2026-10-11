@@ -57,6 +57,8 @@ class BudgetSummaryRead(BaseSchema):
     specified_cents: int
     approved_cents: int
     engaged_cents: int
+    invoiced_cents: int  # étape 10c (ADR-0008), HT EUR au taux du BC
+    paid_cents: int
     remaining_cents: int | None
     alert: BudgetAlertLevel
     by_zone: list[BudgetRowRead]
