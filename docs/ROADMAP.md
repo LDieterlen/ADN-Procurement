@@ -203,7 +203,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : un tarif réel importé, produits créés ou mis à jour, mapping réutilisé au second import.
 - **Décisions préalables** : DF4.1 clé de rapprochement : `gtin` puis `(manufacturer_id, manufacturer_ref)` puis `supplier_ref` (défaut) ; DF4.2 PDF tarifaire hors périmètre (défaut).
 - **Risques** : colonnes hétérogènes ; prix TTC non signalés → `list_price_tax_mode` obligatoire au mapping.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape F4 close` (hashes dans le JOURNAL). DF4.1 clé gtin → (fabricant, réf. fabricant) → réf. fournisseur ; DF4.2 PDF hors périmètre — défauts (ADR-0011). Critère prouvé par `test_api_product_import.py` : un xlsx généré (4 lignes : mise à jour 1 250 → 1 180 GBP, création, deux ignorées avec motif) puis un CSV au second import **sans mapping** (celui enregistré s'applique), observations de prix, produit disparu arrêté. **À vérifier par l'utilisateur** : un tarif réel d'un fournisseur (en-têtes, séparateurs, prix).
 
 ## F5 — Coller une URL
 
