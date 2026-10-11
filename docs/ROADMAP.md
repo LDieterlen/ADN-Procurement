@@ -158,7 +158,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : PO sur 3 lignes, total = somme vérifiée, lignes verrouillées.
 - **Décisions préalables** : D10b.1 numérotation annuelle (défaut) ; D10b.2 PO mono-projet, mono-fournisseur (défaut) ; D10b.3 adresse de livraison = projet (défaut).
 - **Risques** : statuts `in_production`/`shipped` ajoutés sans besoin réel.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 10b close` (hashes dans le JOURNAL). D10b.1 à D10b.3 : défauts (ADR-0007 ; numérotation annuelle via `po_sequence`, pas `code_sequence` qui est par projet). Critère prouvé par `test_api_purchase_order.py` : BC sur 3 lignes → 13 000,00 GBP = 15 210,06 € HT, TVA 3 042,01, lignes `ordered` avec `order_ref`, retour refusé ; `test_money.py` : cas de référence des formules. Statuts `in_production`/`shipped` non ajoutés.
 
 ## Étape 10c — Réceptions et factures
 
@@ -230,6 +230,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, besoin, étape où le reprendre), au lieu d'entrer dans le code. Vidé ou promu en étape lors d'une revue de feuille de route.
 
 - 2026-10-11 — `ffe db restore --with-files` : recopier `FFE_BACKUP_DIR/files/` vers `files/` par la CLI (aujourd'hui manuel, RUNBOOK §5) ; à reprendre avec 10c ou à la première restauration réelle.
+- 2026-10-11 — Bons de commande : « Engagé » sur le tableau de bord multi-projets ; export PDF du document (aujourd'hui : impression navigateur) ; à reprendre avec F1–F2.
 - 2026-10-11 — Devis : édition en place d'une ligne de devis et « dé-retenir » dans l'UI (API prête : `PATCH /quote-lines/{id}`) ; à reprendre après usage (10a).
 - 2026-10-11 — Tableau de bord : préférences de tri et de masquage des projets `prospect` (étape 8, défaut : tous les projets non clos) ; à reprendre après usage.
 
