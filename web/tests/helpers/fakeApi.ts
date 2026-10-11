@@ -14,6 +14,8 @@ type ProjectRead = components['schemas']['ProjectRead']
 type ZoneRead = components['schemas']['ZoneRead']
 type ProjectItemRead = components['schemas']['ProjectItemRead']
 type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
+type BudgetLineRead = components['schemas']['BudgetLineRead']
+type BudgetRowRead = components['schemas']['BudgetRowRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -28,6 +30,7 @@ export type FakeApi = {
   projects: ProjectRead[]
   zones: ZoneRead[]
   items: ProjectItemRead[]
+  budgets: BudgetLineRead[]
   events: {
     id: number
     projectItemId: number
@@ -299,6 +302,7 @@ export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
     deliveryAddress: null,
     deliveryContact: null,
     defaultVatBp: 2000,
+    contingencyBp: 1000,
     startOn: null,
     dueOn: null,
     notes: null,
@@ -327,7 +331,15 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     if (!(payload.name ?? '').trim()) return validation('name', 'Champ obligatoire.')
     if (!payload.clientId) return validation('clientId', 'Champ obligatoire.')
     const id = state.projects.length + 1
-    const created = projectRow({ ...payload, code: payload.code ?? `2026-${String(id).padStart(3, '0')}`, defaultVatBp: payload.defaultVatBp ?? 2000 }, id)
+    const created = projectRow(
+      {
+        ...payload,
+        code: payload.code ?? `2026-${String(id).padStart(3, '0')}`,
+        defaultVatBp: payload.defaultVatBp ?? 2000,
+        contingencyBp: payload.contingencyBp ?? 1000,
+      },
+      id,
+    )
     state.projects.push(created)
     return json(201, created)
   }
@@ -405,6 +417,76 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     return json(201, created)
   }
   if (sub === 'summary' && method === 'GET') return json(200, summaryOf(state, project.id))
+  if (sub === 'budget-lines' && method === 'GET')
+    return json(
+      200,
+      state.budgets.filter((b) => b.projectId === project.id),
+    )
+  if (sub === 'budget-lines' && method === 'PUT') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    const incoming = (body as { lines: { zoneId: number | null; categoryId: number | null; amountCents: number; notes: string | null }[] }).lines
+    const scopes = new Set<string>()
+    for (const l of incoming) {
+      const scope = `${l.zoneId ?? 'n'}:${l.categoryId ?? 'n'}`
+      if (scopes.has(scope)) return error(409, 'conflict', 'Deux budgets pour le même périmètre (projet, zone, catégorie).')
+      scopes.add(scope)
+    }
+    state.budgets = state.budgets.filter((b) => b.projectId !== project.id)
+    incoming.forEach((l, i) =>
+      state.budgets.push({
+        id: 100 + i,
+        projectId: project.id,
+        zoneId: l.zoneId,
+        categoryId: l.categoryId,
+        amountCents: l.amountCents,
+        notes: l.notes,
+        createdAt: NOW,
+        updatedAt: NOW,
+      }),
+    )
+    return json(
+      200,
+      state.budgets.filter((b) => b.projectId === project.id),
+    )
+  }
+  if (sub === 'alerts' && method === 'GET') {
+    const s = summaryOf(state, project.id)
+    const found: {
+      kind: 'budget_90' | 'budget_100' | 'order_overdue'
+      message: string
+      zoneId: number | null
+      categoryId: number | null
+      projectItemId: number | null
+    }[] = []
+    const b = s.budget
+    if (b && b.alert !== 'none')
+      found.push({
+        kind: b.alert === 'over' ? 'budget_100' : 'budget_90',
+        message: `Projet : prescrit à ${b.alert === 'over' ? 100 : 90} % du budget ou plus.`,
+        zoneId: null,
+        categoryId: null,
+        projectItemId: null,
+      })
+    for (const r of b?.byZone ?? [])
+      if (r.alert !== 'none')
+        found.push({
+          kind: r.alert === 'over' ? 'budget_100' : 'budget_90',
+          message: `${r.label} : prescrit à ${r.alert === 'over' ? 100 : 90} % du budget ou plus.`,
+          zoneId: r.zoneId,
+          categoryId: null,
+          projectItemId: null,
+        })
+    for (const l of s.lines)
+      if (l.orderOverdue)
+        found.push({
+          kind: 'order_overdue',
+          message: `${l.itemCode} : à commander avant le ${l.orderBy}, date dépassée.`,
+          zoneId: null,
+          categoryId: null,
+          projectItemId: l.projectItemId,
+        })
+    return json(200, found)
+  }
   if (sub === 'zones' && method === 'GET') {
     const includeArchived = url.searchParams.get('includeArchived') === 'true'
     return json(
@@ -567,6 +649,38 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
     specifiedCents: zoneTotals.get(z.id) ?? 0,
   }))
   if (zoneTotals.get(null)) zoneRows.push({ zoneId: null, zoneCode: null, zoneName: 'Non affecté', multiplier: 1, specifiedCents: zoneTotals.get(null)! })
+  const budgets = state.budgets.filter((b) => b.projectId === projectId)
+  const find = (zoneId: number | null, categoryId: number | null) =>
+    budgets.find((b) => b.zoneId === zoneId && b.categoryId === categoryId)?.amountCents ?? null
+  const alertOf = (budget: number | null, spec: number): BudgetRowRead['alert'] =>
+    budget === null || budget === 0 ? 'none' : spec * 10000 >= budget * 10000 ? 'over' : spec * 10000 >= budget * 9000 ? 'warning' : 'none'
+  const row = (zoneId: number | null, categoryId: number | null, label: string, multiplier: number, spec: number, appr: number): BudgetRowRead => {
+    const b = find(zoneId, categoryId)
+    return {
+      zoneId,
+      categoryId,
+      label,
+      multiplier,
+      budgetCents: b,
+      specifiedCents: spec,
+      approvedCents: appr,
+      remainingCents: b === null ? null : b - spec,
+      alert: alertOf(b, spec),
+    }
+  }
+  const globalCents = find(null, null)
+  const contingencyBp = state.projects.find((p) => p.id === projectId)?.contingencyBp ?? 0
+  const budget: ProjectSummaryRead['budget'] = {
+    globalCents,
+    contingencyBp,
+    contingencyCents: globalCents === null ? 0 : divRound(globalCents * contingencyBp, 10000),
+    specifiedCents: specified,
+    approvedCents: approved,
+    remainingCents: globalCents === null ? null : globalCents - specified,
+    alert: alertOf(globalCents, specified),
+    byZone: zoneRows.map((z) => row(z.zoneId, null, z.zoneName, z.multiplier, z.specifiedCents, 0)),
+    byCategory: [],
+  }
   return {
     projectId,
     lines: result,
@@ -577,6 +691,7 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
     vatByRateBp: { 2000: vat },
     vatCents: vat,
     ttcCents: specified + vat,
+    budget,
   }
 }
 
@@ -830,6 +945,7 @@ export function installFakeApi(
     projects?: Partial<ProjectRead>[]
     zones?: Partial<ZoneRead>[]
     items?: Partial<ProjectItemRead>[]
+    budgets?: Partial<BudgetLineRead>[]
   } = {},
 ): FakeApi {
   const originalFetch = globalThis.fetch
@@ -844,6 +960,17 @@ export function installFakeApi(
     zones: (seed.zones ?? []).map((z, i) => zoneRow(z, i + 1)),
     items: (seed.items ?? []).map((it, i) => itemRow(it, i + 1)),
     events: [],
+    budgets: (seed.budgets ?? []).map((b, i) => ({
+      id: i + 1,
+      projectId: 1,
+      zoneId: null,
+      categoryId: null,
+      amountCents: 0,
+      notes: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+      ...b,
+    })),
     requests: [],
     down: false,
     restore: () => {
@@ -855,14 +982,15 @@ export function installFakeApi(
     const request = input instanceof Request ? input : new Request(input, init)
     const url = new URL(request.url)
     const method = request.method.toUpperCase()
-    const body: unknown = ['POST', 'PATCH'].includes(method) && request.headers.get('content-type')?.includes('json') ? await request.clone().json() : undefined
+    const body: unknown =
+      ['POST', 'PATCH', 'PUT'].includes(method) && request.headers.get('content-type')?.includes('json') ? await request.clone().json() : undefined
     state.requests.push({ method, path: url.pathname + url.search, body })
     if (state.down) throw new TypeError('Failed to fetch')
 
     if (url.pathname === '/api/v1/health') {
       return json(200, { ok: true, dbPath: '/tmp/ffe.sqlite', isDevDb: true, schemaRevision: '0002', lastBackupAt: null, backupDirOk: true })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements)(?:\/(.+))?$/.exec(
+    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard)(?:\/(.+))?$/.exec(
       url.pathname,
     )
     if (route) {
@@ -878,6 +1006,33 @@ export function installFakeApi(
       if (collection === 'zones') response = handleZones(state, method, rest, body)
       if (collection === 'project-items') response = handleItems(state, method, rest, body)
       if (collection === 'placements') response = handlePlacements(state, method, rest, body)
+      if (collection === 'dashboard' && method === 'GET') {
+        response = json(
+          200,
+          state.projects
+            .filter((p) => !CLOSED.includes(p.status))
+            .map((p) => {
+              const s = summaryOf(state, p.id)
+              const items = state.items.filter((i) => i.projectId === p.id)
+              return {
+                projectId: p.id,
+                code: p.code,
+                name: p.name,
+                status: p.status,
+                clientName: state.clients.find((c) => c.id === p.clientId)?.name ?? '',
+                dueOn: p.dueOn,
+                budgetCents: s.budget?.globalCents ?? null,
+                specifiedCents: s.specifiedCents,
+                approvedCents: s.approvedCents,
+                remainingCents: s.budget?.remainingCents ?? null,
+                alert: s.budget?.alert ?? 'none',
+                draftLines: items.filter((i) => i.status === 'draft').length,
+                onHoldLines: items.filter((i) => i.onHold).length,
+                overdueLines: s.lines.filter((l) => l.orderOverdue).length,
+              }
+            }),
+        )
+      }
       if (response) return response
     }
     return error(404, 'not_found', `Route inconnue : ${method} ${url.pathname}`)

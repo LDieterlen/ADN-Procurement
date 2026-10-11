@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useHealth } from '../api/queries/health'
 
 const LINKS = [
+  { to: '/', label: 'Tableau de bord' },
   { to: '/projects', label: 'Projets' },
   { to: '/clients', label: 'Clients' },
   { to: '/products', label: 'Produits' },
@@ -27,6 +28,7 @@ export function Layout() {
             <NavLink
               key={link.to}
               to={link.to}
+              end={link.to === '/'}
               className={({ isActive }) => `rounded px-2 py-1.5 text-sm ${isActive ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}
             >
               {link.label}

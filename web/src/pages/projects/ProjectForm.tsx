@@ -19,6 +19,7 @@ export type ProjectFormValues = {
   deliveryAddress: string
   deliveryContact: string
   defaultVatBp: number | null
+  contingencyBp: number | null
   startOn: string | null
   dueOn: string | null
   notes: string
@@ -32,6 +33,7 @@ const EMPTY: ProjectFormValues = {
   deliveryAddress: '',
   deliveryContact: '',
   defaultVatBp: null,
+  contingencyBp: null,
   startOn: null,
   dueOn: null,
   notes: '',
@@ -46,6 +48,7 @@ export function fromProject(p: ProjectRead): ProjectFormValues {
     deliveryAddress: p.deliveryAddress ?? '',
     deliveryContact: p.deliveryContact ?? '',
     defaultVatBp: p.defaultVatBp,
+    contingencyBp: p.contingencyBp,
     startOn: p.startOn,
     dueOn: p.dueOn,
     notes: p.notes ?? '',
@@ -63,6 +66,7 @@ export function toPayload(v: ProjectFormValues): ProjectCreate {
     deliveryAddress: orNull(v.deliveryAddress),
     deliveryContact: orNull(v.deliveryContact),
     defaultVatBp: v.defaultVatBp,
+    contingencyBp: v.contingencyBp,
     startOn: v.startOn,
     dueOn: v.dueOn,
     notes: orNull(v.notes),
@@ -100,6 +104,7 @@ export function ProjectForm({
         <TextInput name="code" label="Code" hint={initial ? 'Éditable' : 'Vide = généré (AAAA-NNN)'} />
         <EntityPicker name="clientId" label="Client" options={clients} required />
         <BpField name="defaultVatBp" label="TVA par défaut" hint="Vide = réglage général (20 %)" />
+        <BpField name="contingencyBp" label="Contingence" hint="Sur le budget global ; vide = réglage général (10 %)" />
         <DateField name="startOn" label="Début" />
         <DateField name="dueOn" label="Échéance" />
       </div>

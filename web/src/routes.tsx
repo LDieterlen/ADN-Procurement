@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
+import { DashboardPage } from './pages/DashboardPage'
 import { HealthPage } from './pages/HealthPage'
 import { CategoriesPage } from './pages/categories/CategoriesPage'
 import { CategoryEditPage } from './pages/categories/CategoryEditPage'
@@ -18,7 +19,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/projects" replace />} />
+        <Route index element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/new" element={<ProjectEditPage />} />
         <Route path="/projects/:id" element={<ProjectEditPage />} />

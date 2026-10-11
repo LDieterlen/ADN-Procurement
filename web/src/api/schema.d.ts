@@ -141,6 +141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dashboard */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files": {
         parameters: {
             query?: never;
@@ -563,6 +580,41 @@ export interface paths {
         patch: operations["updateProject"];
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Alerts */
+        get: operations["listProjectAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/budget-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Budget Lines */
+        get: operations["listBudgetLines"];
+        /** Put Budget Lines */
+        put: operations["putBudgetLines"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/project-items": {
         parameters: {
             query?: never;
@@ -777,10 +829,112 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AlertRead */
+        AlertRead: {
+            /** Categoryid */
+            categoryId?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "budget_90" | "budget_100" | "order_overdue";
+            /** Message */
+            message: string;
+            /** Projectitemid */
+            projectItemId?: number | null;
+            /** Zoneid */
+            zoneId?: number | null;
+        };
         /** Body_uploadFile */
         Body_uploadFile: {
             /** File */
             file: string;
+        };
+        /** BudgetLineIn */
+        BudgetLineIn: {
+            /** Amountcents */
+            amountCents: number;
+            /** Categoryid */
+            categoryId?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Zoneid */
+            zoneId?: number | null;
+        };
+        /** BudgetLineRead */
+        BudgetLineRead: {
+            /** Amountcents */
+            amountCents: number;
+            /** Categoryid */
+            categoryId: number | null;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Notes */
+            notes: string | null;
+            /** Projectid */
+            projectId: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Zoneid */
+            zoneId: number | null;
+        };
+        /** BudgetLinesPut */
+        BudgetLinesPut: {
+            /** Lines */
+            lines: components["schemas"]["BudgetLineIn"][];
+        };
+        /**
+         * BudgetRowRead
+         * @description One row of the Budget tab: per zone (D8.3 default) or per level-1 category; D8.4 alert level.
+         */
+        BudgetRowRead: {
+            /**
+             * Alert
+             * @enum {string}
+             */
+            alert: "none" | "warning" | "over";
+            /** Approvedcents */
+            approvedCents: number;
+            /** Budgetcents */
+            budgetCents: number | null;
+            /** Categoryid */
+            categoryId: number | null;
+            /** Label */
+            label: string;
+            /** Multiplier */
+            multiplier: number;
+            /** Remainingcents */
+            remainingCents: number | null;
+            /** Specifiedcents */
+            specifiedCents: number;
+            /** Zoneid */
+            zoneId: number | null;
+        };
+        /** BudgetSummaryRead */
+        BudgetSummaryRead: {
+            /**
+             * Alert
+             * @enum {string}
+             */
+            alert: "none" | "warning" | "over";
+            /** Approvedcents */
+            approvedCents: number;
+            /** Bycategory */
+            byCategory: components["schemas"]["BudgetRowRead"][];
+            /** Byzone */
+            byZone: components["schemas"]["BudgetRowRead"][];
+            /** Contingencybp */
+            contingencyBp: number;
+            /** Contingencycents */
+            contingencyCents: number;
+            /** Globalcents */
+            globalCents: number | null;
+            /** Remainingcents */
+            remainingCents: number | null;
+            /** Specifiedcents */
+            specifiedCents: number;
         };
         /** CategoryCreate */
         CategoryCreate: {
@@ -926,6 +1080,40 @@ export interface components {
             postalCode?: string | null;
             /** Siren */
             siren?: string | null;
+        };
+        /** DashboardProjectRead */
+        DashboardProjectRead: {
+            /**
+             * Alert
+             * @enum {string}
+             */
+            alert: "none" | "warning" | "over";
+            /** Approvedcents */
+            approvedCents: number;
+            /** Budgetcents */
+            budgetCents: number | null;
+            /** Clientname */
+            clientName: string;
+            /** Code */
+            code: string;
+            /** Draftlines */
+            draftLines: number;
+            /** Dueon */
+            dueOn: string | null;
+            /** Name */
+            name: string;
+            /** Onholdlines */
+            onHoldLines: number;
+            /** Overduelines */
+            overdueLines: number;
+            /** Projectid */
+            projectId: number;
+            /** Remainingcents */
+            remainingCents: number | null;
+            /** Specifiedcents */
+            specifiedCents: number;
+            /** Status */
+            status: string;
         };
         /** EventRead */
         EventRead: {
@@ -1450,6 +1638,8 @@ export interface components {
             clientId: number;
             /** Code */
             code?: string | null;
+            /** Contingencybp */
+            contingencyBp?: number | null;
             /** Defaultvatbp */
             defaultVatBp?: number | null;
             /** Deliveryaddress */
@@ -1704,6 +1894,8 @@ export interface components {
             clientId: number;
             /** Code */
             code: string;
+            /** Contingencybp */
+            contingencyBp: number;
             /** Createdat */
             createdAt: string;
             /** Defaultvatbp */
@@ -1744,6 +1936,7 @@ export interface components {
         ProjectSummaryRead: {
             /** Approvedcents */
             approvedCents: number;
+            budget?: components["schemas"]["BudgetSummaryRead"] | null;
             /** Lines */
             lines: components["schemas"]["LineAmountsRead"][];
             /** Osecents */
@@ -1769,6 +1962,8 @@ export interface components {
             clientId?: number | null;
             /** Code */
             code?: string | null;
+            /** Contingencybp */
+            contingencyBp?: number | null;
             /** Defaultvatbp */
             defaultVatBp?: number | null;
             /** Deliveryaddress */
@@ -2431,6 +2626,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardProjectRead"][];
                 };
             };
         };
@@ -3575,6 +3790,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProjectAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listBudgetLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetLineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putBudgetLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BudgetLinesPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetLineRead"][];
                 };
             };
             /** @description Validation Error */
