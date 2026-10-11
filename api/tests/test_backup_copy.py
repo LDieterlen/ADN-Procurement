@@ -35,7 +35,10 @@ def test_backup_and_copy_puts_a_checked_copy_in_the_windows_dir(
     assert result.copied_to == settings.backup_dir / "ffe-20261009-120000-manual.sqlite"
     assert result.copy_error is None and result.quick_check == "ok"
     assert result.copied_to is not None and quick_check_file(result.copied_to) == "ok"
-    assert not (settings.backup_dir / "ffe-20261009-120000-manual.sqlite.part").exists()
+    assert sorted(p.name for p in settings.backup_dir.iterdir()) == [
+        "ffe-20261009-120000-manual.sqlite"
+    ]
+    assert sorted(p.name for p in (settings.backups_dir / "tmp").iterdir()) == []  # no sidecar left
 
 
 def test_missing_windows_dir_is_reported_not_fatal(

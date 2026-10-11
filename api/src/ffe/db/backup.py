@@ -42,7 +42,9 @@ class BackupFile:
 
 
 def quick_check_file(path: Path) -> str:
-    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    """`immutable=1`: a finished copy is read without locks nor `-wal`/`-shm` sidecars (which a
+    plain read-only open would leave next to a staged `.part` file, 2026-10-11)."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro&immutable=1", uri=True)
     try:
         row = conn.execute("PRAGMA quick_check").fetchone()
     except sqlite3.DatabaseError as error:
