@@ -59,6 +59,12 @@ erDiagram
     project_item ||--o{ quote_line : "compare"
     quote ||--o{ quote_file : "PDF"
     file ||--o{ quote_file : "fichier"
+    project ||--o{ purchase_order : "engage"
+    supplier ||--o{ purchase_order : "recoit"
+    purchase_order ||--o{ purchase_order_line : "lignes figees"
+    project_item ||--o{ purchase_order_line : "commandee par"
+    purchase_order ||--o{ purchase_order_file : "PDF, AR"
+    file ||--o{ purchase_order_file : "fichier"
 
     setting {
         INTEGER id PK "CHECK id = 1"
@@ -638,6 +644,55 @@ Retenir (service, une transaction) : dé-retient l'autre ligne retenue de l'arti
 | file_id | INTEGER | non | — | FK `file` RESTRICT ; `UNIQUE (quote_id, file_id)` | |
 | caption | TEXT | oui | | | |
 
+### 4.20 `purchase_order` — étape 10b (ADR-0007)
+
+Un bon de commande : un projet, un fournisseur, une devise. Rien de calculé n'est stocké.
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| project_id | INTEGER | non | — | FK `project` RESTRICT | |
+| supplier_id | INTEGER | non | — | FK `supplier` RESTRICT | |
+| number | TEXT | non | — | `UNIQUE` ; `GLOB 'PO-[0-9][0-9][0-9][0-9]-*'` | `PO-AAAA-NNN`, servi par `po_sequence` |
+| status | TEXT | non | `'draft'` | `IN ('draft','issued','acknowledged','partially_delivered','closed','cancelled')` | `partially_delivered` posé à l'étape 10c |
+| currency | TEXT | non | — | `length = 3` | devise du fournisseur et des lignes |
+| fx_rate_micro | INTEGER | non | — | `>= 1` ; `currency <> 'EUR' OR = 1000000` | figé |
+| issued_on | DATE | oui | | format date | posé à l'émission |
+| expected_delivery_on | DATE | oui | | format date | recopié sur les lignes à l'émission |
+| supplier_ref | TEXT | oui | | | n° d'AR fournisseur |
+| delivery_address, delivery_contact | TEXT | oui | | | copiés du projet (D10b.3), modifiables |
+| payment_terms | TEXT | oui | | | copié du fournisseur |
+| notes | TEXT | oui | | | imprimées sur le BC |
+| internal_notes | TEXT | oui | | | |
+
+### 4.21 `purchase_order_line` — étape 10b (ADR-0007)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| purchase_order_id | INTEGER | non | — | FK `purchase_order` **CASCADE** | |
+| project_item_id | INTEGER | non | — | FK composite `(project_item_id, project_id) → project_item (id, project_id)` RESTRICT ; `UNIQUE (purchase_order_id, project_item_id)` | même projet garanti ; une ligne sur un seul BC non annulé (règle d'app) |
+| project_id | INTEGER | non | — | | copie pour la FK composite |
+| description | TEXT | non | — | `length > 0` | copie du libellé |
+| qty_milli | INTEGER | non | — | `>= 0` | défaut : quantité totale de la ligne |
+| unit_cost_cents | INTEGER | non | — | `>= 0` | copie figée |
+| discount_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | |
+| vat_rate_bp | INTEGER | non | — | `BETWEEN 0 AND 10000` | |
+| sort_order | INTEGER | non | `0` | | |
+
+Totaux (`money.py`) : `net_unit = net_unit_cents(unit_cost, discount)` ; `total = total_ht_cents(net_unit, qty)` dans la devise ; `total_eur = total_ht_cents(net_unit_eur_cents(net_unit, fx), qty)` ; TVA par taux sur l'EUR (`vat_totals`).
+
+### 4.22 `purchase_order_file` — étape 10b
+
+Même forme que `quote_file` (§4.19) : `purchase_order_id` CASCADE, `file_id` RESTRICT, `UNIQUE`, `caption`.
+
+### 4.23 `po_sequence` — étape 10b
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| year | INTEGER | non | — | PK ; `BETWEEN 2000 AND 2999` | |
+| next_value | INTEGER | non | `1` | `>= 1` | jamais décrémenté (un BC brouillon supprimé laisse un trou) |
+
+Pas de `created_at`/`updated_at`. Exemple : `(2026, 4)`.
+
 ## 5. Statuts et transitions
 
 `STATUS_RANK` : `draft` 0 < `specified` 1 < `quoted` 2 < `approved` 3 < `ordered` 4 < `delivered` 5 < `installed` 6 ; `cancelled` et `replaced` terminaux (rang −1). `on_hold` est un booléen indépendant.
@@ -649,7 +704,7 @@ Le budget et le Prescrit portent sur l'enveloppe FF&E (`is_amount_counted AND ki
 | Depuis → vers | Préconditions (service, 422 champ par champ) | Effets |
 |---|---|---|
 | libre entre `draft`, `specified`, `quoted`, `approved` (avant et arrière) | confirmation UI ; `specified` exige `name`, `product_id` sauf `kind IN ('custom','existing','fee')`, ≥ 1 placement avec `zone_id` non NULL sauf `kind = 'fee'` ; `quoted` exige `supplier_id` et `unit_cost_cents > 0` sauf `existing` ; `approved` exige les mêmes | événement `status` ; passage en `approved` : pose `approved_at`, `approved_unit_net_cents` (net unitaire EUR), `approved_total_qty_milli` et écrit `approval` ; retour depuis `approved` : snapshot conservé, note obligatoire |
-| `approved` → `ordered` | `order_ref` renseigné ; devis non expiré (avertissement seul) | événement `status` ; à partir d'ici **aucun retour arrière** |
+| `approved` → `ordered` | `order_ref` renseigné ; devis non expiré (avertissement seul) ; à l'étape 10b, l'émission d'un BC pose `order_ref` et fait la transition pour chacune de ses lignes (ADR-0007) | événement `status` ; à partir d'ici **aucun retour arrière** |
 | `ordered` → `delivered` → `installed` | ordre strict | événement `status` |
 | tout statut non terminal → `cancelled` | note obligatoire | terminal ; budget libéré |
 | `cancelled` → `draft` | note obligatoire ; **refusé** si la ligne a été `ordered` un jour (journal) — D2.10 | événement `status` |
@@ -898,7 +953,7 @@ GROUP BY pr.id, pr.code, pr.name, c.name, pr.status, pr.due_on
 ORDER BY pr.due_on IS NULL, pr.due_on, pr.code;
 ```
 
-Dix-neuf tables (seize + `quote`, `quote_line`, `quote_file` à l'étape 10a), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
+Vingt-trois tables (seize + devis 10a + bons de commande 10b), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
 
 ---
 
@@ -910,7 +965,7 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 |---|---|
 | Marge / prix de vente (ADR-0005, question ouverte) | `project_item.markup_bp INTEGER NULL`, `project_item.unit_sell_override_cents INTEGER NULL`, `setting.pricing_mode TEXT` (`resale`/`fees_only`) ; `money.py` ajoute `sell = COALESCE(override, net_eur × (10000 + markup) / 10000)` ; `budget_line` reste en net ou passe en vente selon `pricing_mode` |
 | Options A/B présentées au client | `project_item.alternative_of_id INTEGER NULL` FK composite ; `is_counted` ajoute `alternative_of_id IS NULL` ; codes `.A`, `.B` ; retenir une option = transaction d'échange de codes + `replaced_by_id` |
-| Achats (étapes 10b–10c ; `quote`, `quote_line`, `quote_file` livrés en 10a, §4.17–4.19) | `purchase_order`, `po_line`, `delivery`, `delivery_line`, `supplier_invoice` ; statuts `in_production`, `shipped` ajoutés au CHECK ; les lignes `fee` deviennent les frais du BC ; Engagé / Facturé / Payé |
+| Achats (étape 10c ; devis livrés en 10a §4.17–4.19, bons de commande en 10b §4.20–4.23) | `delivery`, `delivery_line`, `supplier_invoice` ; statuts `in_production`, `shipped` ajoutés au CHECK si besoin ; Facturé / Payé |
 | TVA d'achat, autoliquidation (D2.5 : rien en v1, taux 0 autorisé) | `project_item.purchase_vat_bp INTEGER NULL` ou sur `supplier_invoice` |
 | Validé ventilé par zone (D2.14 : approximation acceptée en v1) | `project_item_placement.approved_qty_milli INTEGER NULL` posé à `approved` ; R2 l'utilise à la place du prix courant |
 | Snapshot dans la devise de la ligne (D2.9 : EUR seul en v1) | `project_item.approved_unit_net_currency_cents`, `approved_fx_rate_micro` nullables |

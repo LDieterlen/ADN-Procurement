@@ -22,7 +22,7 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
         assert current_revision(engine) is None
         assert has_pending(engine)
         upgrade_head(engine)
-        assert current_revision(engine) == head_revision() == "0008"
+        assert current_revision(engine) == head_revision() == "0009"
         assert not has_pending(engine)
         check(engine)  # raises when models and migrations differ
     finally:
@@ -30,7 +30,17 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
 
 
 def test_revision_chain_is_one_migration_per_step() -> None:
-    assert revision_chain() == ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"]
+    assert revision_chain() == [
+        "0001",
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0006",
+        "0007",
+        "0008",
+        "0009",
+    ]
 
 
 def test_migration_0001_seeds_the_single_setting_row(engine: Engine) -> None:

@@ -7,6 +7,7 @@ from ffe.models.client import Client
 from ffe.models.code_sequence import CodeSequence
 from ffe.models.file import File
 from ffe.models.manufacturer import Manufacturer
+from ffe.models.po_sequence import PoSequence
 from ffe.models.product import Product
 from ffe.models.product_file import ProductFile
 from ffe.models.project import Project
@@ -14,6 +15,9 @@ from ffe.models.project_item import ProjectItem
 from ffe.models.project_item_event import ProjectItemEvent
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
+from ffe.models.purchase_order import PurchaseOrder
+from ffe.models.purchase_order_file import PurchaseOrderFile
+from ffe.models.purchase_order_line import PurchaseOrderLine
 from ffe.models.quote import Quote
 from ffe.models.quote_file import QuoteFile
 from ffe.models.quote_line import QuoteLine
@@ -35,7 +39,11 @@ __all__ = [
     "ProjectItem",
     "ProjectItemEvent",
     "ProjectItemFile",
+    "PoSequence",
     "ProjectItemPlacement",
+    "PurchaseOrder",
+    "PurchaseOrderFile",
+    "PurchaseOrderLine",
     "Quote",
     "QuoteFile",
     "QuoteLine",
