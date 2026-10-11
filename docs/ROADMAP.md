@@ -122,7 +122,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : `ordered` puis tentative `draft` → refusé ; l'historique montre le prix validé à une date ; impression lisible sans colonnes internes.
 - **Décisions préalables** : D7c.1 variante client = `client_description`, pas de prix d'achat (défaut) ; D7c.2 `fee` exclu de l'impression client (défaut).
 - **Risques** : dérive des calculs entre impression et écran → même DTO.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(api)`, `feat(web)`, `docs(repo): étape 7c close` (hashes dans le JOURNAL). D7c.1 variante client = `clientDescription` sans prix d'achat ni fournisseur, D7c.2 `fee` exclu de la variante client : défauts (mode enchaîné). « Commander avant le » calculé par le serveur (`summary.lines[].orderBy`, `orderOverdue`, horloge injectée, D7.5). Critère prouvé par `ProjectItemsStatus.test.tsx` : `ordered` puis seules « Livré / Annulé » proposées ; l'historique montre « validé à 1 243,13 € l'unité × 12 » ; variante client sans colonnes internes ; impression = même DTO (`@media print` masque navigation, panneaux, filtres).
 
 ## Étape 8 — Budgets et tableau de bord (migration 0006)
 
