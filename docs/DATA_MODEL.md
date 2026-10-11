@@ -465,6 +465,7 @@ Fichier physique dédoublonné. Les propriétaires passent par `product_file` et
 | size_bytes | INTEGER | non | — | `size_bytes >= 0` | limite 20 Mo côté API (défaut étape 6b) |
 | original_name | TEXT | non | — | | |
 | source_url | TEXT | oui | | | provenance d'une image |
+| license_note | TEXT | oui | | | étape F2 (migration 0012, ADR-0010) : droit d'usage, imprimé sous la photo du book |
 
 Chemin : `FFE_DATA_DIR/files/<sha256>.<ext>` ; vignette `<sha256>.thumb.jpg` par convention, régénérable, pas de colonne. Pas d'`updated_at` : un fichier est immuable.
 
@@ -746,7 +747,7 @@ Chaque export émis d'un projet, conservé tel qu'envoyé.
 |---|---|---|---|---|---|
 | project_id | INTEGER | non | — | FK `project` RESTRICT | |
 | file_id | INTEGER | non | — | FK `file` RESTRICT | octets du classeur (sha256) |
-| kind | TEXT | non | — | `IN ('schedule_xlsx','book_pdf')` | `book_pdf` à l'étape F2 |
+| kind | TEXT | non | — | `IN ('schedule_xlsx','book_pdf')` | `book_pdf` depuis l'étape F2 |
 | variant | TEXT | non | — | `IN ('internal','client')` | |
 | issued_at | TS | non | — | | |
 

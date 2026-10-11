@@ -23,6 +23,8 @@ class File(Base):
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     original_name: Mapped[str] = mapped_column(Text, nullable=False)
     source_url: Mapped[str | None] = mapped_column(Text)
+    # Step F2 (migration 0012): usage right of an image, printed under the photo in the book.
+    license_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)  # immutable: no updated_at
 
     @property
