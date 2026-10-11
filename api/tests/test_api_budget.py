@@ -161,7 +161,7 @@ def test_summary_budget_specified_approved_remaining_by_zone(
     by_category = {r["label"]: r for r in budget["byCategory"]}
     assert by_category["LUM — Luminaires"]["specifiedCents"] == 1_740_382
     assert by_category["LUM — Luminaires"]["approvedCents"] == 1_740_382
-    assert "engagedCents" not in budget  # « Engagé » arrives at step 10b
+    assert budget["engagedCents"] == 0  # « Engagé » : aucun bon de commande émis (10b)
 
 
 def test_cancelling_a_line_frees_the_budget(client: TestClient, world: dict[str, Any]) -> None:

@@ -289,6 +289,10 @@
             ],
             "title": "Categoryid"
           },
+          "engagedCents": {
+            "title": "Engagedcents",
+            "type": "integer"
+          },
           "label": {
             "title": "Label",
             "type": "string"
@@ -332,6 +336,7 @@
           "budgetCents",
           "specifiedCents",
           "approvedCents",
+          "engagedCents",
           "remainingCents",
           "alert"
         ],
@@ -375,6 +380,10 @@
             "title": "Contingencycents",
             "type": "integer"
           },
+          "engagedCents": {
+            "title": "Engagedcents",
+            "type": "integer"
+          },
           "globalCents": {
             "anyOf": [
               {
@@ -408,6 +417,7 @@
           "contingencyCents",
           "specifiedCents",
           "approvedCents",
+          "engagedCents",
           "remainingCents",
           "alert",
           "byZone",
@@ -2129,6 +2139,643 @@
           }
         },
         "title": "PlacementUpdate",
+        "type": "object"
+      },
+      "PoCreate": {
+        "properties": {
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "itemIds": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Itemids",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "supplierId"
+        ],
+        "title": "PoCreate",
+        "type": "object"
+      },
+      "PoFileAttach": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId"
+        ],
+        "title": "PoFileAttach",
+        "type": "object"
+      },
+      "PoFileRead": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "ext": {
+            "title": "Ext",
+            "type": "string"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "mimeType": {
+            "title": "Mimetype",
+            "type": "string"
+          },
+          "originalName": {
+            "title": "Originalname",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId",
+          "caption",
+          "sha256",
+          "ext",
+          "mimeType",
+          "originalName",
+          "sizeBytes"
+        ],
+        "title": "PoFileRead",
+        "type": "object"
+      },
+      "PoLineRead": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "discountBp": {
+            "title": "Discountbp",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCode": {
+            "title": "Itemcode",
+            "type": "string"
+          },
+          "itemStatus": {
+            "title": "Itemstatus",
+            "type": "string"
+          },
+          "netUnitCents": {
+            "title": "Netunitcents",
+            "type": "integer"
+          },
+          "netUnitEurCents": {
+            "title": "Netuniteurcents",
+            "type": "integer"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "purchaseOrderId": {
+            "title": "Purchaseorderid",
+            "type": "integer"
+          },
+          "qtyMilli": {
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "totalCents": {
+            "title": "Totalcents",
+            "type": "integer"
+          },
+          "totalEurCents": {
+            "title": "Totaleurcents",
+            "type": "integer"
+          },
+          "unitCostCents": {
+            "title": "Unitcostcents",
+            "type": "integer"
+          },
+          "vatRateBp": {
+            "title": "Vatratebp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "purchaseOrderId",
+          "projectItemId",
+          "itemCode",
+          "itemStatus",
+          "description",
+          "qtyMilli",
+          "unitCostCents",
+          "discountBp",
+          "vatRateBp",
+          "sortOrder",
+          "netUnitCents",
+          "totalCents",
+          "netUnitEurCents",
+          "totalEurCents"
+        ],
+        "title": "PoLineRead",
+        "type": "object"
+      },
+      "PoLineUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discountBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discountbp"
+          },
+          "qtyMilli": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qtymilli"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          },
+          "unitCostCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unitcostcents"
+          },
+          "vatRateBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vatratebp"
+          }
+        },
+        "title": "PoLineUpdate",
+        "type": "object"
+      },
+      "PoLinesAdd": {
+        "properties": {
+          "itemIds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Itemids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "itemIds"
+        ],
+        "title": "PoLinesAdd",
+        "type": "object"
+      },
+      "PoRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "deliveryAddress": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliveryaddress"
+          },
+          "deliveryContact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliverycontact"
+          },
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/PoFileRead"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "fxRateMicro": {
+            "title": "Fxratemicro",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "internalNotes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internalnotes"
+          },
+          "issuedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuedon"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PoLineRead"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paymentTerms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paymentterms"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "issued",
+              "acknowledged",
+              "partially_delivered",
+              "closed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          },
+          "supplierName": {
+            "title": "Suppliername",
+            "type": "string"
+          },
+          "supplierRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierref"
+          },
+          "totalCents": {
+            "title": "Totalcents",
+            "type": "integer"
+          },
+          "totalEurCents": {
+            "title": "Totaleurcents",
+            "type": "integer"
+          },
+          "ttcEurCents": {
+            "title": "Ttceurcents",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "vatByRateBp": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Vatbyratebp",
+            "type": "object"
+          },
+          "vatCents": {
+            "title": "Vatcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "supplierId",
+          "supplierName",
+          "number",
+          "status",
+          "currency",
+          "fxRateMicro",
+          "issuedOn",
+          "expectedDeliveryOn",
+          "supplierRef",
+          "deliveryAddress",
+          "deliveryContact",
+          "paymentTerms",
+          "notes",
+          "internalNotes",
+          "totalCents",
+          "totalEurCents",
+          "vatByRateBp",
+          "vatCents",
+          "ttcEurCents",
+          "lines",
+          "files",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "PoRead",
+        "type": "object"
+      },
+      "PoStatusChange": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "acknowledged",
+              "closed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PoStatusChange",
+        "type": "object"
+      },
+      "PoUpdate": {
+        "properties": {
+          "deliveryAddress": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliveryaddress"
+          },
+          "deliveryContact": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deliverycontact"
+          },
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "internalNotes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internalnotes"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "paymentTerms": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paymentterms"
+          },
+          "supplierRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierref"
+          }
+        },
+        "title": "PoUpdate",
         "type": "object"
       },
       "ProductCreate": {
@@ -9635,6 +10282,104 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/purchase-orders": {
+      "get": {
+        "operationId": "listPurchaseOrders",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PoRead"
+                  },
+                  "title": "Response Listpurchaseorders",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pos",
+        "tags": [
+          "purchase-orders"
+        ]
+      },
+      "post": {
+        "operationId": "createPurchaseOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Po",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/quotes": {
       "get": {
         "operationId": "listQuotes",
@@ -9991,6 +10736,483 @@
         "summary": "Reorder Zones",
         "tags": [
           "zones"
+        ]
+      }
+    },
+    "/api/v1/purchase-order-lines/{line_id}": {
+      "delete": {
+        "operationId": "deletePurchaseOrderLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Line Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Line",
+        "tags": [
+          "purchase-orders"
+        ]
+      },
+      "patch": {
+        "operationId": "updatePurchaseOrderLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Line Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoLineUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Line",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}": {
+      "delete": {
+        "operationId": "deletePurchaseOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Po",
+        "tags": [
+          "purchase-orders"
+        ]
+      },
+      "get": {
+        "operationId": "getPurchaseOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Po",
+        "tags": [
+          "purchase-orders"
+        ]
+      },
+      "patch": {
+        "operationId": "updatePurchaseOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Po",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/files": {
+      "post": {
+        "operationId": "attachPurchaseOrderFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoFileAttach"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attach File",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/files/{file_id}": {
+      "delete": {
+        "operationId": "detachPurchaseOrderFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detach File",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/issue": {
+      "post": {
+        "operationId": "issuePurchaseOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Po",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/lines": {
+      "post": {
+        "operationId": "addPurchaseOrderLines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoLinesAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Lines",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/status": {
+      "post": {
+        "operationId": "changePurchaseOrderStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoStatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Status",
+        "tags": [
+          "purchase-orders"
         ]
       }
     },

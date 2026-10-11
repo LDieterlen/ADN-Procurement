@@ -11,6 +11,8 @@ RESOURCE_LABELS: dict[str, str] = {
     "zone": "zone",
     "quote": "devis",
     "quote_line": "ligne de devis",
+    "purchase_order": "bon de commande",
+    "purchase_order_line": "ligne de bon de commande",
 }
 
 PROJECT_STATUS_LABELS: dict[str, str] = {
@@ -71,6 +73,33 @@ ITEM_REPLACE_ONLY_APPROVED = (
     "Le remplacement n'est possible que depuis « validé » (avant : changer le produit en place)."
 )
 ITEM_NO_PRODUCT_TO_REFRESH = "Cette ligne n'est pas liée à un produit du catalogue."
+PO_STATUS_LABELS: dict[str, str] = {
+    "draft": "Brouillon",
+    "issued": "Émis",
+    "acknowledged": "Accusé de réception",
+    "partially_delivered": "Partiellement livré",
+    "closed": "Clos",
+    "cancelled": "Annulé",
+}
+PO_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
+PO_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."
+PO_ITEM_NOT_IN_PROJECT = "La ligne n'appartient pas à ce projet."
+PO_ITEM_WRONG_SUPPLIER = "La ligne {code} n'est pas chez ce fournisseur."
+PO_ITEM_WRONG_CURRENCY = "La ligne {code} n'est pas dans la devise du bon de commande ({currency})."
+PO_ITEM_NOT_APPROVED = "La ligne {code} doit être validée (statut « validé ») pour être commandée."
+PO_ITEM_ON_HOLD = "La ligne {code} est en attente."
+PO_ITEM_ALREADY_ORDERED = "La ligne {code} est déjà sur le bon de commande {number}."
+PO_ITEM_ALREADY_ON_PO = "La ligne {code} figure déjà sur ce bon de commande."
+PO_NOT_DRAFT = (
+    "Bon de commande {number} {status} : seules les modifications du brouillon sont possibles."
+)
+PO_NO_LINES = "Un bon de commande s'émet avec au moins une ligne."
+PO_CLOSED = "Bon de commande {number} {status} : plus aucune modification."
+PO_TRANSITION = "Bon de commande {number} : passage de {from_status} à {to_status} impossible."
+PO_NOTE_REQUIRED = "Une note est obligatoire pour annuler un bon de commande émis."
+PO_CANCELLED_NOTE = "BC {number} annulé : {note}"
+PO_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au bon de commande."
+PO_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au bon de commande."
 QUOTE_REFERENCE_TAKEN = "Ce fournisseur a déjà un devis portant cette référence dans le projet."
 QUOTE_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
 QUOTE_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."

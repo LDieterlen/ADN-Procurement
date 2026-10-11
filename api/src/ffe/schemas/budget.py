@@ -45,6 +45,7 @@ class BudgetRowRead(BaseSchema):
     budget_cents: int | None
     specified_cents: int
     approved_cents: int
+    engaged_cents: int  # étape 10b (ADR-0007)
     remaining_cents: int | None
     alert: BudgetAlertLevel
 
@@ -55,6 +56,7 @@ class BudgetSummaryRead(BaseSchema):
     contingency_cents: int
     specified_cents: int
     approved_cents: int
+    engaged_cents: int
     remaining_cents: int | None
     alert: BudgetAlertLevel
     by_zone: list[BudgetRowRead]

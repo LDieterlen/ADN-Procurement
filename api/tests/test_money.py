@@ -348,3 +348,30 @@ def test_python_formulas_equal_the_sql_cte_on_random_lines(engine: Engine) -> No
                 amounts.net_unit_cents,
                 amounts.net_unit_eur_cents,
             )
+
+
+# --- étape 10b : lignes et totaux d'un bon de commande (DATA_MODEL §4.21, ADR-0007) ----------
+
+
+def test_po_line_amounts_follow_the_line_chain_in_both_currencies() -> None:
+    # Beat Light Fat : 1 250,00 GBP −15 % × 12 clés, 1 GBP = 1,17 EUR.
+    amounts = money.po_line_amounts(125_000, 1500, 12_000, 1_170_000)
+    assert amounts.net_unit_cents == 106_250 and amounts.total_cents == 1_275_000
+    assert amounts.net_unit_eur_cents == 124_313 and amounts.total_eur_cents == 1_491_756
+    # EUR line: both chains coincide.
+    eur = money.po_line_amounts(45_000, 0, 2_500, money.EUR_RATE_MICRO)
+    assert eur.total_cents == eur.total_eur_cents == 112_500
+
+
+def test_po_totals_sum_the_lines_and_apply_vat_per_rate_on_eur() -> None:
+    lines = [
+        (money.po_line_amounts(125_000, 1500, 12_000, 1_170_000), 2000),
+        (money.po_line_amounts(10_000, 0, 2_000, 1_170_000), 2000),
+        (money.po_line_amounts(5_000, 0, 1_000, 1_170_000), 550),
+    ]
+    totals = money.po_totals(lines)
+    assert totals.total_cents == 1_275_000 + 20_000 + 5_000
+    assert totals.total_eur_cents == 1_491_756 + 23_400 + 5_850
+    assert totals.vat_by_rate_bp == {550: 322, 2000: 303_031}  # 5 850 × 5,5 % ; 1 515 156 × 20 %
+    assert totals.vat_cents == 322 + 303_031 and totals.ttc_eur_cents == 1_521_006 + 303_353
+    assert money.po_totals([]).ttc_eur_cents == 0

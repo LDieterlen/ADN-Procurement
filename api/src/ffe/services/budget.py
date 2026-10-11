@@ -17,6 +17,7 @@ from ffe.schemas.budget import BudgetLinesPut
 from ffe.services.base import stamp
 from ffe.services.project import ensure_open, get_project
 from ffe.services.project_item import summary as lines_summary
+from ffe.services.purchase_order import engaged as engaged_by_item
 
 WARNING_BP = 9_000  # D8.4: orange at 90 %
 OVER_BP = 10_000  # red at 100 %
@@ -98,6 +99,7 @@ def _row(
     budget: int | None,
     specified: int,
     approved: int,
+    engaged: int = 0,
 ) -> dict[str, Any]:
     return {
         "zone_id": zone_id,
@@ -107,6 +109,7 @@ def _row(
         "budget_cents": budget,
         "specified_cents": specified,
         "approved_cents": approved,
+        "engaged_cents": engaged,
         "remaining_cents": budget - specified if budget is not None else None,
         "alert": _alert(budget, specified),
     }
@@ -130,11 +133,16 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
         return categories[cid].parent_id or cid
 
     amounts = {line["project_item_id"]: line for line in base["lines"]}
+    engaged = engaged_by_item(session, project_id)  # ADR-0007: issued orders, per item
 
-    # Approved by zone: approximation at the current price of the placements (D2.14).
+    # Approved by zone: approximation at the current price of the placements (D2.14);
+    # engaged by zone: same approximation at the order's unit price.
     approved_by_zone: dict[int | None, int] = {}
+    engaged_by_zone: dict[int | None, int] = {}
     specified_by_category: dict[int, int] = {}
     approved_by_category: dict[int, int] = {}
+    engaged_by_category: dict[int, int] = {}
+    engaged_total = 0
     for item_id, line in amounts.items():
         item = items[item_id]
         in_envelope = money.is_in_ffe_envelope(item.status, item.kind)
@@ -142,6 +150,17 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
             continue
         cat = level1(item.category_id)
         specified_by_category[cat] = specified_by_category.get(cat, 0) + line["total_ht_cents"]
+        if item_id in engaged:
+            unit_eur, total_eur = engaged[item_id]
+            engaged_total += total_eur
+            engaged_by_category[cat] = engaged_by_category.get(cat, 0) + total_eur
+            for placement in item.placements:
+                multiplier = (
+                    zones[placement.zone_id].multiplier if placement.zone_id in zones else 1
+                )
+                engaged_by_zone[placement.zone_id] = engaged_by_zone.get(
+                    placement.zone_id, 0
+                ) + money.placement_ht_cents(unit_eur, placement.qty_milli, multiplier)
         if money.is_approved_or_later(item.status):
             approved_by_category[cat] = approved_by_category.get(cat, 0) + (
                 line["approved_cents"] or 0
@@ -166,6 +185,7 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
             budgets.get((z["zone_id"], None)),
             z["specified_cents"],
             approved_by_zone.get(z["zone_id"], 0),
+            engaged_by_zone.get(z["zone_id"], 0),
         )
         for z in base["zones"]
     ]
@@ -178,6 +198,7 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
             budgets.get((None, cid)),
             specified_by_category.get(cid, 0),
             approved_by_category.get(cid, 0),
+            engaged_by_category.get(cid, 0),
         )
         for cid in sorted(
             set(specified_by_category) | {c for z, c in budgets if z is None and c is not None},
@@ -196,6 +217,7 @@ def summary_with_budget(session: Session, project_id: int, today: date) -> dict[
         "contingency_cents": contingency,
         "specified_cents": base["specified_cents"],
         "approved_cents": base["approved_cents"],
+        "engaged_cents": engaged_total,
         "remaining_cents": global_budget - base["specified_cents"]
         if global_budget is not None
         else None,

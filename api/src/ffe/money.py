@@ -146,6 +146,46 @@ def vat_totals(lines: Iterable[tuple[int, int]]) -> VatTotals:
     return VatTotals(ht_total, vat_by_rate, vat_total, ht_total + vat_total)
 
 
+@dataclass(frozen=True)
+class PoLineAmounts:
+    net_unit_cents: int  # currency of the order
+    total_cents: int  # currency of the order
+    net_unit_eur_cents: int
+    total_eur_cents: int
+
+
+def po_line_amounts(
+    unit_cost_cents: int, discount_bp: int, qty_milli: int, fx_rate_micro: int
+) -> PoLineAmounts:
+    """A purchase-order line (DATA_MODEL §4.21): same chain as a project line, in the order's currency
+    and in EUR, rounded to the cent at each step."""
+    net = net_unit_cents(unit_cost_cents, discount_bp)
+    net_eur = net_unit_eur_cents(net, fx_rate_micro)
+    return PoLineAmounts(
+        net, total_ht_cents(net, qty_milli), net_eur, total_ht_cents(net_eur, qty_milli)
+    )
+
+
+@dataclass(frozen=True)
+class PoTotals:
+    total_cents: int  # currency of the order, HT
+    total_eur_cents: int  # HT
+    vat_by_rate_bp: dict[int, int]  # on the EUR amounts
+    vat_cents: int
+    ttc_eur_cents: int
+
+
+def po_totals(lines: Iterable[tuple[PoLineAmounts, int]]) -> PoTotals:
+    """Totals of a purchase order from its lines `(amounts, vat_rate_bp)`; VAT per rate on EUR."""
+    total = 0
+    eur_lines: list[tuple[int, int]] = []
+    for amounts, vat_rate_bp in lines:
+        total += amounts.total_cents
+        eur_lines.append((amounts.total_eur_cents, vat_rate_bp))
+    vat = vat_totals(eur_lines)
+    return PoTotals(total, vat.ht_cents, vat.vat_by_rate_bp, vat.vat_cents, vat.ttc_cents)
+
+
 def order_by(required_on_site: date | None, lead_time_weeks: int | None) -> date | None:
     """Latest order date: on-site date − lead time − 14-day margin (D7.5); None when unknown."""
     if required_on_site is None or lead_time_weeks is None:
