@@ -61,8 +61,8 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   ├── app.py                          # étape 1 : create_app(deps) sans E/S au chargement ; statique web/dist
 │   │   ├── main.py                         # étape 1 : point d'entrée uvicorn ; étape 3 : exécute le cycle de démarrage §5 à l'import, SystemExit(1) sans servir en cas d'échec
 │   │   ├── cli.py                          # étape 1 : Typer `ffe serve|openapi` ; étape 3 : `ffe db …`
-│   │   ├── money.py                        # étape 7a : toutes les formules, entiers seulement
-│   │   ├── transitions.py                  # étape 7a : table des transitions de statut et préconditions (DATA_MODEL §5)
+│   │   ├── money.py                        # étape 7a : toutes les formules, entiers seulement (div_round demi-supérieur, net, net EUR, quantité totale, total HT, TVA par taux, TTC → HT, approved_cents, placement_ht_cents, order_by) ; prouvé par tests/test_money.py (12 cas §10, limites, hypothesis, égalité avec la CTE §8)
+│   │   ├── transitions.py                  # étape 7a : check_transition(current, target, was_ordered) → clé de refus ou None ; required_for(target) = préconditions cumulées
 │   │   ├── errors.py                       # étape 4 : AppError → {code, message, details} (racine du paquet : importable par services/ et api/)
 │   │   ├── i18n/fr.py                      # étape 4 : messages d'erreur et libellés d'enums en français
 │   │   ├── db/                             # étape 3
@@ -76,7 +76,7 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   │   └── seed.py                     #   catégories de départ (étape 6a)
 │   │   ├── models/                         # étape 3 : base.py (naming_convention), un fichier par table
 │   │   ├── schemas/                        # étape 3 : base.py (BaseSchema camelCase), health.py ; étape 4 : par ressource : XxxCreate, XxxUpdate, XxxRead
-│   │   ├── services/                       # étape 4 : logique métier, transactions, journal ; étape 6a : common.py (D6a.3 : get_or_404, ensure_active, archive, unarchive, check_duplicate_name, search, page), category, manufacturer, supplier ; étape 6b : file.py (store_upload : flux → sha256 → `files/<sha>.<ext>`, sniff MIME, unlink_if_orphan, orphans), product.py (filtres, doublon par référence, jointures fichiers) ; étape 6c : project.py (next_code, ensure_open, change_status, open_project_count), zone.py (code unique par projet, reorder, delete si vide)
+│   │   ├── services/                       # étape 4 : logique métier, transactions, journal ; étape 6a : common.py (D6a.3 : get_or_404, ensure_active, archive, unarchive, check_duplicate_name, search, page), category, manufacturer, supplier ; étape 6b : file.py (store_upload : flux → sha256 → `files/<sha>.<ext>`, sniff MIME, unlink_if_orphan, orphans), product.py (filtres, doublon par référence, jointures fichiers) ; étape 6c : project.py (next_code, ensure_open, change_status, open_project_count), zone.py (code unique par projet, reorder, delete si vide) ; étape 7a : project_item.py (précédence des défauts, code_sequence, placements, change_status + snapshot + journal, replace_product, refresh_from_catalogue, suppression bornée, fichiers, summary)
 │   │   └── api/v1/                         # étape 1 : router.py, health.py ; étape 4 : client.py …
 │   └── tests/                              # étape 1 : conftest.py ; étape 3 : test_startup, test_integrity,
 │                                           #   test_migrations, test_backup ; étape 4+ : test_api_<ressource>

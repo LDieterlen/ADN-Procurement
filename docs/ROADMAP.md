@@ -104,7 +104,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : 3 lignes dont une libre et une `existing` ; même lampe dans Lobby ×1 (qté 2) et Chambre type A ×12 (qté 1) → 1 code, quantité = 2×1 + 1×12 = 14 (exemple DATA_MODEL §6) ; ligne en GBP → total EUR au centime ; totaux vérifiés à la main ; `ordered → draft` refusé ; prix catalogue modifié n'affecte pas la ligne.
 - **Décisions préalables** : D7.1 transitions libres avec confirmation jusqu'à `ordered`, puis retour impossible sauf `cancelled` avec note (défaut) ; D7.2 `ordered` exige `order_ref`, `approved` pose le snapshot (défaut) ; D7.3 arrondi au centime par ligne puis somme (défaut) ; D7.4 « Rafraîchir depuis le catalogue » explicite, journalisé (défaut) ; D7.5 marge d'alerte 14 jours (défaut).
 - **Risques** : flottants qui se glissent dans `money.py` ; FK composites `(zone_id, project_id)` ; `code_sequence` décrémenté par erreur.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `6643b7b` (money), `feat(db)`, `feat(api)`, `docs(repo): étape 7a close` (hashes dans le JOURNAL). D7.1 à D7.5 : défauts (mode enchaîné). Critère prouvé par `tests/test_api_project_item.py` : ligne libre et `existing` ; même lampe LOB ×1 (qté 2) + CHA ×12 (qté 1) → un code, 14 pièces, 17 403,82 € ; `ordered → draft` refusé ; prix catalogue modifié sans effet sauf `refresh` ; `test_money.py` : 12 cas §10, limites, propriétés `hypothesis`, égalité avec la CTE SQL §8 sur 200 lignes aléatoires. `GET /projects/{id}/summary` livré dès 7a (montants sans budget).
 
 ## Étape 7b — Lignes : UI tableau et panneau latéral
 
