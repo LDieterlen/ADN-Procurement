@@ -113,7 +113,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : 3 lignes créées dans « Chambre type A ×12 », une placée aussi dans « Chambre type B », totaux identiques à 7a ; réévaluation de D5.1 consignée.
 - **Décisions préalables** : D7b.1 colonnes affichées par défaut (défaut : liste ci-dessus) ; D7b.2 édition en ligne limitée à qté et statut (défaut).
 - **Risques** : le front qui additionne « pour aller vite » → interdit ; tableau trop large sur petit écran.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(web)` puis `docs(repo): étape 7b close` (hashes dans le JOURNAL). D7b.1 colonnes par défaut, D7b.2 édition en ligne limitée à la quantité (statut à 7c) : défauts (mode enchaîné). Critère prouvé par `ProjectItems.test.tsx` : ajout depuis le catalogue dans CHA ×12 (14 917,56 € HT affichés depuis la synthèse serveur), ajout à LOB depuis le panneau → un code, deux placements, 17 403,82 € ; ligne libre. Réévaluation D5.1 : react-hook-form tenu (formulaires imbriqués `Form` + `useController` sans friction). Le front n'additionne rien : `summary` seulement.
 
 ## Étape 7c — Lignes : statuts, historique, filtres, impression
 
