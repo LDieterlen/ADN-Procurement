@@ -44,6 +44,7 @@ TABLE_ORDER: tuple[str, ...] = (
     "project_item_event",
     "code_sequence",
     "project_item_file",
+    "budget_line",
 )
 # Row validation before insert (D4.11); `setting` gets its schema with its API (step 9);
 # `product` and `product_file` rows are validated by the database (STRICT, CHECK, FK) only.

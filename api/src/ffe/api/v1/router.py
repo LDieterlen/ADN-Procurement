@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from ffe.api.v1 import (
+    budget,
     category,
     client,
     file,
@@ -26,3 +27,4 @@ router.include_router(file.router)
 router.include_router(project.router)
 router.include_router(zone.router)
 router.include_router(project_item.router)
+router.include_router(budget.router)

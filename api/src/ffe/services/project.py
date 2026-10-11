@@ -94,8 +94,18 @@ def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Proje
         vat = values.pop("default_vat_bp")
         if vat is None:
             vat = _settings_row(session).default_vat_bp
+        contingency = values.pop("contingency_bp")
+        if contingency is None:
+            contingency = _settings_row(session).default_contingency_bp
         now = stamp(clock)
-        project = Project(**values, code=code, default_vat_bp=vat, created_at=now, updated_at=now)
+        project = Project(
+            **values,
+            code=code,
+            default_vat_bp=vat,
+            contingency_bp=contingency,
+            created_at=now,
+            updated_at=now,
+        )
         session.add(project)
     return project
 

@@ -76,6 +76,14 @@ PLACEMENT_PIECE_QTY = "Quantité entière attendue pour cette unité (multiple d
 PLACEMENT_LAST_ONE = (
     "Une ligne garde au moins un placement : modifier celui-ci plutôt que le supprimer."
 )
+ALERT_BUDGET = "{scope} : prescrit à {pct} % du budget ou plus."
+ALERT_ORDER = "{code} : à commander avant le {on}, date dépassée."
+BUDGET_DUPLICATE_SCOPE = "Deux budgets pour le même périmètre (projet, zone, catégorie)."
+BUDGET_ZONE_NOT_IN_PROJECT = "La zone n'appartient pas à ce projet."
+BUDGET_CATEGORY_NOT_FOUND = "Catégorie introuvable."
+BUDGET_DOUBLE_COUNT = (
+    "Une catégorie et sa sous-catégorie ne peuvent pas avoir chacune un budget pour la même zone."
+)
 ZONE_CODE_TAKEN = "Une zone de ce projet porte déjà ce code."
 ZONE_NOT_EMPTY = "La zone contient des lignes ou un budget : l'archiver plutôt que la supprimer."
 ZONE_REORDER_MISMATCH = "La liste doit contenir exactement les zones actives du projet."

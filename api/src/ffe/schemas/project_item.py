@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 
 from ffe.i18n import fr
 from ffe.schemas.base import BaseSchema, IsoDate
+from ffe.schemas.budget import BudgetSummaryRead
 
 ItemKind = Literal["ffe", "ose", "custom", "existing", "fee"]
 ItemStatus = Literal[
@@ -342,3 +343,4 @@ class ProjectSummaryRead(BaseSchema):
     vat_by_rate_bp: dict[int, int]
     vat_cents: int
     ttc_cents: int
+    budget: BudgetSummaryRead | None = None  # step 8: filled by services/budget.summary_with_budget

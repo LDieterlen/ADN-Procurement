@@ -1,6 +1,62 @@
 {
   "components": {
     "schemas": {
+      "AlertRead": {
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "kind": {
+            "enum": [
+              "budget_90",
+              "budget_100",
+              "order_overdue"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "projectItemId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectitemid"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "required": [
+          "kind",
+          "message"
+        ],
+        "title": "AlertRead",
+        "type": "object"
+      },
       "Body_uploadFile": {
         "properties": {
           "file": {
@@ -13,6 +69,304 @@
           "file"
         ],
         "title": "Body_uploadFile",
+        "type": "object"
+      },
+      "BudgetLineIn": {
+        "properties": {
+          "amountCents": {
+            "minimum": 0.0,
+            "title": "Amountcents",
+            "type": "integer"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "required": [
+          "amountCents"
+        ],
+        "title": "BudgetLineIn",
+        "type": "object"
+      },
+      "BudgetLineRead": {
+        "properties": {
+          "amountCents": {
+            "title": "Amountcents",
+            "type": "integer"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "zoneId",
+          "categoryId",
+          "amountCents",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "BudgetLineRead",
+        "type": "object"
+      },
+      "BudgetLinesPut": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "BudgetLinesPut",
+        "type": "object"
+      },
+      "BudgetRowRead": {
+        "description": "One row of the Budget tab: per zone (D8.3 default) or per level-1 category; D8.4 alert level.",
+        "properties": {
+          "alert": {
+            "enum": [
+              "none",
+              "warning",
+              "over"
+            ],
+            "title": "Alert",
+            "type": "string"
+          },
+          "approvedCents": {
+            "title": "Approvedcents",
+            "type": "integer"
+          },
+          "budgetCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budgetcents"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "multiplier": {
+            "title": "Multiplier",
+            "type": "integer"
+          },
+          "remainingCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingcents"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "required": [
+          "zoneId",
+          "categoryId",
+          "label",
+          "multiplier",
+          "budgetCents",
+          "specifiedCents",
+          "approvedCents",
+          "remainingCents",
+          "alert"
+        ],
+        "title": "BudgetRowRead",
+        "type": "object"
+      },
+      "BudgetSummaryRead": {
+        "properties": {
+          "alert": {
+            "enum": [
+              "none",
+              "warning",
+              "over"
+            ],
+            "title": "Alert",
+            "type": "string"
+          },
+          "approvedCents": {
+            "title": "Approvedcents",
+            "type": "integer"
+          },
+          "byCategory": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetRowRead"
+            },
+            "title": "Bycategory",
+            "type": "array"
+          },
+          "byZone": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetRowRead"
+            },
+            "title": "Byzone",
+            "type": "array"
+          },
+          "contingencyBp": {
+            "title": "Contingencybp",
+            "type": "integer"
+          },
+          "contingencyCents": {
+            "title": "Contingencycents",
+            "type": "integer"
+          },
+          "globalCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Globalcents"
+          },
+          "remainingCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingcents"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "globalCents",
+          "contingencyBp",
+          "contingencyCents",
+          "specifiedCents",
+          "approvedCents",
+          "remainingCents",
+          "alert",
+          "byZone",
+          "byCategory"
+        ],
+        "title": "BudgetSummaryRead",
         "type": "object"
       },
       "CategoryCreate": {
@@ -613,6 +967,110 @@
           }
         },
         "title": "ClientUpdate",
+        "type": "object"
+      },
+      "DashboardProjectRead": {
+        "properties": {
+          "alert": {
+            "enum": [
+              "none",
+              "warning",
+              "over"
+            ],
+            "title": "Alert",
+            "type": "string"
+          },
+          "approvedCents": {
+            "title": "Approvedcents",
+            "type": "integer"
+          },
+          "budgetCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budgetcents"
+          },
+          "clientName": {
+            "title": "Clientname",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "draftLines": {
+            "title": "Draftlines",
+            "type": "integer"
+          },
+          "dueOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dueon"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "onHoldLines": {
+            "title": "Onholdlines",
+            "type": "integer"
+          },
+          "overdueLines": {
+            "title": "Overduelines",
+            "type": "integer"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "remainingCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingcents"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "code",
+          "name",
+          "status",
+          "clientName",
+          "dueOn",
+          "budgetCents",
+          "specifiedCents",
+          "approvedCents",
+          "remainingCents",
+          "alert",
+          "draftLines",
+          "onHoldLines",
+          "overdueLines"
+        ],
+        "title": "DashboardProjectRead",
         "type": "object"
       },
       "EventRead": {
@@ -2628,6 +3086,19 @@
             ],
             "title": "Code"
           },
+          "contingencyBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contingencybp"
+          },
           "defaultVatBp": {
             "anyOf": [
               {
@@ -3875,6 +4346,10 @@
             "title": "Code",
             "type": "string"
           },
+          "contingencyBp": {
+            "title": "Contingencybp",
+            "type": "integer"
+          },
           "createdAt": {
             "title": "Createdat",
             "type": "string"
@@ -3983,6 +4458,7 @@
           "deliveryAddress",
           "deliveryContact",
           "defaultVatBp",
+          "contingencyBp",
           "startOn",
           "dueOn",
           "notes",
@@ -4017,6 +4493,16 @@
           "approvedCents": {
             "title": "Approvedcents",
             "type": "integer"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetSummaryRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "lines": {
             "items": {
@@ -4099,6 +4585,19 @@
               }
             ],
             "title": "Code"
+          },
+          "contingencyBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contingencybp"
           },
           "defaultVatBp": {
             "anyOf": [
@@ -5872,6 +6371,31 @@
         "summary": "Unarchive Client",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "getDashboard",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardProjectRead"
+                  },
+                  "title": "Response Getdashboard",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Dashboard",
+        "tags": [
+          "budgets"
         ]
       }
     },
@@ -7675,6 +8199,155 @@
         "summary": "Update Project",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/alerts": {
+      "get": {
+        "operationId": "listProjectAlerts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertRead"
+                  },
+                  "title": "Response Listprojectalerts",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Alerts",
+        "tags": [
+          "budgets"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/budget-lines": {
+      "get": {
+        "operationId": "listBudgetLines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetLineRead"
+                  },
+                  "title": "Response Listbudgetlines",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Budget Lines",
+        "tags": [
+          "budgets"
+        ]
+      },
+      "put": {
+        "operationId": "putBudgetLines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetLinesPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetLineRead"
+                  },
+                  "title": "Response Putbudgetlines",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Budget Lines",
+        "tags": [
+          "budgets"
         ]
       }
     },

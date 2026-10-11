@@ -30,6 +30,7 @@ class ProjectCreate(BaseSchema):
     delivery_address: Short = None
     delivery_contact: Short = None
     default_vat_bp: Bp | None = None  # None = copied from setting.default_vat_bp
+    contingency_bp: Bp | None = None  # None = copied from setting.default_contingency_bp (D8.2)
     start_on: IsoDate = None
     due_on: IsoDate = None
     notes: Long = None
@@ -54,11 +55,12 @@ class ProjectUpdate(BaseSchema):
     delivery_address: Short = None
     delivery_contact: Short = None
     default_vat_bp: Bp | None = None
+    contingency_bp: Bp | None = None
     start_on: IsoDate = None
     due_on: IsoDate = None
     notes: Long = None
 
-    @field_validator("name", "client_id", "code", "default_vat_bp", mode="before")
+    @field_validator("name", "client_id", "code", "default_vat_bp", "contingency_bp", mode="before")
     @classmethod
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
@@ -80,6 +82,7 @@ class ProjectRead(BaseSchema):
     delivery_address: str | None
     delivery_contact: str | None
     default_vat_bp: int
+    contingency_bp: int
     start_on: str | None
     due_on: str | None
     notes: str | None
