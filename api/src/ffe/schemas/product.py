@@ -9,7 +9,7 @@ from ffe.schemas.base import BaseSchema, IsoDate
 
 Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
 TaxMode = Literal["ht", "ttc"]
-SourceKind = Literal["manual", "url"]
+SourceKind = Literal["manual", "url", "import"]
 FileKind = Literal["image", "datasheet", "drawing", "other"]
 
 Name = Annotated[str, Field(min_length=1, max_length=200)]

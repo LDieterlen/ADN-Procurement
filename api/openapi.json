@@ -104,6 +104,71 @@
         "title": "BackupRead",
         "type": "object"
       },
+      "Body_commitProductImport": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "mapping": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapping"
+          },
+          "markMissingDiscontinued": {
+            "default": false,
+            "title": "Markmissingdiscontinued",
+            "type": "boolean"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file",
+          "supplierId"
+        ],
+        "title": "Body_commitProductImport",
+        "type": "object"
+      },
+      "Body_previewProductImport": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "mapping": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapping"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file",
+          "supplierId"
+        ],
+        "title": "Body_previewProductImport",
+        "type": "object"
+      },
       "Body_uploadFile": {
         "properties": {
           "file": {
@@ -1577,6 +1642,283 @@
         "title": "HealthRead",
         "type": "object"
       },
+      "ImportBatchRead": {
+        "properties": {
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "importedAt": {
+            "title": "Importedat",
+            "type": "string"
+          },
+          "originalName": {
+            "title": "Originalname",
+            "type": "string"
+          },
+          "rowsCreated": {
+            "title": "Rowscreated",
+            "type": "integer"
+          },
+          "rowsDiscontinued": {
+            "title": "Rowsdiscontinued",
+            "type": "integer"
+          },
+          "rowsSkipped": {
+            "title": "Rowsskipped",
+            "type": "integer"
+          },
+          "rowsTotal": {
+            "title": "Rowstotal",
+            "type": "integer"
+          },
+          "rowsUnchanged": {
+            "title": "Rowsunchanged",
+            "type": "integer"
+          },
+          "rowsUpdated": {
+            "title": "Rowsupdated",
+            "type": "integer"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "supplierId",
+          "fileId",
+          "originalName",
+          "importedAt",
+          "rowsTotal",
+          "rowsCreated",
+          "rowsUpdated",
+          "rowsUnchanged",
+          "rowsSkipped",
+          "rowsDiscontinued"
+        ],
+        "title": "ImportBatchRead",
+        "type": "object"
+      },
+      "ImportCommitRead": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/ImportBatchRead"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ImportCounts"
+          },
+          "createdProductIds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Createdproductids",
+            "type": "array"
+          },
+          "updatedProductIds": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Updatedproductids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "counts",
+          "createdProductIds",
+          "updatedProductIds"
+        ],
+        "title": "ImportCommitRead",
+        "type": "object"
+      },
+      "ImportCounts": {
+        "properties": {
+          "create": {
+            "title": "Create",
+            "type": "integer"
+          },
+          "discontinued": {
+            "default": 0,
+            "title": "Discontinued",
+            "type": "integer"
+          },
+          "skip": {
+            "title": "Skip",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "update": {
+            "title": "Update",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "create",
+          "update",
+          "unchanged",
+          "skip"
+        ],
+        "title": "ImportCounts",
+        "type": "object"
+      },
+      "ImportMapping": {
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "name",
+                "supplierRef",
+                "manufacturerRef",
+                "gtin",
+                "listPrice",
+                "leadTimeWeeks",
+                "finish",
+                "manufacturerName"
+              ]
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "defaultCategoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultcategoryid"
+          },
+          "taxMode": {
+            "enum": [
+              "ht",
+              "ttc"
+            ],
+            "title": "Taxmode",
+            "type": "string"
+          },
+          "vatBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vatbp"
+          }
+        },
+        "required": [
+          "columns",
+          "taxMode"
+        ],
+        "title": "ImportMapping",
+        "type": "object"
+      },
+      "ImportPreviewRead": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ImportCounts"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/ImportMapping"
+          },
+          "mappingSource": {
+            "enum": [
+              "given",
+              "saved",
+              "guessed"
+            ],
+            "title": "Mappingsource",
+            "type": "string"
+          },
+          "missingSupplierRefs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missingsupplierrefs",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRowRead"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sample": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Sample",
+            "type": "array"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "supplierId",
+          "filename",
+          "columns",
+          "sample",
+          "mapping",
+          "mappingSource",
+          "counts",
+          "rows",
+          "missingSupplierRefs"
+        ],
+        "title": "ImportPreviewRead",
+        "type": "object"
+      },
       "InvoiceCreate": {
         "properties": {
           "amountHtCents": {
@@ -2672,6 +3014,174 @@
         "title": "PlacementUpdate",
         "type": "object"
       },
+      "PlanRowRead": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "update",
+              "unchanged",
+              "skip"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "gtin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gtin"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "manufacturerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturername"
+          },
+          "manufacturerRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturerref"
+          },
+          "matchedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matchedby"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "newPriceCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newpricecents"
+          },
+          "oldPriceCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldpricecents"
+          },
+          "productId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productid"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "rowIndex": {
+            "title": "Rowindex",
+            "type": "integer"
+          },
+          "supplierRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierref"
+          }
+        },
+        "required": [
+          "rowIndex",
+          "action",
+          "reason",
+          "matchedBy",
+          "productId",
+          "name",
+          "supplierRef",
+          "manufacturerRef",
+          "manufacturerName",
+          "gtin",
+          "oldPriceCents",
+          "newPriceCents",
+          "leadTimeWeeks",
+          "finish"
+        ],
+        "title": "PlanRowRead",
+        "type": "object"
+      },
       "PoCreate": {
         "properties": {
           "expectedDeliveryOn": {
@@ -3552,7 +4062,8 @@
             "default": "manual",
             "enum": [
               "manual",
-              "url"
+              "url",
+              "import"
             ],
             "title": "Sourcekind",
             "type": "string"
@@ -4051,7 +4562,8 @@
           "sourceKind": {
             "enum": [
               "manual",
-              "url"
+              "url",
+              "import"
             ],
             "title": "Sourcekind",
             "type": "string"
@@ -4404,7 +4916,8 @@
               {
                 "enum": [
                   "manual",
-                  "url"
+                  "url",
+                  "import"
                 ],
                 "type": "string"
               },
@@ -8846,6 +9359,193 @@
         "summary": "Get Health",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/imports/products/batches": {
+      "get": {
+        "operationId": "listProductImportBatches",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "supplierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Supplierid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportBatchRead"
+                  },
+                  "title": "Response Listproductimportbatches",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Batches",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/api/v1/imports/products/commit": {
+      "post": {
+        "operationId": "commitProductImport",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_commitProductImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCommitRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit Import",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/api/v1/imports/products/mapping": {
+      "get": {
+        "operationId": "getProductImportMapping",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "supplierId",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Supplierid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ImportMapping"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getproductimportmapping"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Mapping",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/api/v1/imports/products/preview": {
+      "post": {
+        "operationId": "previewProductImport",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_previewProductImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Import",
+        "tags": [
+          "imports"
         ]
       }
     },

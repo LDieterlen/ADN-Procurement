@@ -12,6 +12,7 @@ from ffe.api.v1 import (
     health,
     manufacturer,
     product,
+    product_import,
     project,
     project_item,
     purchase_order,
@@ -40,5 +41,6 @@ router.include_router(purchase_order.router)
 router.include_router(delivery.router)
 router.include_router(supplier_invoice.router)
 router.include_router(export.router)
+router.include_router(product_import.router)
 router.include_router(setting.router)
 router.include_router(system.router)
