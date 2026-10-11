@@ -140,7 +140,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : supprimer `ffe.sqlite`, `ffe db restore` → tout revient ; une copie existe dans le dossier Windows et passe `quick_check` ; export JSON lisible ; Réglages montre la date de dernière sauvegarde ; un 500 provoqué apparaît dans le journal.
 - **Décisions préalables** : D9.1 `FFE_BACKUP_DIR` (défaut D0.10) ; D9.2 Playwright, 2 parcours (défaut : oui) ; D9.3 jeton d'API : reporté à F6 (défaut).
 - **Risques** : copie vers 9p sans `quick_check` ; navigateurs Playwright hors `.persist` perdus au rebuild.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 9 close` (hashes dans le JOURNAL). D9.1 à D9.3 : défauts (mode enchaîné). Critère prouvé : `test_backup.py` (restore remplace la base), `test_backup_copy.py` (copie Windows `quick_check` ok, rotation), `test_json_io.py` (export lisible + fichiers), `SettingsPage.test.tsx` et `e2e/sauvegarde.spec.ts` (date de dernière sauvegarde affichée), `test_logs.py` (500 provoqué dans le journal).
 
 ## Étape 10a — Devis
 
@@ -229,7 +229,8 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 
 Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, besoin, étape où le reprendre), au lieu d'entrer dans le code. Vidé ou promu en étape lors d'une revue de feuille de route.
 
-_(vide)_
+- 2026-10-11 — `ffe db restore --with-files` : recopier `FFE_BACKUP_DIR/files/` vers `files/` par la CLI (aujourd'hui manuel, RUNBOOK §5) ; à reprendre avec 10c ou à la première restauration réelle.
+- 2026-10-11 — Tableau de bord : préférences de tri et de masquage des projets `prospect` (étape 8, défaut : tous les projets non clos) ; à reprendre après usage.
 
 ## Reporté volontairement
 

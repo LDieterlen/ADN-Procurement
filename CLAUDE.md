@@ -8,7 +8,7 @@ Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARC
 
 ## Commandes
 
-**Étape 8 (2026-10-11) : migration 0006 `budget_line` + `project.contingency_bp`, `services/budget.py`, onglet « Budget », `GET /dashboard` en page d'accueil, `GET /projects/{id}/alerts` ; 7c : statuts avec confirmation et note, remplacement de produit, historique, filtres serveur, « Commander avant le », impression et variante client ; 7b : onglet « Lignes » ; 7a : migration 0005, `money.py`, `transitions.py`, service des lignes, `GET /projects/{id}/summary` ; gabarit = ARCHITECTURE §9 + `services/common.py` + `pages/common/useSubmitErrors.ts`. Mode enchaîné depuis 6b : décisions par défaut consignées dans le JOURNAL, pas d'attente de validation (mémoire `feedback-mode-enchaine`).** Mettre cette liste à jour à chaque étape.
+**Étape 9 (2026-10-11) : migration 0007 (agence sur `setting`), `GET/PATCH /settings` + page Réglages, `POST /system/backup`, copie vérifiée vers `FFE_BACKUP_DIR`, fil horaire + sauvegarde à l'arrêt, `logs/ffe.log`, `--with-files`, `check --files`, `docs/RUNBOOK.md`, 2 parcours Playwright (`npm run e2e`) ; 8 : migration 0006 `budget_line` + `project.contingency_bp`, `services/budget.py`, onglet « Budget », `GET /dashboard` en page d'accueil, `GET /projects/{id}/alerts` ; 7c : statuts avec confirmation et note, remplacement de produit, historique, filtres serveur, « Commander avant le », impression et variante client ; 7b : onglet « Lignes » ; 7a : migration 0005, `money.py`, `transitions.py`, service des lignes, `GET /projects/{id}/summary` ; gabarit = ARCHITECTURE §9 + `services/common.py` + `pages/common/useSubmitErrors.ts`. Mode enchaîné depuis 6b : décisions par défaut consignées dans le JOURNAL, pas d'attente de validation (mémoire `feedback-mode-enchaine`).** Mettre cette liste à jour à chaque étape.
 **Venv Python — règle dure pour Claude** : `api/.venv` est un lien symbolique vers `~/.venvs/ffe` (ext4 ; ARCHITECTURE §11, maître). Les shells de Claude Code héritent de `UV_PROJECT_ENVIRONMENT=~/.venvs/racoon` et `UV_FROZEN=1` (réglage utilisateur, **non neutralisé** par le bloc `env` du projet, constaté le 2026-10-10) : tout `uv run` lancé tel quel **resynchronise le venv de Racoon sur le lock de FFE**. Donc : `check.sh` exporte lui-même les bonnes valeurs, et toute commande `uv` hors `check.sh` se lance avec `UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv UV_FROZEN=0 uv …` (préfixe obligatoire). Si le venv de Racoon a été touché : `cd /workspaces/Perso/Racoon && UV_PROJECT_ENVIRONMENT=~/.venvs/racoon UV_FROZEN=1 uv sync` le restaure.
 
 ```
@@ -19,12 +19,13 @@ cd api && uv run ruff format --check . && uv run ruff check .   # format + lint 
 cd api && uv run pyright           # typage strict
 cd api && uv run alembic revision --autogenerate -m "<slug>"    # puis RELIRE alembic/versions/<rev>_<slug>.py ligne à ligne
 cd api && uv run alembic upgrade head | check | history         # check = modèles et migrations coïncident (aussi lancé par pytest)
-cd api && uv run ffe db migrate|backup|restore <f>|check|export-json|import-json <f>   # étape 3 ; migrate = backup puis upgrade puis quick_check ; `ffe db seed` (étape 6a)
+cd api && uv run ffe db migrate|backup [--with-files]|restore <f>|check [--files]|export-json [--with-files]|import-json <f>   # étape 3 ; migrate = backup puis upgrade puis quick_check ; `ffe db seed` (étape 6a) ; options --with-files/--files (étape 9)
 cd api && uv run ffe openapi       # écrit api/openapi.json (commité) depuis create_app().openapi() (étape 1)
 cd web && npm run dev              # Vite 5180 (strictPort ; pas 5173, réservé à d'autres projets), host:true (visible depuis Windows), proxy /api → 127.0.0.1:8000
 cd web && npm run check            # tsc --noEmit && prettier --check . && vitest run — jamais vitest en mode watch
 cd web && npm run gen:api          # scripts/gen-api.ts : ../api/openapi.json → src/api/schema.d.ts, sans API lancée (après `ffe openapi`)
 cd web && npm run format | build   # prettier --write . | vite build
+cd web && npm run e2e              # 2 parcours Playwright (étape 9) : API jetable sur 8001 + Vite 5181, données sous ~/.persist/.ffe-tests/e2e-* ; `npm run e2e:install` après un rebuild
 ```
 
 Données hors dépôt : `~/.persist/ffe/` (réel) et `~/.persist/ffe-dev/` (dev) = `ffe.sqlite` (+ `-wal`, `-shm`), `files/`, `backups/`, `logs/`, `ffe.lock`.

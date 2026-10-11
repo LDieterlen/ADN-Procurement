@@ -20,7 +20,7 @@ Devcontainer WSL2. Vérifié le 2026-10-09 : `/workspaces/Perso` est un montage 
 - Base sur 9p ou sur l'overlay, ou copie directe du fichier : corruption possible, perte au rebuild.
 
 ## Conséquences
-`FFE_DATA_DIR=/workspaces/x` est refusé (testé à l'étape 3) ; sauvegarde automatique avant chaque `upgrade` ; CLI `ffe db backup|restore|check|export-json` ; `.gitignore` exclut `*.sqlite*` ; `.claude/settings.json` refuse la lecture et l'écriture de `~/.persist/ffe/**` (la base de dev `~/.persist/ffe-dev/` reste lisible par Claude ; la base réelle jamais). Timer horaire, copie Windows et `RUNBOOK.md` (restauration) sont livrés à l'étape 9 ; avant, sauvegarde au démarrage et à la demande seulement.
+`FFE_DATA_DIR=/workspaces/x` est refusé (testé à l'étape 3) ; sauvegarde automatique avant chaque `upgrade` ; CLI `ffe db backup|restore|check|export-json` ; `.gitignore` exclut `*.sqlite*` ; `.claude/settings.json` refuse la lecture et l'écriture de `~/.persist/ffe/**` (la base de dev `~/.persist/ffe-dev/` reste lisible par Claude ; la base réelle jamais). Timer horaire, copie Windows (vérifiée par `quick_check`, même rotation), sauvegarde à l'arrêt si la base a changé, et `RUNBOOK.md` : livrés à l'étape 9 (2026-10-11).
 
 ## Repli
 Tout autre dossier ext4 passé en `FFE_DATA_DIR` convient si `~/.persist` change. Restauration par `ffe db restore <fichier>` depuis `backups/` ou `FFE_BACKUP_DIR` : vérifie l'intégrité de la source et sauvegarde la base courante (`pre-restore`) avant remplacement atomique.

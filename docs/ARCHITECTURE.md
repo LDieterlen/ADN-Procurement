@@ -32,10 +32,10 @@ Sélection de la base (D3.4, tranché à l'étape 3) : `FFE_ENV=dev` implicite �
 | `ffe serve [--reload] [--prod]` | 1 | Cycle de démarrage (§5) puis uvicorn sur `127.0.0.1:8000` |
 | `ffe openapi` | 1 | Écrit `api/openapi.json` depuis `create_app().openapi()` (instantané commité : défaut, à confirmer à l'étape 1, D1.5) |
 | `ffe db migrate` | 3 | `backup()` → `alembic upgrade head` → `foreign_key_check` → `quick_check` |
-| `ffe db backup [--label x]` | 3 | Sauvegarde locale + `quick_check` + rotation (étape 3) ; copie vers `FFE_BACKUP_DIR` à l'étape 9 |
+| `ffe db backup [--label x] [--with-files]` | 3 | Sauvegarde locale + `quick_check` + rotation (étape 3) ; étape 9 : copie séquentielle vers `FFE_BACKUP_DIR`, `quick_check` de la copie, même rotation ; `--with-files` synchronise `files/` vers `FFE_BACKUP_DIR/files/` (ajout seulement) |
 | `ffe db restore <fichier>` | 3 | Vérifie, sauvegarde l'actuelle, remplace (serveur arrêté) |
-| `ffe db check` | 3 | `integrity_check`, `foreign_key_check`, liste des tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`), comptages, orphelins de fichiers |
-| `ffe db export-json [sortie]` · `ffe db import-json <fichier> [--replace]` | 3 | Copie lisible indépendante du format, et son retour |
+| `ffe db check [--files]` | 3 | `integrity_check`, `foreign_key_check`, liste des tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`), comptages, orphelins de fichiers ; `--files` (étape 9) recalcule le sha256 de chaque fichier joint |
+| `ffe db export-json [sortie] [--with-files]` · `ffe db import-json <fichier> [--replace]` | 3 | Copie lisible indépendante du format, et son retour ; `--with-files` (étape 9, sortie obligatoire) copie `files/` dans `<dossier de sortie>/files/` |
 | `ffe db seed` | 6a | Catégories de départ dans une base vide (dev) |
 
 Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe `FFE_`, aucune n'est obligatoire ; ce paragraphe est le maître) : `FFE_HOST` (`127.0.0.1`) et `FFE_PORT` (`8000`), `FFE_WEB_DIST` (dossier statique servi en usage réel, défaut `web/dist/`) — étape 1 ; `FFE_DATA_DIR` (surcharge du dossier de données, refusé hors ext4), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, absent = avertissement) ; `FFE_ENV` (`dev` par défaut ; `--prod` le force à `prod`) — étape 3 (D3.4). Aucun `.env` versionné ; `api/.env.example` documente les noms retenus.
@@ -57,9 +57,10 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   ├── openapi.json                        # étape 1 : instantané du contrat, commité, testé (§4)
 │   ├── src/ffe/
 │   │   ├── config.py                       # étape 1 : pydantic-settings (FFE_DATA_DIR, FFE_BACKUP_DIR, FFE_ENV, port) ; étape 3 : chemins dérivés (db_path, backups_dir, lock_path)
-│   │   ├── deps.py                         # étape 3 : Deps (settings, engine, horloge, callbacks d'arrêt) + get_deps (dépendance FastAPI) ; module séparé d'app.py pour éviter l'import circulaire avec les routeurs
-│   │   ├── app.py                          # étape 1 : create_app(deps) sans E/S au chargement ; statique web/dist
-│   │   ├── main.py                         # étape 1 : point d'entrée uvicorn ; étape 3 : exécute le cycle de démarrage §5 à l'import, SystemExit(1) sans servir en cas d'échec
+│   │   ├── deps.py                         # étape 3 : Deps (settings, engine, horloge, callbacks d'arrêt) + get_deps (dépendance FastAPI) ; module séparé d'app.py pour éviter l'import circulaire avec les routeurs ; étape 9 : RuntimeStatus (dernier quick_check, chemin du journal)
+│   │   ├── logs.py                         # étape 9 : configure_logging(logs_dir) → logs/ffe.log (RotatingFileHandler 5 Mo × 2)
+│   │   ├── app.py                          # étape 1 : create_app(deps) sans E/S au chargement ; statique web/dist ; étape 9 : middleware « une ligne de journal par requête »
+│   │   ├── main.py                         # étape 1 : point d'entrée uvicorn ; étape 3 : exécute le cycle de démarrage §5 à l'import, SystemExit(1) sans servir en cas d'échec ; étape 9 : journal, BackupScheduler, sauvegarde à l'arrêt
 │   │   ├── cli.py                          # étape 1 : Typer `ffe serve|openapi` ; étape 3 : `ffe db …`
 │   │   ├── money.py                        # étape 7a : toutes les formules, entiers seulement (div_round demi-supérieur, net, net EUR, quantité totale, total HT, TVA par taux, TTC → HT, approved_cents, placement_ht_cents, order_by) ; prouvé par tests/test_money.py (12 cas §10, limites, hypothesis, égalité avec la CTE §8)
 │   │   ├── transitions.py                  # étape 7a : check_transition(current, target, was_ordered) → clé de refus ou None ; required_for(target) = préconditions cumulées
@@ -70,18 +71,20 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   │   ├── fs_check.py                 #   lecture de /proc/mounts, refus hors ext4
 │   │   │   ├── lock.py                     #   verrou mono-instance (ffe.lock)
 │   │   │   ├── startup.py                  #   cycle de démarrage §5
-│   │   │   ├── backup.py                   #   backup(), quick_check, rotation, copie FFE_BACKUP_DIR, restore()
+│   │   │   ├── backup.py                   #   backup(), quick_check, rotation, restore() ; étape 9 : copy_to_backup_dir(), sync_files(), backup_and_copy(), needs_backup()
+│   │   │   ├── scheduler.py                #   étape 9 : BackupScheduler (fil horaire, règle 24 h ; tick(modified_rule) à l'arrêt)
 │   │   │   ├── migrate.py                  #   Alembic programmatique : head_revision, current_revision, has_pending, upgrade_head, downgrade_base, check
 │   │   │   ├── json_io.py                  #   export_json() / import_json()
 │   │   │   └── seed.py                     #   catégories de départ (étape 6a)
 │   │   ├── models/                         # étape 3 : base.py (naming_convention), un fichier par table
-│   │   ├── schemas/                        # étape 3 : base.py (BaseSchema camelCase), health.py ; étape 4 : par ressource : XxxCreate, XxxUpdate, XxxRead
+│   │   ├── schemas/                        # étape 3 : base.py (BaseSchema camelCase), health.py ; étape 4 : par ressource : XxxCreate, XxxUpdate, XxxRead ; étape 9 : setting.py, system.py
 │   │   ├── services/                       # étape 4 : logique métier, transactions, journal ; étape 6a : common.py (D6a.3 : get_or_404, ensure_active, archive, unarchive, check_duplicate_name, search, page), category, manufacturer, supplier ; étape 6b : file.py (store_upload : flux → sha256 → `files/<sha>.<ext>`, sniff MIME, unlink_if_orphan, orphans), product.py (filtres, doublon par référence, jointures fichiers) ; étape 6c : project.py (next_code, ensure_open, change_status, open_project_count), zone.py (code unique par projet, reorder, delete si vide) ; étape 7a : project_item.py (précédence des défauts, code_sequence, placements, change_status + snapshot + journal, replace_product, refresh_from_catalogue, suppression bornée, fichiers, summary) ; étape 8 : budget.py (put_budget_lines en bloc, summary_with_budget, alerts, dashboard)
-│   │   └── api/v1/                         # étape 1 : router.py, health.py ; étape 4 : client.py …
+│   │   └── api/v1/                         # étape 1 : router.py, health.py ; étape 4 : client.py … ; étape 9 : setting.py (`/settings`), system.py (`/system/backup`)
 │   └── tests/                              # étape 1 : conftest.py ; étape 3 : test_startup, test_integrity,
 │                                           #   test_migrations, test_backup ; étape 4+ : test_api_<ressource>
 ├── web/                                    # étape 1 : paquet npm
-│   ├── package.json · package-lock.json · tsconfig.json · vite.config.ts · vitest.config.ts · .prettierrc · .prettierignore
+│   ├── e2e/                                # étape 9 : prescription.spec.ts, sauvegarde.spec.ts (Playwright Chromium), start-api.mjs (API jetable sur 8001, données sous ~/.persist/.ffe-tests/e2e-*) ; `npm run e2e`
+│   ├── package.json · package-lock.json · tsconfig.json · vite.config.ts · vitest.config.ts · playwright.config.ts · .prettierrc · .prettierignore
 │   ├── index.html
 │   ├── scripts/gen-api.ts                  # étape 1 : openapi.json → schema.d.ts (exécuté par Node 24, partagé avec le test de fraîcheur)
 │   ├── src/
@@ -100,7 +103,7 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 
 Nommage des modules (maître) : un module par table, nom singulier = nom de la table, dans chaque couche : `models/client.py`, `schemas/client.py`, `services/client.py`, `api/v1/client.py`, `web/src/api/queries/client.ts` ; `services/project_item.py` pour les lignes. Les URL restent au pluriel (`/clients`, `API.md`).
 
-Hors dépôt : `~/.persist/ffe/{ffe.sqlite, files/, backups/, logs/, ffe.lock}` (réel), `~/.persist/ffe-dev/` (dev), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, disque Windows). Non créés avant leur étape : `api/src/ffe/exports/`, `imports/`, `integrations/`, `captures/`, `extension/`, `desktop/`, `web/e2e/`.
+Hors dépôt : `~/.persist/ffe/{ffe.sqlite, files/, backups/, logs/, ffe.lock}` (réel), `~/.persist/ffe-dev/` (dev), `FFE_BACKUP_DIR` (défaut `/workspaces/Perso/FFE-sauvegardes/`, disque Windows). Non créés avant leur étape : `api/src/ffe/exports/`, `imports/`, `integrations/`, `captures/`, `extension/`, `desktop/`.
 
 ## 3. Flux d'une requête
 
@@ -158,7 +161,7 @@ Verrou mono-instance (D3.5) : `ffe.lock` dans le répertoire de données, pris p
 5. `alembic upgrade head` (programmatique, même configuration que la CLI).
 6. `PRAGMA foreign_key_check` (non vide → arrêt, message « restaurer `<fichier pre-migrate>` »).
 7. `PRAGMA quick_check` ; puis seulement, écoute sur `127.0.0.1:8000`.
-8. Arrêt (`SIGINT`/`SIGTERM`) : `engine.dispose()`, libération du verrou ; `backup()` à l'arrêt si > 24 h : étape 9.
+8. Arrêt (`SIGINT`/`SIGTERM`) : arrêt du fil horaire, sauvegarde si la base a changé depuis la dernière (mtime de `ffe.sqlite`/`-wal` > dernière sauvegarde) ou si > 24 h (`scheduler.tick(modified_rule=True)`), `engine.dispose()`, libération du verrou (étape 9).
 
 Tout échec d'une étape 1–7 = arrêt sans servir, base intacte. Les tests ne passent pas par `startup.py` : `conftest.py` crée un fichier temporaire migré (§7).
 
@@ -172,10 +175,10 @@ Tout échec d'une étape 1–7 = arrêt sans servir, base intacte. Les tests ne 
 ### Sauvegardes
 
 - Méthode unique, `backup.py` : `wal_checkpoint(TRUNCATE)` → `sqlite3.Connection.backup()` (stdlib, cohérent même pendant une écriture) vers `backups/tmp/` → `quick_check` du fichier produit → `rename` dans `backups/ffe-YYYYMMDD-HHMMSS[-label].sqlite` → copie séquentielle vers `FFE_BACKUP_DIR` (fiable sur 9p). **Règle dure : ne jamais copier `ffe.sqlite` à chaud** (`cp`, explorateur Windows) : le WAL contient des écritures non intégrées.
-- Déclencheurs : démarrage (règle 24 h ou pre-migrate), avant `ffe db migrate`, `ffe db restore`, `ffe db import-json --replace`, à la demande (`ffe db backup`) ; à l'étape 9 : arrêt, timer horaire appliquant la règle 24 h, `POST /api/v1/system/backup`, copie vers `FFE_BACKUP_DIR` (ADR-0002).
-- Rotation (D3.2, `backup.rotate`) : par date calendaire, dernière sauvegarde de chacun des 14 derniers jours, des 8 dernières semaines ISO et des 12 derniers mois présents ; fichiers libellés (`pre-migrate-*`, `pre-restore-*`, `pre-import`, libellé manuel) conservés 90 jours ; même rotation dans `FFE_BACKUP_DIR` à l'étape 9.
+- Déclencheurs : démarrage (règle 24 h ou pre-migrate), avant `ffe db migrate`, `ffe db restore`, `ffe db import-json --replace`, à la demande (`ffe db backup`) ; étape 9 : arrêt (base modifiée ou > 24 h), fil horaire `BackupScheduler` appliquant la règle 24 h, `POST /api/v1/system/backup`, copie vérifiée vers `FFE_BACKUP_DIR` (`copy_to_backup_dir` : copie `.part`, `quick_check`, `rename`, rotation ; un échec de copie est journalisé et remonté dans la réponse, jamais fatal) (ADR-0002).
+- Rotation (D3.2, `backup.rotate`) : par date calendaire, dernière sauvegarde de chacun des 14 derniers jours, des 8 dernières semaines ISO et des 12 derniers mois présents ; fichiers libellés (`pre-migrate-*`, `pre-restore-*`, `pre-import`, libellé manuel) conservés 90 jours ; même rotation dans `FFE_BACKUP_DIR` (étape 9).
 - `ffe db restore <fichier>` : `quick_check` de la source, sauvegarde `pre-restore` de la base courante, remplacement atomique par `rename`, serveur arrêté (le verrou le garantit).
-- `ffe db check` : `integrity_check`, `foreign_key_check`, liste des tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`), comptages par table, orphelins `files/` ↔ table `file`.
+- `ffe db check` : `integrity_check`, `foreign_key_check`, liste des tables avec leur drapeau STRICT (lu dans `sqlite_master.sql`), comptages par table, orphelins `files/` ↔ table `file` ; `--files` recalcule le sha256 de chaque fichier joint (`services/file.verify_hashes`).
 
 ### Export / import JSON
 
@@ -191,7 +194,7 @@ Clés camelCase (mêmes DTO que l'API), tables dans l'ordre des dépendances, id
 
 ### Journal et logs
 
-`logs/ffe.log` dans le répertoire de données : `logging` stdlib, rotation par taille (2 fichiers), une ligne par requête (méthode, chemin, code, durée) et chaque erreur 500 avec sa trace. `GET /api/v1/health` expose la date de dernière sauvegarde, l'état de `FFE_BACKUP_DIR` et le dernier `quick_check`. Le journal métier des lignes (`project_item_event`) est dans la base, pas dans ce fichier.
+`logs/ffe.log` dans le répertoire de données : `logging` stdlib, rotation par taille (2 fichiers), une ligne par requête (méthode, chemin, code, durée) et chaque erreur 500 avec sa trace. `GET /api/v1/health` expose la date de dernière sauvegarde, l'état de `FFE_BACKUP_DIR`, le dernier `quick_check` (`RuntimeStatus`, posé au démarrage et à chaque sauvegarde) et le chemin du journal. Une requête qui lève une exception est journalisée deux fois : la ligne de requête (`… 500 …`) par le middleware, la trace par `internal_handler` (`test_logs.py`). Le journal métier des lignes (`project_item_event`) est dans la base, pas dans ce fichier.
 
 ## 6. Frontières d'import et tests d'architecture
 
@@ -225,7 +228,7 @@ Tests d'architecture, zéro dépendance :
 | API | par ressource : 201 + relecture, PATCH partiel, 422 `details[].field`, 404, 409 (`archivedId`, RESTRICT, transition), archive/unarchive | `test_api_<ressource>.py` via `TestClient` (étape 4+) |
 | Contrat | `openapi.json` à jour ; `schema.d.ts` à jour | `api/tests/test_openapi.py`, `web/tests/schema-freshness.test.ts` (étape 1) |
 | Front | composants de formulaire (centimes ↔ affichage, millièmes, bp), affichage des 422 | `web/src/**/<Composant>.test.tsx`, Vitest + Testing Library (étape 5) |
-| Bout en bout | 2 parcours Playwright | `web/e2e/` (étape 9) |
+| Bout en bout | 2 parcours Playwright Chromium contre une vraie API sur données jetables (prescription : catégorie → client → projet → zone ×12 → ligne libre → totaux serveur ; sauvegarde : réglages → « Sauvegarder maintenant » → copie Windows vérifiée → Santé) | `web/e2e/` (étape 9), `npm run e2e`, hors `check.sh` (lance deux serveurs sur 8001 et 5181) |
 
 Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire** (jamais `:memory:` : WAL et FK doivent être réels), le migre par Alembic, injecte une horloge fixe et construit `create_app(deps)` + `TestClient`. Les factories passent par les services (journal garanti). Aucun test ne touche `~/.persist/ffe`.
 
@@ -290,7 +293,7 @@ Ce que la prochaine ressource copie sans réfléchir : les trois schémas, les s
 
 - **9p** : le dépôt est sur `/workspaces/Perso` (9p drvfs). Code et `node_modules` y vivent (lenteur acceptée) ; **aucune donnée SQLite** n'y est jamais écrite. inotify ne remonte pas toujours : `vite.config.ts` prévoit `server.watch.usePolling` activable par variable d'environnement (`VITE_POLL=1`), `uvicorn --reload` avec `--reload-dir src` (polling via `watchfiles` par `WATCHFILES_FORCE_POLLING=1` si besoin). `vitest run` toujours, jamais en mode watch.
 - **Accès depuis Windows** : Vite `server.host: true` ; l'API écoute `127.0.0.1` seulement et reste joignable depuis le navigateur Windows par la redirection de ports de WSL/devcontainer.
-- **Persistance** : seul `~/.persist` survit au rebuild. Base, fichiers, sauvegardes, verrou et logs y vivent ; `FFE_BACKUP_DIR` sur le disque Windows est la seule copie hors conteneur.
+- **Persistance** : seul `~/.persist` survit au rebuild. Base, fichiers, sauvegardes, verrou et logs y vivent ; `FFE_BACKUP_DIR` sur le disque Windows est la seule copie hors conteneur. Navigateurs Playwright sous `~/.persist/ms-playwright` (`PLAYWRIGHT_BROWSERS_PATH` posé par les scripts `e2e` et `e2e:install` de `package.json`), donc conservés au rebuild.
 - **Proxy TLS** : `uv` avec `system-certs = true` (comme Racoon) ; côté npm, `cafile`/`strict-ssl` dans `.npmrc` local si `npm install` échoue (jamais versionné). Constaté à l'étape 1 : `uv` et `npm` passent sans réglage supplémentaire.
 - **Upload en tests (jsdom)** : Vitest reconstruit un `FormData` jsdom en Blob vide ; `queries/product.ts` construit donc le corps multipart à la main (octets + `boundary`), standard pour python-multipart et pour le navigateur, et `tests/helpers/fakeApi.ts` le relit octet par octet (jamais via `TextDecoder('latin1')`, qui remappe 0x80–0x9F).
 - **Venv Python (maître)** : `api/.venv` est un **lien symbolique vers `~/.venvs/ffe`** (ext4). Mesuré à l'étape 1 : la suite pytest prend 3,9 s avec un venv sur 9p, 0,6–0,8 s sur ext4. `uv` suit le lien sans réglage ; `.venv` est ignoré par git ; après reconstruction du devcontainer, recréer le lien (README « Lancer »). Les shells de Claude Code héritent du bloc `env` de `~/.persist/claude/settings.json` écrit pour Racoon (`UV_PROJECT_ENVIRONMENT=~/.venvs/racoon`, `UV_FROZEN=1`, `UV_PYTHON_PREFERENCE=only-managed`) ; le terminal de l'utilisateur n'y est pas soumis. Le bloc `env` de `.claude/settings.json` du projet (`UV_PROJECT_ENVIRONMENT=/workspaces/Perso/FFE/api/.venv`, `UV_FROZEN=0`) **ne le neutralise pas** (constaté le 2026-10-10 sur une session neuve : le réglage utilisateur l'emporte). Conséquence : tout `uv run` lancé par Claude sans préfixe resynchronise le venv de Racoon sur le lock de FFE (arrivé deux fois, réparé par `uv sync` dans Racoon). Protections : `check.sh` exporte lui-même `UV_PROJECT_ENVIRONMENT="$PWD/api/.venv"` et `UV_FROZEN=0` ; toute autre commande `uv` de Claude porte ce préfixe (CLAUDE.md). Correction définitive, à la main de l'utilisateur : déplacer ce bloc `env` du réglage utilisateur vers `.claude/settings.json` de Racoon. `npm create vite` a échoué sans TTY : `web/` a été écrit à la main (mêmes fichiers).

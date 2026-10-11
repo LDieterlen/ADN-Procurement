@@ -9,7 +9,7 @@ Outil local mono-utilisateur, priorité fiabilité puis simplicité, trois couch
 L'utilisateur retient la voie Python après lecture de la comparaison, en acceptant le coût des deux chaînes d'outils.
 - Back `api/` (projet uv, `native-tls = true`) : Python 3.14, FastAPI 0.143, SQLAlchemy 2.0.x (`Mapped[]`, `naming_convention`), Alembic 1.20 (`render_as_batch=True`, `compare_type=True`), Pydantic v2 + pydantic-settings, Typer (CLI `ffe`), uvicorn.
 - Front `web/` (paquet npm) : Vite 8, React 19, TypeScript 7 strict, TanStack Query 5, react-router 7 déclaratif, react-hook-form, Tailwind 4, client openapi-fetch + types openapi-typescript générés depuis `/openapi.json`, Vitest 5, Prettier.
-- Qualité : ruff + pyright + pytest côté `api/`, tsc + prettier + vitest côté `web/`, `./check.sh` à la racine. Un dépôt, deux sous-projets, sans outil de workspace, sans ESLint, sans CI.
+- Qualité : ruff + pyright + pytest côté `api/`, tsc + prettier + vitest côté `web/`, `./check.sh` à la racine. Un dépôt, deux sous-projets, sans outil de workspace, sans ESLint, sans CI. Étape 9 : `@playwright/test` 1.64 (dev) pour deux parcours Chromium, `npm run e2e`, hors `check.sh`.
 
 ## Alternatives écartées
 - TypeScript unique (better-sqlite3 13 + Drizzle 0.45 + Hono 4) : la mieux notée, mais drizzle-kit recrée les tables sur SQLite sans le filet d'Alembic, et dépend d'un binaire natif.
