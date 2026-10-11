@@ -1,10 +1,12 @@
-"""`setting`: single-row installation settings (DATA_MODEL §4.1; step 3 columns only, D2.8)."""
+"""`setting`: single-row installation settings (DATA_MODEL §4.1; columns added per step, D2.8)."""
 
 from sqlalchemy import CheckConstraint, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
+
+SIRET_GLOB = "[0-9]" * 14
 
 
 class Setting(TimestampedMixin, Base):
@@ -13,6 +15,10 @@ class Setting(TimestampedMixin, Base):
         CheckConstraint("id = 1", name="single_row"),
         CheckConstraint("default_vat_bp BETWEEN 0 AND 10000", name="default_vat_bp_range"),
         CheckConstraint("base_currency = 'EUR'", name="base_currency_eur"),
+        CheckConstraint(
+            f"agency_siret IS NULL OR agency_siret GLOB '{SIRET_GLOB}'",
+            name="agency_siret_format",
+        ),
         STRICT,
     )
 
@@ -31,3 +37,10 @@ class Setting(TimestampedMixin, Base):
     default_contingency_bp: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("1000")
     )
+    # Step 9 (migration 0007): agency identity, header of the future exports.
+    agency_name: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    agency_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agency_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agency_phone: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agency_siret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agency_vat_number: Mapped[str | None] = mapped_column(Text, nullable=True)
