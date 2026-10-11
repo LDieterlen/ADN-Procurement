@@ -131,7 +131,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : budget global 50 000 € et « Chambres » 30 000 € ; Prescrit et Reste cohérents avec l'onglet Lignes ; annuler une ligne libère le budget ; 2 budgets globaux → 409 ; aucune colonne « Engagé » (arrive en 10b).
 - **Décisions préalables** : D8.1 budget en net HT EUR (défaut) ; D8.2 contingence au niveau projet (défaut) ; D8.3 vue par zone par défaut, bascule par catégorie (défaut) ; D8.4 alerte à 90 % (orange) et 100 % (rouge) (défaut).
 - **Risques** : `UNIQUE` sur colonnes nullables sans `COALESCE` ; `on_hold` compté mais à signaler.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 8 close` (hashes dans le JOURNAL). D8.1 à D8.4 : défauts (mode enchaîné). Critère prouvé par `tests/test_api_budget.py` : global 50 000 € + CHA 30 000 € → Prescrit 17 403,82 €, Reste 32 596,18 € ; annuler libère ; 2 globaux → 409 ; `engagedCents` absent.
 
 ## Étape 9 — Polish fiabilité
 

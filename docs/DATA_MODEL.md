@@ -279,7 +279,7 @@ Réglages de l'installation, une seule ligne. Identité de l'agence pour les fut
 | base_currency | 3 | TEXT | non | `'EUR'` | `CHECK (base_currency = 'EUR')` | lever le CHECK = migration future |
 | seed_category_version | 6a | INTEGER | non | `0` | `>= 0` | version du seed appliqué |
 | project_code_prefix | 6c | TEXT | non | `''` | | `'P'` donne `P2026-001` |
-| default_contingency_bp | 8 | INTEGER | non | `1000` | `BETWEEN 0 AND 10000` | hérité par `project.contingency_bp` ; valeur à confirmer à l'étape 8 |
+| default_contingency_bp | 8 | INTEGER | non | `1000` | `BETWEEN 0 AND 10000` | hérité par `project.contingency_bp` ; 10 % confirmé par défaut à l'étape 8 (D8.2) |
 | agency_name | 9 | TEXT | non | `''` | | en-tête des exports |
 | agency_address | 9 | TEXT | oui | | | multiligne |
 | agency_email, agency_phone | 9 | TEXT | oui | | | |
