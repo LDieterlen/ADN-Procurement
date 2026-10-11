@@ -185,7 +185,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : book d'un projet réel, une page par article, regroupé par zone, photo principale ; PO imprimable avec coordonnées agence et fournisseur.
 - **Décisions préalables** : DF2.1 mise en page ; DF2.2 vignettes (défaut : non).
 - **Risques** : WeasyPrint et dépendances système dans le devcontainer.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape F2 close` (hashes dans le JOURNAL). DF2.1 mise en page CSS des gabarits (ADR-0010) ; DF2.2 pas de vignettes — défauts (mode enchaîné). WeasyPrint 70 vérifié dans le devcontainer sans paquet système. Critère prouvé par `test_api_pdf.py` : book = couverture + une page par article par zone, photo et note de licence, aucun prix ni fournisseur ; BC = agence, fournisseur, livraison, 14 875,00 GBP et contre-valeur 17 403,82 €, joint une fois au BC. **À vérifier par l'utilisateur** : rendu visuel sur un projet réel (la mise en page n'a été contrôlée que par le HTML rendu et le nombre de pages).
 
 ## F3 — Recherche d'entreprises + VIES
 
