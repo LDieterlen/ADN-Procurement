@@ -176,7 +176,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : totaux Excel = totaux de l'onglet Lignes et Budget ; variante client sans prix d'achat.
 - **Décisions préalables** : DF1.1 une feuille par zone ou une seule (défaut : une seule, une ligne par placement) ; DF1.2 colonnes.
 - **Risques** : formules Excel recalculant → écrire des valeurs, jamais de formules.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape F1 close` (hashes dans le JOURNAL). DF1.1 une seule feuille, une ligne par placement ; DF1.2 colonnes fixées dans ADR-0009 — défauts (mode enchaîné). Critère prouvé par `test_api_export.py` : Prescrit / TVA / TTC du classeur = synthèse (17 703,82 €), variante client sans Tom Dixon ni prix, aucune formule dans aucune cellule, export émis conservé et listé.
 
 ## F2 — Exports PDF
 
