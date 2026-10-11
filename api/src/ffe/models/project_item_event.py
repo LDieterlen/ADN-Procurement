@@ -18,6 +18,7 @@ EVENT_KINDS = (
     "product",
     "placement",
     "approval",
+    "quote",
     "other",
 )
 

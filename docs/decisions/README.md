@@ -38,3 +38,4 @@ Comment revenir en arrière ou faire évoluer, et à quel coût.
 | [ADR-0003](ADR-0003-argent-dates-identifiants.md) | Argent, dates, identifiants et intégrité | acceptée | 2026-10-09 |
 | [ADR-0004](ADR-0004-langues-et-conventions.md) | Langues, conventions et mode de collaboration | acceptée | 2026-10-09 |
 | [ADR-0005](ADR-0005-lignes-placements-prix.md) | Lignes, placements, prix figés et statuts | à confirmer (étape 2) | 2026-10-09 |
+| [ADR-0006](ADR-0006-devis-fournisseurs.md) | Devis fournisseurs : un devis par fournisseur et projet, une ligne retenue par article | à confirmer (étape 10a) | 2026-10-11 |

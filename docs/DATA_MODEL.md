@@ -53,6 +53,12 @@ erDiagram
     file ||--o{ product_file : "fichier"
     project_item ||--o{ project_item_file : "devis, BAT"
     file ||--o{ project_item_file : "fichier"
+    project ||--o{ quote : "recoit"
+    supplier ||--o{ quote : "emet"
+    quote ||--o{ quote_line : "prix par article"
+    project_item ||--o{ quote_line : "compare"
+    quote ||--o{ quote_file : "PDF"
+    file ||--o{ quote_file : "fichier"
 
     setting {
         INTEGER id PK "CHECK id = 1"
@@ -535,7 +541,7 @@ Politique (maître, ADR-0005) : `created` à la création ; `status` à chaque t
 | Colonne | Type | Null | Défaut | Contrainte | Commentaire |
 |---|---|---|---|---|---|
 | project_item_id | INTEGER | non | — | FK `project_item` **CASCADE** | |
-| kind | TEXT | non | — | | Pydantic : `created`, `status`, `price`, `fx`, `qty`, `product`, `placement`, `approval`, `other` |
+| kind | TEXT | non | — | | Pydantic : `created`, `status`, `price`, `fx`, `qty`, `product`, `placement`, `approval`, `quote` (étape 10a : devis retenu, quel que soit le statut), `other` |
 | from_status, to_status | TEXT | oui | | | pour `status` et `approval` |
 | old_value, new_value | TEXT | oui | | | JSON compact : `{"cost":125000,"currency":"GBP","fx":1170000,"discount":1500}` |
 | changed_at | TS | non | — | | |
@@ -587,6 +593,50 @@ Unicité : index unique d'expression `(project_id, COALESCE(zone_id, 0), COALESC
 Exemple : `(3, 12, NULL, 18000000, 'Chambres type A, 12 clés, 15 000 € par clé')`.
 
 ---
+
+### 4.17 `quote` — étape 10a (ADR-0006)
+
+Un devis reçu d'un fournisseur pour un projet, dans sa devise, avec un taux figé à la réception. Jamais compté : seule la ligne retenue copie ses valeurs sur `project_item`.
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| project_id | INTEGER | non | — | FK `project` RESTRICT | |
+| supplier_id | INTEGER | non | — | FK `supplier` RESTRICT | |
+| reference | TEXT | non | — | `length(reference) > 0` ; `UNIQUE (project_id, supplier_id, reference)` | n° du devis fournisseur |
+| quoted_on | DATE | oui | | format date | |
+| valid_until | DATE | oui | | `valid_until IS NULL OR quoted_on IS NULL OR valid_until >= quoted_on` | |
+| currency | TEXT | non | — | `length(currency) = 3` | défaut : devise du fournisseur |
+| fx_rate_micro | INTEGER | non | — | `>= 1` ; `currency <> 'EUR' OR fx_rate_micro = 1000000` | 1 unité = n/10⁶ EUR, figé |
+| declined_at | TS | oui | | | écarté (gardé pour comparaison) |
+| notes | TEXT | oui | | | |
+
+Exemple : `(3, 9, 'TD-2026-118', '2026-10-01', '2026-11-30', 'GBP', 1170000, NULL, NULL)`.
+
+### 4.18 `quote_line` — étape 10a (ADR-0006)
+
+Le prix proposé par un devis pour un article du même projet. Au plus une ligne retenue par article.
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| quote_id | INTEGER | non | — | FK `quote` **CASCADE** | |
+| project_item_id | INTEGER | non | — | FK composite `(project_item_id, project_id) → project_item (id, project_id)` RESTRICT ; `UNIQUE (quote_id, project_item_id)` | même projet garanti |
+| project_id | INTEGER | non | — | | copie pour la FK composite |
+| unit_cost_cents | INTEGER | non | — | `>= 0` | dans la devise du devis |
+| discount_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | |
+| lead_time_weeks | INTEGER | oui | | `>= 0` | |
+| description | TEXT | oui | | | libellé du fournisseur |
+| notes | TEXT | oui | | | |
+| retained_at | TS | oui | | index unique partiel `(project_item_id) WHERE retained_at IS NOT NULL` | retenue = copiée sur la ligne |
+
+Retenir (service, une transaction) : dé-retient l'autre ligne retenue de l'article, pose `retained_at`, copie `supplier_id`, `unit_cost_cents`, `discount_bp`, `currency`, `fx_rate_micro`, `lead_time_weeks` (si non NULL), `quoted_on`, `quote_valid_until` ← `valid_until`, `quote_ref` ← `reference` sur `project_item`, écrit l'événement `quote` (toujours) puis `price`/`fx` si validée (§4.13), passe en `quoted` si rang < `quoted` (préconditions §5, 422 sinon) ; refusé dès `ordered` ou terminale (409). Suppression physique : ligne non retenue seulement ; un devis se supprime s'il n'a aucune ligne retenue, sinon il s'écarte (`declined_at`).
+
+### 4.19 `quote_file` — étape 10a (ADR-0006)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| quote_id | INTEGER | non | — | FK `quote` **CASCADE** | |
+| file_id | INTEGER | non | — | FK `file` RESTRICT ; `UNIQUE (quote_id, file_id)` | |
+| caption | TEXT | oui | | | |
 
 ## 5. Statuts et transitions
 
@@ -848,7 +898,7 @@ GROUP BY pr.id, pr.code, pr.name, c.name, pr.status, pr.due_on
 ORDER BY pr.due_on IS NULL, pr.due_on, pr.code;
 ```
 
-Seize tables, zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
+Dix-neuf tables (seize + `quote`, `quote_line`, `quote_file` à l'étape 10a), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
 
 ---
 
@@ -860,7 +910,7 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 |---|---|
 | Marge / prix de vente (ADR-0005, question ouverte) | `project_item.markup_bp INTEGER NULL`, `project_item.unit_sell_override_cents INTEGER NULL`, `setting.pricing_mode TEXT` (`resale`/`fees_only`) ; `money.py` ajoute `sell = COALESCE(override, net_eur × (10000 + markup) / 10000)` ; `budget_line` reste en net ou passe en vente selon `pricing_mode` |
 | Options A/B présentées au client | `project_item.alternative_of_id INTEGER NULL` FK composite ; `is_counted` ajoute `alternative_of_id IS NULL` ; codes `.A`, `.B` ; retenir une option = transaction d'échange de codes + `replaced_by_id` |
-| Achats (étape 10) | `quote`, `quote_line`, `purchase_order`, `po_line`, `delivery`, `delivery_line`, `supplier_invoice` ; statuts `in_production`, `shipped` ajoutés au CHECK ; les lignes `fee` deviennent les frais du BC ; Engagé / Facturé / Payé |
+| Achats (étapes 10b–10c ; `quote`, `quote_line`, `quote_file` livrés en 10a, §4.17–4.19) | `purchase_order`, `po_line`, `delivery`, `delivery_line`, `supplier_invoice` ; statuts `in_production`, `shipped` ajoutés au CHECK ; les lignes `fee` deviennent les frais du BC ; Engagé / Facturé / Payé |
 | TVA d'achat, autoliquidation (D2.5 : rien en v1, taux 0 autorisé) | `project_item.purchase_vat_bp INTEGER NULL` ou sur `supplier_invoice` |
 | Validé ventilé par zone (D2.14 : approximation acceptée en v1) | `project_item_placement.approved_qty_milli INTEGER NULL` posé à `approved` ; R2 l'utilise à la place du prix courant |
 | Snapshot dans la devise de la ligne (D2.9 : EUR seul en v1) | `project_item.approved_unit_net_currency_cents`, `approved_fx_rate_micro` nullables |

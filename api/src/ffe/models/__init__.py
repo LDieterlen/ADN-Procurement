@@ -14,6 +14,9 @@ from ffe.models.project_item import ProjectItem
 from ffe.models.project_item_event import ProjectItemEvent
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
+from ffe.models.quote import Quote
+from ffe.models.quote_file import QuoteFile
+from ffe.models.quote_line import QuoteLine
 from ffe.models.setting import Setting
 from ffe.models.supplier import Supplier
 from ffe.models.zone import Zone
@@ -33,6 +36,9 @@ __all__ = [
     "ProjectItemEvent",
     "ProjectItemFile",
     "ProjectItemPlacement",
+    "Quote",
+    "QuoteFile",
+    "QuoteLine",
     "Setting",
     "Supplier",
     "Zone",
