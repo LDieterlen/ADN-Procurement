@@ -1,9 +1,11 @@
 """Application factory. No I/O at import time: everything comes through `Deps`."""
 
-from collections.abc import AsyncGenerator
+import logging
+import time
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,7 @@ from ffe.api.v1.router import router as v1_router
 from ffe.deps import Deps
 
 API_PREFIX = "/api/v1"
+log = logging.getLogger("ffe")
 # DNS-rebinding guard (D4.5): the API only answers to its own names, with or without a port.
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -29,6 +32,25 @@ def create_app(deps: Deps | None = None) -> FastAPI:
     app = FastAPI(title="FFE", version="0.1.0", openapi_url="/openapi.json", lifespan=lifespan)
     app.state.deps = deps
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+    @app.middleware("http")
+    async def log_request(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            # The 500 itself, with its trace, is logged by `internal_handler` outside this chain.
+            elapsed_ms = round((time.perf_counter() - started) * 1000)
+            log.info("%s %s 500 %dms", request.method, request.url.path, elapsed_ms)
+            raise
+        elapsed_ms = round((time.perf_counter() - started) * 1000)
+        log.info(
+            "%s %s %d %dms", request.method, request.url.path, response.status_code, elapsed_ms
+        )
+        return response
+
     register_error_handlers(app)
     app.include_router(v1_router, prefix=API_PREFIX)
 

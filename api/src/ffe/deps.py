@@ -21,11 +21,20 @@ def utcnow() -> datetime:
 
 
 @dataclass
+class RuntimeStatus:
+    """Facts of the running instance, shown by `GET /health` (step 9)."""
+
+    last_quick_check: str | None = None  # verdict of the latest quick_check (startup or backup)
+    log_path: str | None = None
+
+
+@dataclass
 class Deps:
     settings: Settings = field(default_factory=Settings)
     engine: Engine | None = None  # None only when building the OpenAPI document
     clock: Clock = utcnow
     on_shutdown: list[Callable[[], None]] = field(default_factory=list[Callable[[], None]])
+    status: RuntimeStatus = field(default_factory=RuntimeStatus)
 
 
 def get_deps(request: Request) -> Deps:

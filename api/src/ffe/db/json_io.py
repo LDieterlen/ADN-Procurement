@@ -7,12 +7,14 @@ the validation at step 3; Pydantic schemas validate each row from step 4 on (D3.
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
 from sqlalchemy import Engine, Table, delete, insert, select
 
 from ffe.db import DbError
+from ffe.db.backup import sync_files
 from ffe.db.migrate import current_revision, revision_chain
 from ffe.models.base import Base
 from ffe.schemas.base import BaseSchema
@@ -22,6 +24,7 @@ from ffe.schemas.file import FileRead
 from ffe.schemas.manufacturer import ManufacturerRead
 from ffe.schemas.project import ProjectRead
 from ffe.schemas.project_item import EventRead, PlacementRead
+from ffe.schemas.setting import SettingRead
 from ffe.schemas.supplier import SupplierRead
 from ffe.schemas.zone import ZoneRead
 
@@ -46,9 +49,10 @@ TABLE_ORDER: tuple[str, ...] = (
     "project_item_file",
     "budget_line",
 )
-# Row validation before insert (D4.11); `setting` gets its schema with its API (step 9);
-# `product` and `product_file` rows are validated by the database (STRICT, CHECK, FK) only.
+# Row validation before insert (D4.11); `product` and `product_file` rows are validated by the
+# database (STRICT, CHECK, FK) only.
 ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
+    "setting": SettingRead,
     "client": ClientRead,
     "category": CategoryRead,
     "manufacturer": ManufacturerRead,
@@ -153,3 +157,9 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                 conn.execute(insert(table).values(**data))
             imported[table.name] = len(rows)
     return imported
+
+
+def export_files(files_dir: Path, target_dir: Path) -> int:
+    """`export-json --with-files`: copies `files/` next to the document (content-addressed names,
+    so the export stays readable on its own). Returns the number of files copied."""
+    return sync_files(files_dir, target_dir)

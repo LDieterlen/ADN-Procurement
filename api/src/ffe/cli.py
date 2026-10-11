@@ -1,4 +1,4 @@
-"""`ffe` command line: `serve`, `openapi`, `db migrate|backup|restore|check|export-json|import-json`."""
+"""`ffe` command line: `serve`, `openapi`, `db migrate|backup|restore|check|export-json|import-json|seed`."""
 
 import json
 import os
@@ -17,6 +17,7 @@ from ffe.app import create_app
 from ffe.config import Settings, load_settings
 from ffe.db import DbError
 from ffe.db.backup import backup as make_backup
+from ffe.db.backup import backup_and_copy
 from ffe.db.backup import restore as restore_backup
 from ffe.db.engine import (
     create_db_engine,
@@ -26,13 +27,14 @@ from ffe.db.engine import (
     row_counts,
     table_strictness,
 )
-from ffe.db.json_io import export_json, import_json
+from ffe.db.json_io import export_files, export_json, import_json
 from ffe.db.lock import InstanceLock
 from ffe.db.migrate import current_revision, has_pending, head_revision, upgrade_head
 from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
 from ffe.deps import Deps, utcnow
 from ffe.services.file import orphans as file_orphans
+from ffe.services.file import verify_hashes
 
 OPENAPI_PATH = Path(__file__).resolve().parents[2] / "openapi.json"
 
@@ -125,16 +127,28 @@ def migrate(prod: ProdFlag = False) -> None:
 @db.command()
 def backup(
     label: Annotated[str | None, typer.Option(help="Suffixe du fichier de sauvegarde.")] = None,
+    with_files: Annotated[
+        bool, typer.Option("--with-files", help="Copier aussi files/ dans FFE_BACKUP_DIR/files.")
+    ] = False,
     prod: ProdFlag = False,
 ) -> None:
-    """Sauvegarde locale (sqlite3 backup API + quick_check + rotation)."""
+    """Sauvegarde locale (backup API + quick_check + rotation), puis copie vérifiée vers FFE_BACKUP_DIR."""
     with _opened(prod) as (settings, engine):
+        if not settings.db_path.exists():
+            typer.echo("Aucune base à sauvegarder.")
+            return
         try:
-            made = make_backup(engine, settings.backups_dir, utcnow, label=label)
+            result = backup_and_copy(engine, settings, utcnow, label=label, with_files=with_files)
         except DbError as error:
             _fail(error)
             return
-        typer.echo(str(made) if made else "Aucune base à sauvegarder.")
+        typer.echo(f"Sauvegarde : {result.path}")
+        if result.copied_to:
+            typer.echo(f"Copie Windows : {result.copied_to} (quick_check ok)")
+            if with_files:
+                typer.echo(f"Fichiers copiés : {result.files_copied}")
+        else:
+            typer.echo(f"Copie Windows absente : {result.copy_error}", err=True)
 
 
 @db.command()
@@ -156,8 +170,13 @@ def restore(
 
 
 @db.command()
-def check(prod: ProdFlag = False) -> None:
-    """integrity_check, foreign_key_check, tables avec leur drapeau STRICT, comptages."""
+def check(
+    files: Annotated[
+        bool, typer.Option("--files", help="Recalculer le sha256 de chaque fichier joint.")
+    ] = False,
+    prod: ProdFlag = False,
+) -> None:
+    """integrity_check, foreign_key_check, tables avec leur drapeau STRICT, comptages, orphelins."""
     with _opened(prod) as (settings, engine):
         if not settings.db_path.exists():
             _fail(DbError(f"Aucune base : {settings.db_path} (lancer `ffe db migrate`)."))
@@ -180,6 +199,12 @@ def check(prod: ProdFlag = False) -> None:
             typer.echo(f"  disque seul : {name}")
         for name in rows_only:
             typer.echo(f"  ligne seule : {name}")
+        if files:
+            with Session(engine) as session:
+                damaged = verify_hashes(session, settings.files_dir)
+            typer.echo(f"fichiers altérés (sha256 différent du nom) : {len(damaged)}")
+            for name in damaged:
+                typer.echo(f"  altéré : {name}")
 
 
 @db.command("export-json")
@@ -187,16 +212,24 @@ def export_json_cmd(
     output: Annotated[
         Path | None, typer.Argument(help="Fichier de sortie (défaut : stdout).")
     ] = None,
+    with_files: Annotated[
+        bool, typer.Option("--with-files", help="Copier files/ à côté du fichier de sortie.")
+    ] = False,
     prod: ProdFlag = False,
 ) -> None:
     """Copie lisible de toutes les tables (format ffe-export v1)."""
-    with _opened(prod) as (_settings, engine):
+    if with_files and output is None:
+        _fail(DbError("--with-files demande un fichier de sortie."))
+    with _opened(prod) as (settings, engine):
         text = json.dumps(export_json(engine, utcnow), indent=2, ensure_ascii=False) + "\n"
         if output is None:
             sys.stdout.write(text)
         else:
             output.write_text(text, encoding="utf-8")
             typer.echo(f"Écrit : {output}")
+            if with_files:
+                copied = export_files(settings.files_dir, output.parent / "files")
+                typer.echo(f"Fichiers copiés dans {output.parent / 'files'} : {copied}")
 
 
 @db.command("import-json")

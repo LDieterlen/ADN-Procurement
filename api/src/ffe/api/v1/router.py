@@ -12,7 +12,9 @@ from ffe.api.v1 import (
     product,
     project,
     project_item,
+    setting,
     supplier,
+    system,
     zone,
 )
 
@@ -28,3 +30,5 @@ router.include_router(project.router)
 router.include_router(zone.router)
 router.include_router(project_item.router)
 router.include_router(budget.router)
+router.include_router(setting.router)
+router.include_router(system.router)

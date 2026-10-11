@@ -38,7 +38,7 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0006"
+    assert document["schemaRevision"] == "0007"
     assert list(document["tables"]) == [
         "setting",
         "client",
@@ -142,3 +142,13 @@ def test_import_lets_the_database_enforce_its_constraints(engine: Engine, clock:
     document["tables"]["client"][0]["name"] = ""  # complete row, passes the schema, fails the CHECK
     with pytest.raises(Exception, match="ck_client_name_not_empty|CHECK"):
         import_json(engine, document, replace=True)
+
+
+def test_export_files_copies_the_attachments_next_to_the_document(ext4_tmp: Path) -> None:
+    from ffe.db.json_io import export_files
+
+    files_dir = ext4_tmp / "files"
+    files_dir.mkdir()
+    (files_dir / ("e" * 64 + ".png")).write_bytes(b"E")
+    assert export_files(files_dir, ext4_tmp / "out" / "files") == 1
+    assert (ext4_tmp / "out" / "files" / ("e" * 64 + ".png")).read_bytes() == b"E"

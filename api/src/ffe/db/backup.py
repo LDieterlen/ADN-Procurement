@@ -4,6 +4,7 @@ Rule (ARCHITECTURE §5): never copy `ffe.sqlite` while it is open elsewhere; the
 unintegrated writes. Everything here goes through the SQLite backup API.
 """
 
+import logging
 import os
 import re
 import shutil
@@ -15,9 +16,12 @@ from pathlib import Path
 
 from sqlalchemy import Engine
 
+from ffe.config import Settings
 from ffe.db import DbError
 
 Clock = Callable[[], datetime]
+log = logging.getLogger("ffe")
+BACKUP_MAX_AGE = timedelta(hours=24)
 
 BACKUP_NAME = re.compile(r"^ffe-(\d{8})-(\d{6})(?:-(?P<label>[A-Za-z0-9_.-]+))?\.sqlite$")
 KEEP_DAILY = 14
@@ -149,3 +153,93 @@ def restore(engine: Engine, source: Path, backups_dir: Path, clock: Clock) -> Pa
     if verdict != "ok":
         raise BackupError(f"Base restaurée mais quick_check échoue : {verdict}")
     return safety
+
+
+def copy_to_backup_dir(made: Path, backup_dir: Path, now: datetime) -> Path:
+    """Sequential copy of a finished backup into `FFE_BACKUP_DIR` (9p-safe), checked, rotated.
+
+    Raises `BackupError` when the directory is unusable or the copy fails `quick_check`
+    (the bad copy is removed). Never touches the local backup.
+    """
+    if not backup_dir.is_dir() or not os.access(backup_dir, os.W_OK):
+        raise BackupError(f"Dossier de copie absent ou non accessible : {backup_dir}")
+    staged = backup_dir / (made.name + ".part")
+    try:
+        shutil.copyfile(made, staged)
+        verdict = quick_check_file(staged)
+        if verdict != "ok":
+            raise BackupError(f"Copie refusée, quick_check de {made.name} : {verdict}")
+        final = backup_dir / made.name
+        os.replace(staged, final)
+    except OSError as error:
+        raise BackupError(f"Copie vers {backup_dir} impossible : {error}") from error
+    finally:
+        staged.unlink(missing_ok=True)
+    rotate(backup_dir, now)
+    return final
+
+
+def sync_files(files_dir: Path, target_dir: Path) -> int:
+    """Copies the attached files missing in `target_dir` (content-addressed: never overwritten,
+    never deleted). Returns the number of files copied."""
+    if not files_dir.is_dir():
+        return 0
+    target_dir.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for source in sorted(p for p in files_dir.iterdir() if p.is_file()):
+        destination = target_dir / source.name
+        if destination.exists() and destination.stat().st_size == source.stat().st_size:
+            continue
+        staged = target_dir / (source.name + ".part")
+        shutil.copyfile(source, staged)
+        os.replace(staged, destination)
+        copied += 1
+    return copied
+
+
+@dataclass(frozen=True)
+class BackupResult:
+    path: Path
+    quick_check: str  # always "ok" (a failing copy is refused before the file exists)
+    copied_to: Path | None
+    copy_error: str | None
+    files_copied: int
+
+
+def backup_and_copy(
+    engine: Engine,
+    settings: Settings,
+    clock: Clock,
+    label: str | None = None,
+    with_files: bool = False,
+) -> BackupResult:
+    """`backup()` then the Windows copy (ADR-0002). A copy failure is reported, never fatal."""
+    made = backup(engine, settings.backups_dir, clock, label=label)
+    if made is None:
+        raise BackupError(f"Aucune base à sauvegarder : {settings.db_path}")
+    copied_to: Path | None = None
+    copy_error: str | None = None
+    files_copied = 0
+    try:
+        copied_to = copy_to_backup_dir(made, settings.backup_dir, clock())
+        if with_files:
+            files_copied = sync_files(settings.files_dir, settings.backup_dir / "files")
+    except BackupError as error:
+        copy_error = str(error)
+        log.warning("copie de sauvegarde : %s", error)
+    return BackupResult(made, "ok", copied_to, copy_error, files_copied)
+
+
+def needs_backup(settings: Settings, now: datetime, modified_rule: bool = False) -> bool:
+    """24 h rule (ADR-0002); with `modified_rule`, also when the database changed since the last
+    backup (file mtime of the base or its WAL), which is what the shutdown backup applies."""
+    if not settings.db_path.exists():
+        return False
+    last = last_backup_at(settings.backups_dir)
+    if last is None or now.astimezone(UTC) - last > BACKUP_MAX_AGE:
+        return True
+    if not modified_rule:
+        return False
+    candidates = [settings.db_path, settings.db_path.with_name(settings.db_path.name + "-wal")]
+    newest = max((p.stat().st_mtime for p in candidates if p.exists()), default=0.0)
+    return datetime.fromtimestamp(newest, tz=UTC) > last

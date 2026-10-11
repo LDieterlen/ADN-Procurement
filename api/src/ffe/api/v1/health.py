@@ -25,5 +25,8 @@ def get_health(deps: Deps = Depends(get_deps)) -> HealthRead:
         is_dev_db=settings.is_dev_db,
         schema_revision=revision,
         last_backup_at=last.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ") if last else None,
+        backup_dir=str(backup_dir),
         backup_dir_ok=backup_dir.is_dir() and os.access(backup_dir, os.W_OK),
+        last_quick_check=deps.status.last_quick_check,
+        log_path=deps.status.log_path,
     )

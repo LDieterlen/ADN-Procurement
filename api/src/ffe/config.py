@@ -51,6 +51,11 @@ class Settings(BaseSettings):
         return self.resolved_data_dir / LOCK_FILENAME
 
     @property
+    def logs_dir(self) -> Path:
+        """`logs/ffe.log` and its one rotated sibling (ARCHITECTURE §5 « Journal et logs »)."""
+        return self.resolved_data_dir / "logs"
+
+    @property
     def files_dir(self) -> Path:
         """Attached files, one per sha256 (`<sha256>.<ext>`, DATA_MODEL §4.9)."""
         return self.resolved_data_dir / "files"

@@ -124,3 +124,20 @@ def orphans(session: Session, files_dir: Path) -> tuple[list[str], list[str]]:
     if files_dir.is_dir():
         on_disk = {p.name for p in files_dir.iterdir() if p.is_file()}
     return sorted(on_disk - rows), sorted(rows - on_disk)
+
+
+def verify_hashes(session: Session, files_dir: Path) -> list[str]:
+    """`ffe db check --files`: names of the files on disk whose content no longer matches their
+    sha256 (bit rot or manual edit). Rows without a file are reported by `orphans`."""
+    damaged: list[str] = []
+    for file in session.scalars(select(File)):
+        path = content_path(files_dir, file)
+        if not path.is_file():
+            continue
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != file.sha256:
+            damaged.append(file.filename)
+    return sorted(damaged)

@@ -2,20 +2,19 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import Engine
 
 from ffe.config import Settings
 from ffe.db import DbError
-from ffe.db.backup import backup, last_backup_at
+from ffe.db.backup import BACKUP_MAX_AGE, backup_and_copy, last_backup_at
 from ffe.db.engine import create_db_engine, foreign_key_check, quick_check
 from ffe.db.fs_check import ensure_ext4
 from ffe.db.lock import InstanceLock
 from ffe.db.migrate import has_pending, head_revision, upgrade_head
 
 Clock = Callable[[], datetime]
-BACKUP_MAX_AGE = timedelta(hours=24)
 
 
 class StartupError(DbError):
@@ -28,6 +27,7 @@ class Started:
     engine: Engine
     lock: InstanceLock
     backup_path: str | None  # None = skipped (no database yet, or recent backup)
+    backup_copy_error: str | None = None  # Windows copy refused (ADR-0002: never fatal)
 
     def close(self) -> None:
         self.engine.dispose()
@@ -59,13 +59,14 @@ def run_startup(settings: Settings, clock: Clock = utcnow) -> Started:
                 raise StartupError(f"quick_check au démarrage : {verdict}. Base non servie.")
         pending = has_pending(engine)
         backup_path: str | None = None
+        copy_error: str | None = None
         if db_existed:  # 4
             last = last_backup_at(settings.backups_dir)
             stale = last is None or clock().astimezone(UTC) - last > BACKUP_MAX_AGE
             if pending or stale:
                 label = f"pre-migrate-{head_revision()}" if pending else None
-                made = backup(engine, settings.backups_dir, clock, label=label)
-                backup_path = str(made) if made else None
+                result = backup_and_copy(engine, settings, clock, label=label)
+                backup_path, copy_error = str(result.path), result.copy_error
         if pending:
             upgrade_head(engine)  # 5
         violations = foreign_key_check(engine)  # 6
@@ -75,7 +76,7 @@ def run_startup(settings: Settings, clock: Clock = utcnow) -> Started:
         verdict = quick_check(engine)  # 7
         if verdict != "ok":
             raise StartupError(f"quick_check après migration : {verdict}.")
-        return Started(settings, engine, lock, backup_path)
+        return Started(settings, engine, lock, backup_path, copy_error)
     except BaseException:
         if engine is not None:
             engine.dispose()

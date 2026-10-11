@@ -91,3 +91,17 @@ def test_orphans_report_both_directions(
     on_disk_only, rows_only = orphans(session, settings.files_dir)
     assert on_disk_only == ["deadbeef.jpg"]
     assert rows_only == [f"{body['sha256']}.png"]
+
+
+def test_verify_hashes_reports_an_altered_file(
+    client: TestClient, session: Session, settings: Settings
+) -> None:
+    from ffe.services.file import verify_hashes
+
+    uploaded = client.post(
+        "/api/v1/files", files={"file": ("a.png", PNG_BYTES, "image/png")}
+    ).json()
+    name = f"{uploaded['sha256']}.{uploaded['ext']}"
+    assert verify_hashes(session, settings.files_dir) == []
+    (settings.files_dir / name).write_bytes(b"\x89PNG damaged")
+    assert verify_hashes(session, settings.files_dir) == [name]

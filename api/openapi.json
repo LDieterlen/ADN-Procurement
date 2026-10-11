@@ -57,6 +57,53 @@
         "title": "AlertRead",
         "type": "object"
       },
+      "BackupRead": {
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "copiedTo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copiedto"
+          },
+          "copyError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copyerror"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "quickCheck": {
+            "title": "Quickcheck",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "copiedTo",
+          "copyError",
+          "quickCheck",
+          "at"
+        ],
+        "title": "BackupRead",
+        "type": "object"
+      },
       "Body_uploadFile": {
         "properties": {
           "file": {
@@ -1231,6 +1278,10 @@
       },
       "HealthRead": {
         "properties": {
+          "backupDir": {
+            "title": "Backupdir",
+            "type": "string"
+          },
           "backupDirOk": {
             "title": "Backupdirok",
             "type": "boolean"
@@ -1261,6 +1312,28 @@
             ],
             "title": "Lastbackupat"
           },
+          "lastQuickCheck": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastquickcheck"
+          },
+          "logPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logpath"
+          },
           "ok": {
             "title": "Ok",
             "type": "boolean"
@@ -1283,7 +1356,10 @@
           "isDevDb",
           "schemaRevision",
           "lastBackupAt",
-          "backupDirOk"
+          "backupDir",
+          "backupDirOk",
+          "lastQuickCheck",
+          "logPath"
         ],
         "title": "HealthRead",
         "type": "object"
@@ -4785,6 +4861,237 @@
           "productId"
         ],
         "title": "ReplaceProduct",
+        "type": "object"
+      },
+      "SettingRead": {
+        "properties": {
+          "agencyAddress": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyaddress"
+          },
+          "agencyEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyemail"
+          },
+          "agencyName": {
+            "title": "Agencyname",
+            "type": "string"
+          },
+          "agencyPhone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyphone"
+          },
+          "agencySiret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencysiret"
+          },
+          "agencyVatNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyvatnumber"
+          },
+          "baseCurrency": {
+            "title": "Basecurrency",
+            "type": "string"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "defaultContingencyBp": {
+            "title": "Defaultcontingencybp",
+            "type": "integer"
+          },
+          "defaultVatBp": {
+            "title": "Defaultvatbp",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "projectCodePrefix": {
+            "title": "Projectcodeprefix",
+            "type": "string"
+          },
+          "seedCategoryVersion": {
+            "title": "Seedcategoryversion",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "defaultVatBp",
+          "baseCurrency",
+          "seedCategoryVersion",
+          "projectCodePrefix",
+          "defaultContingencyBp",
+          "agencyName",
+          "agencyAddress",
+          "agencyEmail",
+          "agencyPhone",
+          "agencySiret",
+          "agencyVatNumber",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "SettingRead",
+        "type": "object"
+      },
+      "SettingUpdate": {
+        "properties": {
+          "agencyAddress": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyaddress"
+          },
+          "agencyEmail": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyemail"
+          },
+          "agencyName": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyname"
+          },
+          "agencyPhone": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyphone"
+          },
+          "agencySiret": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{14}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencysiret"
+          },
+          "agencyVatNumber": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}[0-9A-Z]{2,13}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencyvatnumber"
+          },
+          "defaultContingencyBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultcontingencybp"
+          },
+          "defaultVatBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvatbp"
+          },
+          "projectCodePrefix": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "pattern": "^[A-Z0-9-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projectcodeprefix"
+          }
+        },
+        "title": "SettingUpdate",
         "type": "object"
       },
       "StatusChange": {
@@ -8828,6 +9135,66 @@
         ]
       }
     },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "patch": {
+        "operationId": "updateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
     "/api/v1/suppliers": {
       "get": {
         "operationId": "listSuppliers",
@@ -9139,6 +9506,27 @@
         "summary": "Unarchive Supplier",
         "tags": [
           "suppliers"
+        ]
+      }
+    },
+    "/api/v1/system/backup": {
+      "post": {
+        "operationId": "createBackup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create Backup",
+        "tags": [
+          "system"
         ]
       }
     },

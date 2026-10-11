@@ -68,6 +68,8 @@ def test_stale_backup_triggers_a_backup_on_start(settings: Settings, clock: Cloc
     try:
         assert started.backup_path is not None
         assert list_backups(settings.backups_dir)[-1].label is None
+        assert started.backup_copy_error is None
+        assert list_backups(settings.backup_dir)[-1].path.name == Path(started.backup_path).name
     finally:
         started.close()
     again = run_startup(settings, lambda: later + timedelta(hours=1))
@@ -83,7 +85,7 @@ def test_pending_migration_makes_a_pre_migrate_backup(settings: Settings, clock:
     started.close()
     again = run_startup(settings, clock)
     try:
-        assert again.backup_path is not None and "pre-migrate-0006" in again.backup_path
+        assert again.backup_path is not None and "pre-migrate-0007" in again.backup_path
         assert current_revision(again.engine) == head_revision()
     finally:
         again.close()
