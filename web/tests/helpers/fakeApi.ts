@@ -28,6 +28,17 @@ export type FakeApi = {
   projects: ProjectRead[]
   zones: ZoneRead[]
   items: ProjectItemRead[]
+  events: {
+    id: number
+    projectItemId: number
+    kind: string
+    fromStatus: string | null
+    toStatus: string | null
+    oldValue: string | null
+    newValue: string | null
+    changedAt: string
+    note: string | null
+  }[]
   requests: { method: string; path: string; body: unknown }[]
   down: boolean
   restore: () => void
@@ -331,9 +342,20 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     return json(200, project)
   }
   if (sub === 'project-items' && method === 'GET') {
+    const status = url.searchParams.get('status')
+    const kind = url.searchParams.get('kind')
+    const supplierId = url.searchParams.get('supplierId')
+    const q = url.searchParams.get('q')
     return json(
       200,
-      state.items.filter((i) => i.projectId === project.id),
+      state.items.filter(
+        (i) =>
+          i.projectId === project.id &&
+          (!status || i.status === status) &&
+          (!kind || i.kind === kind) &&
+          (!supplierId || i.supplierId === Number(supplierId)) &&
+          (!q || normalize(i.name).includes(normalize(q)) || normalize(i.itemCode).includes(normalize(q))),
+      ),
     )
   }
   if (sub === 'project-items' && method === 'POST') {
@@ -487,6 +509,7 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
 
 // Integer formulas of money.py, replicated so the fake summary matches the real API.
 const divRound = (n: number, d: number) => Math.floor((n + Math.floor(d / 2)) / d)
+const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T00:00:00Z').getTime() + days * 86_400_000).toISOString().slice(0, 10)
 let placementSeq = 1000
 
 function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
@@ -514,6 +537,11 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
         for (const p of i.placements) zoneTotals.set(p.zoneId, (zoneTotals.get(p.zoneId) ?? 0) + divRound(eur * p.qtyMilli * mult(p.zoneId), 1000))
       }
     }
+    const orderBy =
+      i.requiredOnSite && i.leadTimeWeeks !== null && i.kind !== 'fee' && counted && !['ordered', 'delivered', 'installed'].includes(i.status)
+        ? addDays(i.requiredOnSite, -(i.leadTimeWeeks * 7 + 14))
+        : null
+    const orderOverdue = orderBy !== null && orderBy <= '2026-10-10' && !i.onHold
     return {
       projectItemId: i.id,
       itemCode: i.itemCode,
@@ -526,6 +554,8 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
       netUnitEurCents: eur,
       totalHtCents: total,
       approvedCents,
+      orderBy,
+      orderOverdue,
     }
   })
   const vat = divRound(specified * 2000, 10000)
@@ -591,6 +621,18 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
     if (['ordered', 'delivered', 'installed'].includes(item.status) && s.status === 'draft')
       return error(409, 'conflict', 'Commandée ou au-delà : aucun retour en arrière, seulement « annulé » avec une note.')
     if (s.status === 'ordered' && !item.orderRef) return validation('orderRef', 'Une référence de commande est nécessaire pour passer en « commandé ».')
+    const previous = item.status
+    state.events.push({
+      id: state.events.length + 1,
+      projectItemId: item.id,
+      kind: 'status',
+      fromStatus: previous,
+      toStatus: s.status,
+      oldValue: null,
+      newValue: null,
+      changedAt: LATER,
+      note: s.note ?? null,
+    })
     item.status = s.status
     if (s.status === 'approved') {
       const zones = state.zones
@@ -598,13 +640,51 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
       item.approvedAt = NOW
       item.approvedUnitNetCents = divRound(divRound(item.unitCostCents * (10000 - item.discountBp), 10000) * item.fxRateMicro, 1_000_000)
       item.approvedTotalQtyMilli = qty
+      state.events.push({
+        id: state.events.length + 1,
+        projectItemId: item.id,
+        kind: 'approval',
+        fromStatus: previous,
+        toStatus: 'approved',
+        oldValue: null,
+        newValue: JSON.stringify({ unitNetEur: item.approvedUnitNetCents, qty }),
+        changedAt: LATER,
+        note: null,
+      })
     }
     return json(200, item)
   }
   if (sub === 'events' && method === 'GET')
     return json(200, [
-      { id: 1, projectItemId: item.id, kind: 'created', fromStatus: null, toStatus: 'draft', oldValue: null, newValue: null, changedAt: NOW, note: null },
+      { id: 0, projectItemId: item.id, kind: 'created', fromStatus: null, toStatus: 'draft', oldValue: null, newValue: null, changedAt: NOW, note: null },
+      ...state.events.filter((e) => e.projectItemId === item.id),
     ])
+  if (sub === 'replace' && method === 'POST') {
+    if (item.status !== 'approved') return error(409, 'conflict', 'Le remplacement n’est possible que depuis « validé ».')
+    const r = payload as { productId: number; note?: string | null }
+    const product = state.products.find((x) => x.id === r.productId)
+    if (!product) return validation('productId', 'Produit introuvable.')
+    const created = itemRow(
+      {
+        projectId: item.projectId,
+        itemCode: item.itemCode,
+        productId: product.id,
+        name: product.name,
+        status: 'specified',
+        unitCostCents: product.listPriceCents ?? 0,
+        currency: product.listPriceCurrency,
+        fxRateMicro: item.fxRateMicro,
+        placements: item.placements,
+      },
+      state.items.length + 1,
+    )
+    item.itemCode = `${item.itemCode}.R1`
+    item.status = 'replaced'
+    item.replacedById = created.id
+    item.placements = []
+    state.items.push(created)
+    return json(201, created)
+  }
   if (sub === 'refresh' && method === 'POST') return json(200, item)
   return undefined
 }
@@ -763,6 +843,7 @@ export function installFakeApi(
     projects: (seed.projects ?? []).map((p, i) => projectRow(p, i + 1)),
     zones: (seed.zones ?? []).map((z, i) => zoneRow(z, i + 1)),
     items: (seed.items ?? []).map((it, i) => itemRow(it, i + 1)),
+    events: [],
     requests: [],
     down: false,
     restore: () => {

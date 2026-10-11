@@ -32,17 +32,34 @@ export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
 }
 export const ITEM_KIND_LABELS: Record<ItemKind, string> = { ffe: 'FF&E', ose: 'OS&E', custom: 'Sur mesure', existing: 'Existant', fee: 'Frais' }
 
+export type ItemFilters = { status: ItemStatus | null; kind: ItemKind | null; supplierId: number | null; q: string }
+
 export const itemKeys = {
-  list: (projectId: number) => ['projects', 'items', projectId] as const,
+  list: (projectId: number, filters?: ItemFilters) => ['projects', 'items', projectId, filters ?? null] as const,
   one: (id: number) => ['project-items', 'one', id] as const,
   events: (id: number) => ['project-items', 'events', id] as const,
   summary: (projectId: number) => ['projects', 'summary', projectId] as const,
 }
 
-export function useProjectItems(projectId: number | undefined) {
+export function useProjectItems(projectId: number | undefined, filters?: ItemFilters) {
   return useQuery({
-    queryKey: itemKeys.list(projectId ?? 0),
-    queryFn: () => call(api.GET('/api/v1/projects/{project_id}/project-items', { params: { path: { project_id: projectId ?? 0 } } })),
+    queryKey: itemKeys.list(projectId ?? 0, filters),
+    queryFn: () =>
+      call(
+        api.GET('/api/v1/projects/{project_id}/project-items', {
+          params: {
+            path: { project_id: projectId ?? 0 },
+            query: filters
+              ? {
+                  status: filters.status ?? undefined,
+                  kind: filters.kind ?? undefined,
+                  supplierId: filters.supplierId ?? undefined,
+                  q: filters.q.trim() || undefined,
+                }
+              : undefined,
+          },
+        }),
+      ),
     enabled: projectId !== undefined,
   })
 }

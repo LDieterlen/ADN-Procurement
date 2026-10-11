@@ -9,15 +9,20 @@ import {
   ITEM_KIND_LABELS,
   ITEM_STATUS_LABELS,
   useAddPlacement,
+  useChangeItemStatus,
   useDeleteItem,
+  useItemEvents,
+  useReplaceItemProduct,
   useDeletePlacement,
   useProjectItem,
   useRefreshItem,
   useUpdateItem,
   useUpdatePlacement,
+  type ItemStatus,
   type ProjectItemRead,
   type ProjectItemUpdate,
 } from '../../api/queries/projectItem'
+import { useProducts } from '../../api/queries/product'
 import { useSuppliers } from '../../api/queries/supplier'
 import { BpField } from '../../components/forms/BpField'
 import { DateField } from '../../components/forms/DateField'
@@ -30,6 +35,7 @@ import { TextArea } from '../../components/forms/TextArea'
 import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import { centsToText } from '../../components/forms/MoneyField'
 import { CURRENCIES } from '../suppliers/SupplierForm'
 import { UNIT_OPTIONS } from '../products/ProductForm'
 
@@ -295,7 +301,230 @@ function ItemForm({
   )
 }
 
-export function ItemPanel({ itemId, zones, readOnly, onClose }: { itemId: number; zones: ZoneRead[]; readOnly: boolean; onClose: () => void }) {
+// --- 7c : statut avec confirmation et note, remplacement, historique ---------------------------
+
+const NEXT_STATUSES: Record<ItemStatus, ItemStatus[]> = {
+  draft: ['specified', 'quoted', 'approved', 'cancelled'],
+  specified: ['draft', 'quoted', 'approved', 'cancelled'],
+  quoted: ['draft', 'specified', 'approved', 'cancelled'],
+  approved: ['draft', 'specified', 'quoted', 'ordered', 'cancelled'],
+  ordered: ['delivered', 'cancelled'],
+  delivered: ['installed', 'cancelled'],
+  installed: ['cancelled'],
+  cancelled: ['draft'],
+  replaced: [],
+}
+
+function StatusSection({ item, readOnly }: { item: ProjectItemRead; readOnly: boolean }) {
+  const change = useChangeItemStatus()
+  const toast = useToast()
+  const [target, setTarget] = useState<ItemStatus | ''>('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const options = NEXT_STATUSES[item.status]
+  const noteRequired =
+    target === 'cancelled' || item.status === 'cancelled' || (item.status === 'approved' && ['draft', 'specified', 'quoted'].includes(target))
+
+  function confirm() {
+    if (!target) return
+    change
+      .mutateAsync({ id: item.id, data: { status: target, note: note.trim() || null } })
+      .then(() => {
+        toast.show({ kind: 'success', message: `Ligne ${item.itemCode} : ${ITEM_STATUS_LABELS[target]}.` })
+        setTarget('')
+        setNote('')
+        setError(null)
+      })
+      .catch((e: unknown) => setError(isApiError(e) ? e.details.map((d) => d.message).join(' ') || e.message : String(e)))
+  }
+
+  if (readOnly || options.length === 0) return null
+  return (
+    <fieldset className="rounded border border-neutral-200 p-3">
+      <legend className="px-1 text-sm font-medium text-neutral-600">Statut</legend>
+      <div className="flex flex-wrap items-end gap-2 text-sm">
+        <label className="flex flex-col gap-1">
+          Passer en
+          <select
+            value={target}
+            onChange={(event) => setTarget(event.target.value as ItemStatus | '')}
+            className="rounded border border-neutral-300 bg-white px-2 py-1"
+            aria-label="Nouveau statut"
+          >
+            <option value="">Choisir…</option>
+            {options.map((s) => (
+              <option key={s} value={s}>
+                {ITEM_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button variant={target === 'cancelled' ? 'danger' : 'primary'} disabled={!target || change.isPending} onClick={confirm}>
+          Confirmer
+        </Button>
+      </div>
+      {target && (
+        <label className="mt-2 flex flex-col gap-1 text-sm">
+          Note {noteRequired ? '(obligatoire)' : '(facultative)'}
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            className="rounded border border-neutral-300 px-2 py-1"
+            aria-label="Note de transition"
+          />
+        </label>
+      )}
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </fieldset>
+  )
+}
+
+function ReplaceSection({ item, onReplaced }: { item: ProjectItemRead; onReplaced: (id: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [productId, setProductId] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const products = useProducts({ q: search, includeArchived: false, categoryId: null, manufacturerId: null, supplierId: null, limit: 50, offset: 0 })
+  const replace = useReplaceItemProduct()
+  const toast = useToast()
+  if (item.status !== 'approved') return null
+  return (
+    <fieldset className="rounded border border-neutral-200 p-3">
+      <legend className="px-1 text-sm font-medium text-neutral-600">Remplacer le produit</legend>
+      {!open && <Button onClick={() => setOpen(true)}>Remplacer (nouvelle ligne, celle-ci devient « remplacée »)</Button>}
+      {open && (
+        <div className="space-y-2 text-sm">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher un produit…"
+            aria-label="Produit de remplacement : recherche"
+            className="w-full rounded border border-neutral-300 px-2 py-1"
+          />
+          <select
+            value={productId}
+            onChange={(event) => setProductId(event.target.value)}
+            className="w-full rounded border border-neutral-300 bg-white px-2 py-1"
+            aria-label="Produit de remplacement"
+          >
+            <option value="">Choisir…</option>
+            {(products.data?.items ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            placeholder="Note (rupture, changement client…)"
+            className="w-full rounded border border-neutral-300 px-2 py-1"
+            aria-label="Note de remplacement"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              disabled={!productId || replace.isPending}
+              onClick={() =>
+                replace
+                  .mutateAsync({ id: item.id, data: { productId: Number(productId), note: note.trim() || null } })
+                  .then((created) => {
+                    toast.show({ kind: 'success', message: `Nouvelle ligne ${created.itemCode} ; l'ancienne est remplacée.` })
+                    onReplaced(created.id)
+                  })
+                  .catch((e: unknown) => setError(isApiError(e) ? e.message : String(e)))
+              }
+            >
+              Remplacer
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Annuler
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="text-xs text-red-700">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  created: 'Création',
+  status: 'Statut',
+  price: 'Prix',
+  fx: 'Taux de change',
+  qty: 'Quantité',
+  product: 'Produit',
+  placement: 'Placements',
+  approval: 'Validation client',
+  other: 'Autre',
+}
+
+function describeEvent(e: { kind: string; fromStatus: string | null; toStatus: string | null; oldValue: string | null; newValue: string | null }): string {
+  if (e.kind === 'status' && e.toStatus)
+    return `${e.fromStatus ? ITEM_STATUS_LABELS[e.fromStatus as ItemStatus] + ' → ' : ''}${ITEM_STATUS_LABELS[e.toStatus as ItemStatus]}`
+  if (e.kind === 'approval' && e.newValue) {
+    try {
+      const v = JSON.parse(e.newValue) as { unitNetEur: number; qty: number }
+      return `validé à ${centsToText(v.unitNetEur)} € l'unité × ${v.qty / 1000}`
+    } catch {
+      return e.newValue
+    }
+  }
+  if (e.kind === 'price' && e.newValue) {
+    try {
+      const o = e.oldValue ? (JSON.parse(e.oldValue) as { cost: number; currency: string }) : null
+      const n = JSON.parse(e.newValue) as { cost: number; currency: string; discount: number }
+      return `${o ? centsToText(o.cost) + ' → ' : ''}${centsToText(n.cost)} ${n.currency} brut, remise ${n.discount / 100} %`
+    } catch {
+      return e.newValue
+    }
+  }
+  return [e.oldValue, e.newValue].filter(Boolean).join(' → ')
+}
+
+function HistorySection({ itemId }: { itemId: number }) {
+  const events = useItemEvents(itemId)
+  const [open, setOpen] = useState(false)
+  return (
+    <fieldset className="rounded border border-neutral-200 p-3">
+      <legend className="px-1 text-sm font-medium text-neutral-600">
+        <button type="button" className="underline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          Historique {events.data ? `(${events.data.length})` : ''}
+        </button>
+      </legend>
+      {open && (
+        <ol className="space-y-1 text-xs" aria-label="Historique de la ligne">
+          {(events.data ?? []).map((e) => (
+            <li key={e.id} className="flex gap-2">
+              <span className="w-36 shrink-0 font-mono text-neutral-500">{e.changedAt.replace('T', ' ').replace('Z', '')}</span>
+              <span className="w-28 shrink-0 font-medium">{EVENT_LABELS[e.kind] ?? e.kind}</span>
+              <span>
+                {describeEvent(e)}
+                {e.note && <em className="ml-1 text-neutral-600">— {e.note}</em>}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </fieldset>
+  )
+}
+
+export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: { itemId: number; zones: ZoneRead[]; readOnly: boolean; onClose: () => void }) {
+  const [itemId, setItemId] = useState(initialItemId)
   const item = useProjectItem(itemId)
   const categories = useCategories(false)
   const suppliers = useSuppliers(ALL)
@@ -359,6 +588,9 @@ export function ItemPanel({ itemId, zones, readOnly, onClose }: { itemId: number
             readOnly={readOnly}
           />
           <PlacementsEditor item={item.data} zones={zones} readOnly={readOnly || item.data.status === 'cancelled' || item.data.status === 'replaced'} />
+          <StatusSection item={item.data} readOnly={readOnly} />
+          {!readOnly && <ReplaceSection item={item.data} onReplaced={setItemId} />}
+          <HistorySection itemId={item.data.id} />
           {!readOnly && (
             <div className="flex gap-2 border-t border-neutral-200 pt-3">
               {item.data.productId !== null && (
