@@ -49,6 +49,8 @@ class Supplier(TimestampedMixin, Base):
         Integer, nullable=False, server_default=text("0")
     )
     payment_terms: Mapped[str | None] = mapped_column(Text)
+    # Step F4 (migration 0013): JSON mapping of the last price-list import (ADR-0011).
+    import_mapping: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
     archived_at: Mapped[str | None] = mapped_column(Text)
 

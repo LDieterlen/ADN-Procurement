@@ -43,3 +43,4 @@ Comment revenir en arrière ou faire évoluer, et à quel coût.
 | [ADR-0008](ADR-0008-receptions-et-factures.md) | Réceptions et factures fournisseur : par bon de commande, réception partielle, factures et paiements en une table | à confirmer (étape 10c) | 2026-10-11 |
 | [ADR-0009](ADR-0009-exports-xlsx.md) | Exports xlsx : openpyxl, valeurs seulement, chaque export émis conservé | à confirmer (étape F1) | 2026-10-11 |
 | [ADR-0010](ADR-0010-exports-pdf.md) | Exports PDF : WeasyPrint + Jinja2, book client et bon de commande, note de licence des images | à confirmer (étape F2) | 2026-10-11 |
+| [ADR-0011](ADR-0011-import-tarifs.md) | Import de tarifs fournisseur (xlsx/CSV) : mapping par fournisseur, rapprochement en trois clés, observations de prix | à confirmer (étape F4) | 2026-10-11 |

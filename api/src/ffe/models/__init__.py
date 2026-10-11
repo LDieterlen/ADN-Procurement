@@ -8,8 +8,10 @@ from ffe.models.code_sequence import CodeSequence
 from ffe.models.delivery import Delivery
 from ffe.models.delivery_line import DeliveryLine
 from ffe.models.file import File
+from ffe.models.import_batch import ImportBatch
 from ffe.models.manufacturer import Manufacturer
 from ffe.models.po_sequence import PoSequence
+from ffe.models.price_observation import PriceObservation
 from ffe.models.product import Product
 from ffe.models.product_file import ProductFile
 from ffe.models.project import Project
@@ -38,6 +40,7 @@ __all__ = [
     "Delivery",
     "DeliveryLine",
     "File",
+    "ImportBatch",
     "Manufacturer",
     "Product",
     "ProductFile",
@@ -47,6 +50,7 @@ __all__ = [
     "ProjectItemEvent",
     "ProjectItemFile",
     "PoSequence",
+    "PriceObservation",
     "ProjectItemPlacement",
     "PurchaseOrder",
     "PurchaseOrderFile",

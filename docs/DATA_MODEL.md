@@ -71,6 +71,10 @@ erDiagram
     purchase_order ||--o{ supplier_invoice : "factures"
     project ||--o{ project_file : "exports emis"
     file ||--o{ project_file : "fichier"
+    supplier ||--o{ import_batch : "tarifs importes"
+    file ||--o{ import_batch : "fichier source"
+    import_batch ||--o{ price_observation : "prix observes"
+    product ||--o{ price_observation : "historique de prix"
 
     setting {
         INTEGER id PK "CHECK id = 1"
@@ -413,6 +417,7 @@ Qui vend et facture ; en-tête des futurs BC ; cible de la future recherche d'en
 | currency | TEXT | non | `'EUR'` | `length(currency) = 3` | devise de facturation, copiée sur la ligne à l'affectation |
 | default_discount_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | remise pro habituelle, copiée sur la ligne |
 | payment_terms | TEXT | oui | | | « 30 % à la commande, solde avant livraison » |
+| import_mapping | TEXT | oui | | JSON | étape F4 (migration 0013, ADR-0011) : mapping colonnes → champs du dernier import |
 | notes | TEXT | oui | | | |
 | archived_at | TS | oui | | | |
 
@@ -753,6 +758,31 @@ Chaque export émis d'un projet, conservé tel qu'envoyé.
 
 Pas d'`updated_at`. Exemple : `(3, 41, 'schedule_xlsx', 'client', '2026-10-11T15:02:00Z')`.
 
+### 4.28 `import_batch` — étape F4 (ADR-0011)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| supplier_id | INTEGER | non | — | FK `supplier` RESTRICT | |
+| file_id | INTEGER | non | — | FK `file` RESTRICT | fichier importé, conservé |
+| mapping_json | TEXT | non | — | JSON | mapping et options appliqués |
+| imported_at | TS | non | — | | |
+| rows_total, rows_created, rows_updated, rows_unchanged, rows_skipped, rows_discontinued | INTEGER | non | `0` | `>= 0` | comptes du lot |
+
+Pas d'`updated_at`.
+
+### 4.29 `price_observation` — étape F4 (ADR-0011)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| import_batch_id | INTEGER | non | — | FK `import_batch` **CASCADE** | |
+| product_id | INTEGER | non | — | FK `product` RESTRICT | |
+| list_price_cents | INTEGER | non | — | `>= 0` | tel qu'importé |
+| list_price_currency | TEXT | non | — | `length = 3` | |
+| list_price_tax_mode | TEXT | non | — | `IN ('ht','ttc')` | |
+| observed_on | DATE | non | — | format date | date de l'import |
+
+`product.list_price_*` = dernière observation (le service les recopie). Rien de calculé.
+
 ## 5. Statuts et transitions
 
 `STATUS_RANK` : `draft` 0 < `specified` 1 < `quoted` 2 < `approved` 3 < `ordered` 4 < `delivered` 5 < `installed` 6 ; `cancelled` et `replaced` terminaux (rang −1). `on_hold` est un booléen indépendant.
@@ -1013,7 +1043,7 @@ GROUP BY pr.id, pr.code, pr.name, c.name, pr.status, pr.due_on
 ORDER BY pr.due_on IS NULL, pr.due_on, pr.code;
 ```
 
-Vingt-sept tables (seize + devis 10a + bons de commande 10b + réceptions et factures 10c + exports émis F1), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
+Vingt-neuf tables (seize + devis 10a + bons de commande 10b + réceptions et factures 10c + exports émis F1 + import de tarifs F4), zéro vue : schedule, book, budget par zone et catégorie, fournisseurs multi-devises, alertes, historique et tableau de bord sont tous couverts.
 
 ---
 
@@ -1030,7 +1060,7 @@ Règle : `ADD COLUMN` nullable ou nouvelle table ; jamais de recréation d'une t
 | Validé ventilé par zone (D2.14 : approximation acceptée en v1) | `project_item_placement.approved_qty_milli INTEGER NULL` posé à `approved` ; R2 l'utilise à la place du prix courant |
 | Snapshot dans la devise de la ligne (D2.9 : EUR seul en v1) | `project_item.approved_unit_net_currency_cents`, `approved_fx_rate_micro` nullables |
 | Recherche d'entreprises (DINUM, INSEE, VIES) | `supplier.activity_code`, `legal_form_code`, `admin_status`, `registry_source`, `registry_synced_at`, `vat_status`, `vat_checked_at` ; table `supplier_registry_snapshot(supplier_id, source, fetched_at, raw_json)` ; aucun dirigeant |
-| Capture produit / import tarifs | `product_source(product_id, url, url_hash UNIQUE, domain, captured_at, method, raw_json)`, `price_observation(product_id, price_cents, currency, tax_mode, observed_on, source)`, `import_batch`, `capture_inbox`, `setting.api_token` |
+| Capture produit (F5–F6 ; import tarifs livré en F4 §4.28–4.29) | `product_source(product_id, url, url_hash UNIQUE, domain, captured_at, method, raw_json)`, `capture_inbox`, `setting.api_token` |
 | Révisions de schedule (`project_file` livrée en F1, §4.27) | `schedule_revision(project_id, label, issued_on, snapshot_json)` |
 | Zones hiérarchiques | `zone.parent_id INTEGER NULL` + CTE récursive ; `zone.required_on_site` par phase |
 | Multi-fournisseurs, variantes, composants | `product_supplier`, `product_variant` + `project_item.variant_id`, `project_item.parent_item_id` |
