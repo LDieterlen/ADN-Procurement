@@ -29,6 +29,7 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmDialog, type DialogAction } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import { InvoicesSection, ReceiptsSection } from './OrderReceipts'
 
 const ALL = { q: '', limit: 200, offset: 0, includeArchived: false }
 const control = 'rounded border border-neutral-300 px-2 py-1 text-sm'
@@ -381,6 +382,7 @@ function OrderCard({ po, projectId, readOnly }: { po: PoRead; projectId: number;
             <th className="px-1 py-1 text-right">Remise</th>
             <th className="px-1 py-1 text-right">Net HT {po.currency}</th>
             <th className="px-1 py-1 text-right">Net HT €</th>
+            <th className="px-1 py-1 text-right">Reçu</th>
             <th className="px-1 py-1"></th>
           </tr>
         </thead>
@@ -418,6 +420,7 @@ function OrderCard({ po, projectId, readOnly }: { po: PoRead; projectId: number;
               <td className="px-1 py-1 text-right">{line.discountBp ? `${bpToText(line.discountBp)} %` : ''}</td>
               <td className="px-1 py-1 text-right">{centsToText(line.totalCents)}</td>
               <td className="px-1 py-1 text-right">{centsToText(line.totalEurCents)}</td>
+              <td className="px-1 py-1 text-right">{po.status === 'draft' ? '' : `${milliToText(line.receivedQtyMilli)} / ${milliToText(line.qtyMilli)}`}</td>
               <td className="px-1 py-1 text-right">
                 {draft && !locked && (
                   <Button
@@ -439,6 +442,7 @@ function OrderCard({ po, projectId, readOnly }: { po: PoRead; projectId: number;
             </td>
             <td className="px-1 py-1 text-right">{centsToText(po.totalCents)}</td>
             <td className="px-1 py-1 text-right">{centsToText(po.totalEurCents)}</td>
+            <td></td>
             <td></td>
           </tr>
         </tfoot>
@@ -517,6 +521,8 @@ function OrderCard({ po, projectId, readOnly }: { po: PoRead; projectId: number;
           </>
         )}
       </div>
+      {po.status !== 'draft' && <ReceiptsSection po={po} readOnly={readOnly} />}
+      {po.status !== 'draft' && <InvoicesSection po={po} readOnly={readOnly} />}
       {printing && <PoDocument po={po} projectId={projectId} onClose={() => setPrinting(false)} />}
     </article>
   )

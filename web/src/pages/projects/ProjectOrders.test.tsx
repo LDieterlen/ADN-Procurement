@@ -103,7 +103,7 @@ describe('onglet Commandes', () => {
     ).toEqual(['15 %', '12 750,00', '14 917,56'])
     // 12 750 + 200 + 50 = 13 000,00 GBP ; 14 917,56 + 234,00 + 58,50 = 15 210,06 €
     const foot = within(card).getAllByRole('row').at(-1)!
-    expect(Array.from((foot as HTMLTableRowElement).cells).map((c) => c.textContent?.trim())).toEqual(['Total HT', '13 000,00', '15 210,06', ''])
+    expect(Array.from((foot as HTMLTableRowElement).cells).map((c) => c.textContent?.trim())).toEqual(['Total HT', '13 000,00', '15 210,06', '', ''])
     expect(api.purchaseOrders[0]?.deliveryAddress).toBe('12 rue du Chantier')
 
     await user.click(within(card).getByRole('button', { name: 'Émettre' }))
@@ -166,6 +166,9 @@ describe('onglet Commandes', () => {
       vatByRateBp: { 2000: 1170 },
       vatCents: 1170,
       ttcEurCents: 7_020,
+      invoicedHtCents: 0,
+      paidHtCents: 0,
+      deliveriesCount: 0,
       lines: [
         {
           id: 99,
@@ -183,6 +186,7 @@ describe('onglet Commandes', () => {
           totalCents: 5_000,
           netUnitEurCents: 5_850,
           totalEurCents: 5_850,
+          receivedQtyMilli: 0,
         },
       ],
       files: [],

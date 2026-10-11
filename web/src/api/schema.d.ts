@@ -158,6 +158,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deliveries/{delivery_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Delivery */
+        delete: operations["deleteDelivery"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files": {
         parameters: {
             query?: never;
@@ -206,6 +223,41 @@ export interface paths {
         get: operations["getHealth"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Invoice */
+        delete: operations["deleteInvoice"];
+        options?: never;
+        head?: never;
+        /** Update Invoice */
+        patch: operations["updateInvoice"];
+        trace?: never;
+    };
+    "/api/v1/invoices/{invoice_id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay Invoice */
+        post: operations["payInvoice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -792,6 +844,24 @@ export interface paths {
         patch: operations["updatePurchaseOrder"];
         trace?: never;
     };
+    "/api/v1/purchase-orders/{po_id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Deliveries */
+        get: operations["listDeliveries"];
+        put?: never;
+        /** Create Delivery */
+        post: operations["createDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/purchase-orders/{po_id}/files": {
         parameters: {
             query?: never;
@@ -821,6 +891,24 @@ export interface paths {
         post?: never;
         /** Detach File */
         delete: operations["detachPurchaseOrderFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invoices */
+        get: operations["listInvoices"];
+        put?: never;
+        /** Create Invoice */
+        post: operations["createInvoice"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1280,6 +1368,10 @@ export interface components {
             engagedCents: number;
             /** Globalcents */
             globalCents: number | null;
+            /** Invoicedcents */
+            invoicedCents: number;
+            /** Paidcents */
+            paidCents: number;
             /** Remainingcents */
             remainingCents: number | null;
             /** Specifiedcents */
@@ -1464,6 +1556,58 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** DeliveryCreate */
+        DeliveryCreate: {
+            /** Lines */
+            lines: components["schemas"]["DeliveryLineIn"][];
+            /** Notes */
+            notes?: string | null;
+            /** Receivedon */
+            receivedOn: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** DeliveryLineIn */
+        DeliveryLineIn: {
+            /** Purchaseorderlineid */
+            purchaseOrderLineId: number;
+            /** Qtymilli */
+            qtyMilli: number;
+            /** Remarks */
+            remarks?: string | null;
+        };
+        /** DeliveryLineRead */
+        DeliveryLineRead: {
+            /** Id */
+            id: number;
+            /** Itemcode */
+            itemCode: string;
+            /** Purchaseorderlineid */
+            purchaseOrderLineId: number;
+            /** Qtymilli */
+            qtyMilli: number;
+            /** Remarks */
+            remarks: string | null;
+        };
+        /** DeliveryRead */
+        DeliveryRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Lines */
+            lines: components["schemas"]["DeliveryLineRead"][];
+            /** Notes */
+            notes: string | null;
+            /** Purchaseorderid */
+            purchaseOrderId: number;
+            /** Receivedon */
+            receivedOn: string;
+            /** Reference */
+            reference: string | null;
+            /** Updatedat */
+            updatedAt: string;
+        };
         /** EventRead */
         EventRead: {
             /** Changedat */
@@ -1529,6 +1673,94 @@ export interface components {
             ok: boolean;
             /** Schemarevision */
             schemaRevision: string | null;
+        };
+        /** InvoiceCreate */
+        InvoiceCreate: {
+            /** Amounthtcents */
+            amountHtCents: number;
+            /** Dueon */
+            dueOn?: string | null;
+            /** Invoicedon */
+            invoicedOn: string;
+            /**
+             * Kind
+             * @default balance
+             * @enum {string}
+             */
+            kind: "deposit" | "balance" | "other";
+            /** Notes */
+            notes?: string | null;
+            /** Reference */
+            reference: string;
+            /**
+             * Vatcents
+             * @default 0
+             */
+            vatCents: number;
+        };
+        /** InvoicePay */
+        InvoicePay: {
+            /** Paidon */
+            paidOn: string;
+            /** Paymentref */
+            paymentRef?: string | null;
+        };
+        /** InvoiceRead */
+        InvoiceRead: {
+            /** Amounthtcents */
+            amountHtCents: number;
+            /** Amounthteurcents */
+            amountHtEurCents: number;
+            /** Createdat */
+            createdAt: string;
+            /** Dueon */
+            dueOn: string | null;
+            /** Id */
+            id: number;
+            /** Invoicedon */
+            invoicedOn: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deposit" | "balance" | "other";
+            /** Notes */
+            notes: string | null;
+            /** Paidon */
+            paidOn: string | null;
+            /** Paymentref */
+            paymentRef: string | null;
+            /** Purchaseorderid */
+            purchaseOrderId: number;
+            /** Reference */
+            reference: string;
+            /** Ttccents */
+            ttcCents: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Vatcents */
+            vatCents: number;
+        };
+        /** InvoiceUpdate */
+        InvoiceUpdate: {
+            /** Amounthtcents */
+            amountHtCents?: number | null;
+            /** Dueon */
+            dueOn?: string | null;
+            /** Invoicedon */
+            invoicedOn?: string | null;
+            /** Kind */
+            kind?: ("deposit" | "balance" | "other") | null;
+            /** Notes */
+            notes?: string | null;
+            /** Paidon */
+            paidOn?: string | null;
+            /** Paymentref */
+            paymentRef?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /** Vatcents */
+            vatCents?: number | null;
         };
         /** ItemFileAttach */
         ItemFileAttach: {
@@ -1830,6 +2062,8 @@ export interface components {
             purchaseOrderId: number;
             /** Qtymilli */
             qtyMilli: number;
+            /** Receivedqtymilli */
+            receivedQtyMilli: number;
             /** Sortorder */
             sortOrder: number;
             /** Totalcents */
@@ -1867,6 +2101,8 @@ export interface components {
             createdAt: string;
             /** Currency */
             currency: string;
+            /** Deliveriescount */
+            deliveriesCount: number;
             /** Deliveryaddress */
             deliveryAddress: string | null;
             /** Deliverycontact */
@@ -1881,6 +2117,8 @@ export interface components {
             id: number;
             /** Internalnotes */
             internalNotes: string | null;
+            /** Invoicedhtcents */
+            invoicedHtCents: number;
             /** Issuedon */
             issuedOn: string | null;
             /** Lines */
@@ -1889,6 +2127,8 @@ export interface components {
             notes: string | null;
             /** Number */
             number: string;
+            /** Paidhtcents */
+            paidHtCents: number;
             /** Paymentterms */
             paymentTerms: string | null;
             /** Projectid */
@@ -3433,6 +3673,37 @@ export interface operations {
             };
         };
     };
+    deleteDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     uploadFile: {
         parameters: {
             query?: never;
@@ -3520,6 +3791,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthRead"];
+                };
+            };
+        };
+    };
+    deleteInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoicePay"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5249,6 +5619,72 @@ export interface operations {
             };
         };
     };
+    listDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeliveryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     attachPurchaseOrderFile: {
         parameters: {
             query?: never;
@@ -5303,6 +5739,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceRead"];
                 };
             };
             /** @description Validation Error */

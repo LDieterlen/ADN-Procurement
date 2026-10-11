@@ -21,6 +21,8 @@ type QuoteRead = components['schemas']['QuoteRead']
 type QuoteLineRead = components['schemas']['QuoteLineRead']
 type PoRead = components['schemas']['PoRead']
 type PoLineRead = components['schemas']['PoLineRead']
+type DeliveryRead = components['schemas']['DeliveryRead']
+type InvoiceRead = components['schemas']['InvoiceRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -39,6 +41,8 @@ export type FakeApi = {
   setting: SettingRead
   quotes: QuoteRead[]
   purchaseOrders: PoRead[]
+  deliveries: DeliveryRead[]
+  invoices: InvoiceRead[]
   lastBackupAt: string | null
   backupDirOk: boolean
   events: {
@@ -462,6 +466,9 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
       vatByRateBp: {},
       vatCents: 0,
       ttcEurCents: 0,
+      invoicedHtCents: 0,
+      paidHtCents: 0,
+      deliveriesCount: 0,
       lines: [],
       files: [],
       createdAt: NOW,
@@ -781,6 +788,8 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
     specifiedCents: specified,
     approvedCents: approved,
     engagedCents: engagedOf(state, null, null),
+    invoicedCents: invoicedOf(state, false),
+    paidCents: invoicedOf(state, true),
     remainingCents: globalCents === null ? null : globalCents - specified,
     alert: alertOf(globalCents, specified),
     byZone: zoneRows.map((z) => row(z.zoneId, null, z.zoneName, z.multiplier, z.specifiedCents, 0)),
@@ -1123,6 +1132,8 @@ export function installFakeApi(
     backupDirOk: true,
     quotes: [],
     purchaseOrders: [],
+    deliveries: [],
+    invoices: [],
     requests: [],
     down: false,
     restore: () => {
@@ -1177,7 +1188,7 @@ export function installFakeApi(
       })
     }
     const route =
-      /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines|purchase-orders|purchase-order-lines)(?:\/(.+))?$/.exec(
+      /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines|purchase-orders|purchase-order-lines|deliveries|invoices)(?:\/(.+))?$/.exec(
         url.pathname,
       )
     if (route) {
@@ -1197,6 +1208,8 @@ export function installFakeApi(
       if (collection === 'quote-lines') response = handleQuoteLines(state, method, rest, body)
       if (collection === 'purchase-orders') response = handlePurchaseOrders(state, method, rest, body)
       if (collection === 'purchase-order-lines') response = handlePurchaseOrderLines(state, method, rest, body)
+      if (collection === 'deliveries') response = handleDeliveries(state, method, rest)
+      if (collection === 'invoices') response = handleInvoices(state, method, rest, body)
       if (collection === 'dashboard' && method === 'GET') {
         response = json(
           200,
@@ -1433,6 +1446,7 @@ function poLineRow(state: FakeApi, po: PoRead, itemId: number): PoLineRead {
     totalCents: 0,
     netUnitEurCents: 0,
     totalEurCents: 0,
+    receivedQtyMilli: 0,
   }
   poLineAmounts(po, line)
   return line
@@ -1530,6 +1544,71 @@ function handlePurchaseOrders(state: FakeApi, method: string, rest: string | und
     poTotals(po)
     return json(201, po)
   }
+  if (sub === 'deliveries' && method === 'GET')
+    return json(
+      200,
+      state.deliveries.filter((d) => d.purchaseOrderId === po.id),
+    )
+  if (sub === 'deliveries' && method === 'POST') {
+    if (po.status === 'draft' || po.status === 'cancelled')
+      return error(409, 'conflict', `Bon de commande ${po.number} ${po.status} : réception possible après émission seulement.`)
+    const d = body as { receivedOn: string; reference: string | null; lines: { purchaseOrderLineId: number; qtyMilli: number }[] }
+    for (const [index, l] of d.lines.entries()) {
+      const line = po.lines.find((x) => x.id === l.purchaseOrderLineId)
+      if (!line) return validation(`lines.${index}.purchaseOrderLineId`, `La ligne ${l.purchaseOrderLineId} n’appartient pas à ce bon de commande.`)
+      if (line.receivedQtyMilli + l.qtyMilli > line.qtyMilli) return validation(`lines.${index}.qtyMilli`, `Ligne ${line.itemCode} : trop reçu.`)
+    }
+    const delivery: DeliveryRead = {
+      id: state.deliveries.length + 1,
+      purchaseOrderId: po.id,
+      receivedOn: d.receivedOn,
+      reference: d.reference,
+      notes: null,
+      lines: d.lines.map((l, i) => ({
+        id: i + 1,
+        purchaseOrderLineId: l.purchaseOrderLineId,
+        itemCode: po.lines.find((x) => x.id === l.purchaseOrderLineId)!.itemCode,
+        qtyMilli: l.qtyMilli,
+        remarks: null,
+      })),
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    state.deliveries.push(delivery)
+    syncReceipts(state, po, `Réception ${d.reference ?? '—'} du ${d.receivedOn}.`)
+    return json(201, delivery)
+  }
+  if (sub === 'invoices' && method === 'GET')
+    return json(
+      200,
+      state.invoices.filter((i) => i.purchaseOrderId === po.id),
+    )
+  if (sub === 'invoices' && method === 'POST') {
+    if (po.status === 'cancelled') return error(409, 'conflict', `Bon de commande ${po.number} annulé : plus de facture.`)
+    const inv = body as { kind: InvoiceRead['kind']; reference: string; invoicedOn: string; dueOn: string | null; amountHtCents: number; vatCents: number }
+    if (state.invoices.some((i) => i.purchaseOrderId === po.id && i.reference === inv.reference.trim()))
+      return validation('reference', 'Ce bon de commande a déjà une facture portant cette référence.')
+    const created: InvoiceRead = {
+      id: state.invoices.length + 1,
+      purchaseOrderId: po.id,
+      kind: inv.kind,
+      reference: inv.reference.trim(),
+      invoicedOn: inv.invoicedOn,
+      dueOn: inv.dueOn,
+      amountHtCents: inv.amountHtCents,
+      vatCents: inv.vatCents,
+      ttcCents: inv.amountHtCents + inv.vatCents,
+      amountHtEurCents: divRound(inv.amountHtCents * po.fxRateMicro, 1_000_000),
+      paidOn: null,
+      paymentRef: null,
+      notes: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    state.invoices.push(created)
+    syncInvoices(state, po)
+    return json(201, created)
+  }
   if (sub === 'files' && method === 'POST') {
     const f = body as { fileId: number; caption: string | null }
     const file = state.files.find((x) => x.id === f.fileId)
@@ -1570,6 +1649,118 @@ function handlePurchaseOrderLines(state: FakeApi, method: string, rest: string |
     po.lines = po.lines.filter((l) => l.id !== line.id)
     poTotals(po)
     return json(200, po)
+  }
+  return undefined
+}
+
+function invoicedOf(state: FakeApi, paidOnly: boolean): number {
+  let total = 0
+  for (const inv of state.invoices) {
+    const po = state.purchaseOrders.find((o) => o.id === inv.purchaseOrderId)
+    if (!po || po.status === 'cancelled') continue
+    if (paidOnly && !inv.paidOn) continue
+    total += inv.amountHtEurCents
+  }
+  return total
+}
+
+function syncInvoices(state: FakeApi, po: PoRead): void {
+  const mine = state.invoices.filter((i) => i.purchaseOrderId === po.id)
+  po.invoicedHtCents = mine.reduce((s, i) => s + i.amountHtCents, 0)
+  po.paidHtCents = mine.filter((i) => i.paidOn).reduce((s, i) => s + i.amountHtCents, 0)
+}
+
+function syncReceipts(state: FakeApi, po: PoRead, note: string): void {
+  const mine = state.deliveries.filter((d) => d.purchaseOrderId === po.id)
+  po.deliveriesCount = mine.length
+  let complete = true
+  let any = false
+  for (const line of po.lines) {
+    line.receivedQtyMilli = mine
+      .flatMap((d) => d.lines)
+      .filter((l) => l.purchaseOrderLineId === line.id)
+      .reduce((s, l) => s + l.qtyMilli, 0)
+    any = any || line.receivedQtyMilli > 0
+    const item = state.items.find((i) => i.id === line.projectItemId)!
+    if (line.receivedQtyMilli >= line.qtyMilli) {
+      if (item.status === 'ordered') {
+        state.events.push({
+          id: state.events.length + 1,
+          projectItemId: item.id,
+          kind: 'status',
+          fromStatus: 'ordered',
+          toStatus: 'delivered',
+          oldValue: null,
+          newValue: null,
+          changedAt: LATER,
+          note,
+        })
+        item.status = 'delivered'
+        line.itemStatus = 'delivered'
+      }
+    } else {
+      complete = false
+      if (item.status === 'delivered') {
+        state.events.push({
+          id: state.events.length + 1,
+          projectItemId: item.id,
+          kind: 'status',
+          fromStatus: 'delivered',
+          toStatus: 'ordered',
+          oldValue: null,
+          newValue: null,
+          changedAt: LATER,
+          note,
+        })
+        item.status = 'ordered'
+        line.itemStatus = 'ordered'
+      }
+    }
+  }
+  po.status = complete ? 'closed' : any ? 'partially_delivered' : 'acknowledged'
+}
+
+function handleDeliveries(state: FakeApi, method: string, rest: string | undefined): Response | undefined {
+  const match = /^(\d+)$/.exec(rest ?? '')
+  if (!match) return undefined
+  const delivery = state.deliveries.find((d) => d.id === Number(match[1]))
+  if (!delivery) return error(404, 'not_found', `Réception n° ${match[1]} introuvable.`)
+  if (method === 'DELETE') {
+    const po = state.purchaseOrders.find((o) => o.id === delivery.purchaseOrderId)!
+    state.deliveries = state.deliveries.filter((d) => d.id !== delivery.id)
+    syncReceipts(state, po, `Réception ${delivery.reference ?? '—'} du ${delivery.receivedOn} supprimée (correction de saisie).`)
+    return json(200, po)
+  }
+  return undefined
+}
+
+function handleInvoices(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const invoice = state.invoices.find((i) => i.id === Number(match[1]))
+  if (!invoice) return error(404, 'not_found', `Facture n° ${match[1]} introuvable.`)
+  const po = state.purchaseOrders.find((o) => o.id === invoice.purchaseOrderId)!
+  const sub = match[2]
+  if (invoice.paidOn && (method !== 'PATCH' || Object.keys((body ?? {}) as object).some((k) => k !== 'notes')))
+    return error(409, 'conflict', `Facture ${invoice.reference} payée le ${invoice.paidOn} : plus aucune modification.`)
+  if (!sub && method === 'PATCH') {
+    Object.assign(invoice, body, { updatedAt: LATER })
+    invoice.ttcCents = invoice.amountHtCents + invoice.vatCents
+    invoice.amountHtEurCents = divRound(invoice.amountHtCents * po.fxRateMicro, 1_000_000)
+    syncInvoices(state, po)
+    return json(200, invoice)
+  }
+  if (sub === 'pay' && method === 'POST') {
+    const p = body as { paidOn: string; paymentRef: string | null }
+    invoice.paidOn = p.paidOn
+    invoice.paymentRef = p.paymentRef
+    syncInvoices(state, po)
+    return json(200, invoice)
+  }
+  if (!sub && method === 'DELETE') {
+    state.invoices = state.invoices.filter((i) => i.id !== invoice.id)
+    syncInvoices(state, po)
+    return new Response(null, { status: 204 })
   }
   return undefined
 }
