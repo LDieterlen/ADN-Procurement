@@ -43,12 +43,19 @@ class SettingUpdate(BaseSchema):
             raise ValueError(fr.FIELD_REQUIRED)
         return value
 
-    @field_validator("project_code_prefix", "agency_name", mode="before")
+    @field_validator("project_code_prefix", mode="before")
     @classmethod
-    def texts_cannot_be_null(cls, value: Any) -> Any:
+    def prefix_cannot_be_null(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
         return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("agency_name", mode="before")
+    @classmethod
+    def name_cannot_be_null(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError(fr.FIELD_REQUIRED)
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("agency_address", "agency_email", "agency_phone", mode="before")
     @classmethod

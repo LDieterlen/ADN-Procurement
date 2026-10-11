@@ -127,6 +127,7 @@ class ProductFileRead(BaseSchema):
     is_primary: bool
     caption: str | None
     sort_order: int
+    license_note: str | None = None
     sha256: str
     ext: str
     mime_type: str
@@ -146,6 +147,7 @@ class ProductFileRead(BaseSchema):
             mime_type=junction.file.mime_type,
             original_name=junction.file.original_name,
             size_bytes=junction.file.size_bytes,
+            license_note=junction.file.license_note,
         )
 
 
@@ -201,3 +203,4 @@ class ProductFileUpdate(BaseSchema):
     is_primary: bool | None = None
     caption: Short = None
     sort_order: int | None = None
+    license_note: Short = None  # étape F2 : porté par le fichier, pas la jointure

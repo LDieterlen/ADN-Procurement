@@ -206,6 +206,8 @@ def update_file(
         if is_primary:
             _clear_primary(product, file_id)
             session.flush()
+        if "license_note" in changes:
+            junction.file.license_note = changes.pop("license_note")
         for field_name, value in changes.items():
             setattr(junction, field_name, int(value) if field_name == "is_primary" else value)
         junction.updated_at = product.updated_at = stamp(clock)

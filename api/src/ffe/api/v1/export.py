@@ -21,6 +21,24 @@ def list_exports(project_id: ProjectId, session: SessionDep) -> list[ProjectFile
 
 
 @router.get(
+    "/book.pdf",
+    operation_id="exportBook",
+    response_class=Response,
+    responses={200: {"content": {service.PDF_MIME: {}}}},
+)
+def export_book(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> Response:
+    row, data = service.issue_book(session, deps.settings.files_dir, project_id, deps.clock)
+    return Response(
+        content=data,
+        media_type=service.PDF_MIME,
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(row.file.original_name)}",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.get(
     "/schedule.xlsx",
     operation_id="exportSchedule",
     response_class=Response,

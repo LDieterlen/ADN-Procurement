@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="page cover">
+  <div class="agency">
+    <strong>{{ agency.name or "FFE" }}</strong><br>
+    <span class="muted small">{{ agency.address or "" }}</span>
+  </div>
+  <h1>{{ project.name }}</h1>
+  <p class="muted">Projet {{ project.code }} · {{ client_name }}</p>
+  <p>Book FF&amp;E — {{ item_count }} article(s) dans {{ zone_count }} zone(s)</p>
+  <p class="muted small">Émis le {{ issued_on }}</p>
+</section>
+{% for zone in zones %}
+  {% for article in zone["articles"] %}
+  <section class="page">
+    <p class="muted small">Zone {{ zone["code"] or "—" }} — {{ zone["name"] }}{% if zone["multiplier"] > 1 %} (× {{ zone["multiplier"] }}){% endif %}</p>
+    <h2><span class="code">{{ article["item_code"] }}</span> {{ article["name"] }}</h2>
+    <div class="article">
+      <div>
+        {% if article["photo"] %}
+          <img class="photo" src="{{ article["photo"] }}" alt="{{ article["name"] }}">
+          {% if article["license_note"] %}<p class="muted small">{{ article["license_note"] }}</p>{% endif %}
+        {% else %}
+          <p class="muted">Pas de photo</p>
+        {% endif %}
+      </div>
+      <dl>
+        {% if article["client_description"] %}<dt>Description</dt><dd>{{ article["client_description"] }}</dd>{% endif %}
+        <dt>Type</dt><dd>{{ article["kind_label"] }}</dd>
+        {% if article["finish"] %}<dt>Finition</dt><dd>{{ article["finish"] }}</dd>{% endif %}
+        {% if article["color"] %}<dt>Couleur</dt><dd>{{ article["color"] }}</dd>{% endif %}
+        {% if article["materials"] %}<dt>Matériaux</dt><dd>{{ article["materials"] }}</dd>{% endif %}
+        {% if article["dimensions"] %}<dt>Dimensions</dt><dd>{{ article["dimensions"] }}</dd>{% endif %}
+        <dt>Quantité dans la zone</dt><dd>{{ article["qty_text"] }}{% if zone["multiplier"] > 1 %} par clé, {{ article["qty_total_text"] }} au total{% endif %}</dd>
+        {% if article["manufacturer"] %}<dt>Fabricant</dt><dd>{{ article["manufacturer"] }}</dd>{% endif %}
+      </dl>
+    </div>
+  </section>
+  {% endfor %}
+{% endfor %}
+{% endblock %}

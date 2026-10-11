@@ -1424,6 +1424,17 @@
             "title": "Id",
             "type": "integer"
           },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
           "mimeType": {
             "title": "Mimetype",
             "type": "string"
@@ -3697,6 +3708,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
           "mimeType": {
             "title": "Mimetype",
             "type": "string"
@@ -3774,6 +3796,18 @@
               }
             ],
             "title": "Kind"
+          },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
           },
           "sortOrder": {
             "anyOf": [
@@ -10892,6 +10926,45 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/exports/book.pdf": {
+      "get": {
+        "operationId": "exportBook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Book",
+        "tags": [
+          "exports"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/exports/schedule.xlsx": {
       "get": {
         "operationId": "exportSchedule",
@@ -12233,6 +12306,45 @@
           }
         },
         "summary": "Add Lines",
+        "tags": [
+          "purchase-orders"
+        ]
+      }
+    },
+    "/api/v1/purchase-orders/{po_id}/pdf": {
+      "get": {
+        "operationId": "exportPurchaseOrderPdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "po_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Po Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Pdf",
         "tags": [
           "purchase-orders"
         ]

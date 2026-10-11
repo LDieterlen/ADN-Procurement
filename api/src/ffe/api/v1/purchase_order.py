@@ -2,6 +2,7 @@
 status, files (API.md « Bons de commande »)."""
 
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Path, Response
 
@@ -15,6 +16,7 @@ from ffe.schemas.purchase_order import (
     PoStatusChange,
     PoUpdate,
 )
+from ffe.services import project_file as export_service
 from ffe.services import purchase_order as service
 
 router = APIRouter(tags=["purchase-orders"])
@@ -100,4 +102,22 @@ def detach_file(po_id: PoId, file_id: FileId, session: SessionDep, deps: DepsDep
     return service.to_read(
         session,
         service.detach_file(session, po_id, file_id, deps.settings.files_dir, deps.clock),
+    )
+
+
+@router.get(
+    "/purchase-orders/{po_id}/pdf",
+    operation_id="exportPurchaseOrderPdf",
+    response_class=Response,
+    responses={200: {"content": {export_service.PDF_MIME: {}}}},
+)
+def export_pdf(po_id: PoId, session: SessionDep, deps: DepsDep) -> Response:
+    name, data = export_service.issue_po_pdf(session, deps.settings.files_dir, po_id, deps.clock)
+    return Response(
+        content=data,
+        media_type=export_service.PDF_MIME,
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
+            "Cache-Control": "no-store",
+        },
     )

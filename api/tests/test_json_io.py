@@ -38,7 +38,7 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0011"
+    assert document["schemaRevision"] == "0012"
     assert list(document["tables"]) == [
         "setting",
         "client",

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; @bottom-center { content: "{{ footer }} — page " counter(page) " / " counter(pages); font-size: 8pt; color: #666; } }
+  body { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-size: 10pt; color: #111; }
+  h1 { font-size: 20pt; margin: 0 0 4mm; }
+  h2 { font-size: 13pt; margin: 0 0 3mm; }
+  .muted { color: #666; }
+  .small { font-size: 8pt; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 1.5mm 2mm; vertical-align: top; }
+  th { text-align: left; border-bottom: 0.4mm solid #333; font-size: 8pt; text-transform: uppercase; color: #444; }
+  td { border-bottom: 0.2mm solid #ccc; }
+  .num { text-align: right; white-space: nowrap; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .cover { display: flex; flex-direction: column; justify-content: center; height: 240mm; }
+  .cover .agency { position: absolute; top: 0; left: 0; }
+  .article { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
+  .photo { width: 100%; max-height: 150mm; object-fit: contain; border: 0.2mm solid #ddd; }
+  .code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; color: #444; }
+  dl { margin: 0; } dt { font-weight: bold; margin-top: 2mm; } dd { margin: 0; }
+  .totals td { border: none; }
+  .totals .label { text-align: right; color: #444; }
+</style>
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>

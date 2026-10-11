@@ -11,4 +11,5 @@ class FileRead(BaseSchema):
     size_bytes: int
     original_name: str
     source_url: str | None
+    license_note: str | None = None
     created_at: str

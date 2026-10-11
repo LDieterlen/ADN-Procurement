@@ -7,14 +7,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ffe.deps import Clock
+from ffe.exports.book_pdf import build_book
+from ffe.exports.po_pdf import build_po_pdf
 from ffe.exports.schedule_xlsx import Variant, build_schedule
-from ffe.models import Project, ProjectFile
+from ffe.models import Project, ProjectFile, PurchaseOrderFile
 from ffe.schemas.project_file import ProjectFileRead
 from ffe.services.base import stamp
 from ffe.services.file import store_bytes
 from ffe.services.project import get_project
+from ffe.services.purchase_order import get_po
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+PDF_MIME = "application/pdf"
 
 
 def list_exports(session: Session, project_id: int) -> list[ProjectFile]:
@@ -68,3 +72,47 @@ def issue_schedule(
         session.add(row)
     session.refresh(row)
     return row, data
+
+
+def issue_book(
+    session: Session, files_dir: Path, project_id: int, clock: Clock
+) -> tuple[ProjectFile, bytes]:
+    """Client book PDF (ADR-0010), kept like a schedule export (`kind = 'book_pdf'`)."""
+    today = clock().date()
+    with session.begin():
+        project = get_project(session, project_id)
+        _html, data = build_book(session, files_dir, project_id, today)
+        name = f"{project.code}-book-{today.isoformat()}.pdf"
+        file = store_bytes(
+            session, files_dir, data, name, PDF_MIME, "pdf", clock, in_transaction=True
+        )
+        row = ProjectFile(
+            project_id=project_id,
+            file_id=file.id,
+            kind="book_pdf",
+            variant="client",
+            issued_at=stamp(clock),
+        )
+        session.add(row)
+    session.refresh(row)
+    return row, data
+
+
+def issue_po_pdf(session: Session, files_dir: Path, po_id: int, clock: Clock) -> tuple[str, bytes]:
+    """Purchase-order PDF, attached once per content to the order (reprints are free)."""
+    today = clock().date()
+    with session.begin():
+        po = get_po(session, po_id)
+        _html, data = build_po_pdf(session, files_dir, po_id)
+        name = f"{po.number}-{today.isoformat()}.pdf"
+        file = store_bytes(
+            session, files_dir, data, name, PDF_MIME, "pdf", clock, in_transaction=True
+        )
+        if not any(j.file_id == file.id for j in po.files):
+            now = stamp(clock)
+            po.files.append(
+                PurchaseOrderFile(
+                    file_id=file.id, caption=f"BC {po.number} (PDF)", created_at=now, updated_at=now
+                )
+            )
+    return name, data

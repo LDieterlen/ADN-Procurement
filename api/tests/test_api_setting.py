@@ -24,7 +24,7 @@ def test_partial_patch_keeps_the_other_fields(client: TestClient) -> None:
         },
     )
     assert first.status_code == 200, first.text
-    assert first.json()["agencyName"] == "ATELIER X" or first.json()["agencyName"] == "Atelier X"
+    assert first.json()["agencyName"] == "Atelier X"
     assert first.json()["agencySiret"] == "12345678900012"
     assert first.json()["agencyVatNumber"] == "FR12345678900"
     second = client.patch("/api/v1/settings", json={"defaultVatBp": 1000, "projectCodePrefix": "p"})

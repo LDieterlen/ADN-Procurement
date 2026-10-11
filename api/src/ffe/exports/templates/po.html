@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block body %}
+<section>
+  <table class="totals"><tr>
+    <td style="width:50%">
+      <strong>{{ agency.name or "FFE" }}</strong><br>
+      <span class="muted small">{{ agency.address or "" }}</span><br>
+      <span class="muted small">{{ [agency.email, agency.phone] | select | join(" · ") }}</span><br>
+      {% if agency.vat_number %}<span class="muted small">TVA {{ agency.vat_number }}</span>{% endif %}
+    </td>
+    <td class="num">
+      <h1>Bon de commande {{ po.number }}</h1>
+      <p>{% if po.issued_on %}Émis le {{ po.issued_on }}{% else %}Brouillon{% endif %}</p>
+      <p class="muted">Projet {{ project.code }} — {{ project.name }}</p>
+    </td>
+  </tr></table>
+  <table class="totals" style="margin: 6mm 0"><tr>
+    <td style="width:50%">
+      <strong>Fournisseur</strong><br>{{ supplier.name }}<br>
+      <span class="muted">{{ supplier_address }}</span><br>
+      <span class="muted">{{ [supplier.contact_name, supplier.email, supplier.phone] | select | join(" · ") }}</span>
+    </td>
+    <td>
+      <strong>Livraison</strong><br>{{ po.delivery_address or "—" }}<br>
+      <span class="muted">{{ po.delivery_contact or "" }}</span>
+      {% if po.expected_delivery_on %}<br>Livraison prévue le {{ po.expected_delivery_on }}{% endif %}
+    </td>
+  </tr></table>
+  <table>
+    <thead><tr><th>Réf.</th><th>Désignation</th><th class="num">Qté</th><th class="num">PU {{ po.currency }}</th><th class="num">Remise</th><th class="num">Net HT {{ po.currency }}</th></tr></thead>
+    <tbody>
+    {% for line in lines %}
+      <tr><td class="code">{{ line.item_code }}</td><td>{{ line.description }}</td><td class="num">{{ line.qty_text }}</td><td class="num">{{ line.unit_text }}</td><td class="num">{{ line.discount_text }}</td><td class="num">{{ line.total_text }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="totals"><td colspan="5" class="label"><strong>Total HT {{ po.currency }}</strong></td><td class="num"><strong>{{ totals.total_text }}</strong></td></tr>
+      {% if po.currency != "EUR" %}
+      <tr class="totals"><td colspan="5" class="label">Contre-valeur HT EUR (1 {{ po.currency }} = {{ totals.fx_text }} €)</td><td class="num">{{ totals.total_eur_text }}</td></tr>
+      {% else %}
+      <tr class="totals"><td colspan="5" class="label">TVA</td><td class="num">{{ totals.vat_text }}</td></tr>
+      <tr class="totals"><td colspan="5" class="label"><strong>Total TTC EUR</strong></td><td class="num"><strong>{{ totals.ttc_text }}</strong></td></tr>
+      {% endif %}
+    </tfoot>
+  </table>
+  {% if po.payment_terms %}<p>Conditions de paiement : {{ po.payment_terms }}</p>{% endif %}
+  {% if po.notes %}<p style="white-space: pre-line">{{ po.notes }}</p>{% endif %}
+</section>
+{% endblock %}
