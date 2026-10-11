@@ -9,6 +9,8 @@ RESOURCE_LABELS: dict[str, str] = {
     "file": "fichier",
     "project": "projet",
     "zone": "zone",
+    "quote": "devis",
+    "quote_line": "ligne de devis",
 }
 
 PROJECT_STATUS_LABELS: dict[str, str] = {
@@ -69,6 +71,22 @@ ITEM_REPLACE_ONLY_APPROVED = (
     "Le remplacement n'est possible que depuis « validé » (avant : changer le produit en place)."
 )
 ITEM_NO_PRODUCT_TO_REFRESH = "Cette ligne n'est pas liée à un produit du catalogue."
+QUOTE_REFERENCE_TAKEN = "Ce fournisseur a déjà un devis portant cette référence dans le projet."
+QUOTE_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
+QUOTE_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."
+QUOTE_ITEM_NOT_IN_PROJECT = "La ligne n'appartient pas à ce projet."
+QUOTE_ITEM_TERMINAL = "Ligne {status} : un devis ne s'y applique plus."
+QUOTE_ITEM_ALREADY_QUOTED = "Ce devis a déjà une ligne pour cet article."
+QUOTE_LINE_RETAINED = (
+    "Cette ligne de devis est retenue : retenir une autre ligne avant de la supprimer."
+)
+QUOTE_HAS_RETAINED_LINE = "Ce devis a une ligne retenue : l'écarter plutôt que le supprimer."
+QUOTE_DECLINED = "Ce devis est écarté."
+QUOTE_RETAIN_AFTER_ORDER = "Ligne {status} : commandée ou au-delà, un devis ne se retient plus."
+QUOTE_VALID_BEFORE_QUOTED = "La date de validité doit suivre la date du devis."
+QUOTE_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au devis."
+QUOTE_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au devis."
+QUOTE_RETAINED_NOTE = "Devis {reference} ({supplier}) retenu."
 PLACEMENT_ZONE_NOT_IN_PROJECT = "La zone n'appartient pas à ce projet."
 PLACEMENT_ZONE_ARCHIVED = "La zone est archivée."
 PLACEMENT_ZONE_TAKEN = "La ligne est déjà placée dans cette zone."

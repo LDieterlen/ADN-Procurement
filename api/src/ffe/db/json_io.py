@@ -48,6 +48,9 @@ TABLE_ORDER: tuple[str, ...] = (
     "code_sequence",
     "project_item_file",
     "budget_line",
+    "quote",
+    "quote_line",
+    "quote_file",
 )
 # Row validation before insert (D4.11); `product` and `product_file` rows are validated by the
 # database (STRICT, CHECK, FK) only.

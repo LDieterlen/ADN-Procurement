@@ -58,7 +58,7 @@ def _err(field: str, message: str) -> ValidationAppError:
     return ValidationAppError([ErrorDetail(field, message)])
 
 
-def _price_json(item: ProjectItem) -> str:
+def price_json(item: ProjectItem) -> str:
     return json.dumps(
         {
             "cost": item.unit_cost_cents,
@@ -71,7 +71,7 @@ def _price_json(item: ProjectItem) -> str:
     )
 
 
-def _event(
+def write_event(
     session: Session,
     item: ProjectItem,
     kind: str,
@@ -242,7 +242,7 @@ def _resolve_defaults(session: Session, project_id: int, data: ProjectItemCreate
         values["discount_bp"] = supplier.default_discount_bp if supplier is not None else 0
     if values["vat_rate_bp"] is None:
         values["vat_rate_bp"] = project.default_vat_bp
-    values["fx_rate_micro"] = _resolve_fx(
+    values["fx_rate_micro"] = resolve_fx(
         session, project_id, values["currency"], values["fx_rate_micro"]
     )
     if data.kind == "existing":
@@ -251,7 +251,7 @@ def _resolve_defaults(session: Session, project_id: int, data: ProjectItemCreate
     return values
 
 
-def _resolve_fx(session: Session, project_id: int, currency: str, given: int | None) -> int:
+def resolve_fx(session: Session, project_id: int, currency: str, given: int | None) -> int:
     if currency == "EUR":
         if given not in (None, money.EUR_RATE_MICRO):
             raise _err("fxRateMicro", fr.ITEM_FX_EUR_IS_ONE)
@@ -313,7 +313,7 @@ def _journal_qty_if_approved(
     session.refresh(item)
     after = _placements_json(session, item)
     if after != before:
-        _event(session, item, "placement", clock, old_value=before, new_value=after, note=note)
+        write_event(session, item, "placement", clock, old_value=before, new_value=after, note=note)
 
 
 def add_placement(
@@ -441,7 +441,7 @@ def create_item(
             )
         session.add(item)
         session.flush()
-        _event(session, item, "created", clock, to_status="draft", new_value=_price_json(item))
+        write_event(session, item, "created", clock, to_status="draft", new_value=price_json(item))
     session.refresh(item)
     return item
 
@@ -487,27 +487,29 @@ def update_item(
                     raise _err("fxRateMicro", fr.ITEM_FX_EUR_IS_ONE)
                 changes["fx_rate_micro"] = money.EUR_RATE_MICRO
             elif fx_given is None and "currency" in changes:
-                changes["fx_rate_micro"] = _resolve_fx(session, item.project_id, currency, None)
+                changes["fx_rate_micro"] = resolve_fx(session, item.project_id, currency, None)
         unit = changes.get("unit", item.unit)
         if unit in PIECE_UNITS and unit != item.unit:
             for placement in item.placements:
                 _check_qty(unit, placement.qty_milli)
-        before_price = _price_json(item)
+        before_price = price_json(item)
         before_fx = item.fx_rate_micro
         before_product = item.product_id
         for field_name, value in changes.items():
             setattr(item, field_name, value)
         item.updated_at = stamp(clock)
         if item.approved_at is not None:
-            after_price = _price_json(item)
+            after_price = price_json(item)
             price_changed = any(
                 f in changes and changes[f] != json.loads(before_price)[k]
                 for f, k in zip(PRICE_FIELDS, ("cost", "currency", "discount", "vat"), strict=True)
             )
             if price_changed:
-                _event(session, item, "price", clock, old_value=before_price, new_value=after_price)
+                write_event(
+                    session, item, "price", clock, old_value=before_price, new_value=after_price
+                )
             if item.fx_rate_micro != before_fx:
-                _event(
+                write_event(
                     session,
                     item,
                     "fx",
@@ -516,7 +518,7 @@ def update_item(
                     new_value=str(item.fx_rate_micro),
                 )
             if item.product_id != before_product:
-                _event(
+                write_event(
                     session,
                     item,
                     "product",
@@ -557,7 +559,7 @@ def _was_ordered(session: Session, item_id: int) -> bool:
     return row is not None
 
 
-def _check_preconditions(session: Session, item: ProjectItem, target: str) -> None:
+def check_preconditions(session: Session, item: ProjectItem, target: str) -> None:
     needs = required_for(target)
     details: list[ErrorDetail] = []
     if "name" in needs and not item.name:
@@ -591,11 +593,11 @@ def change_status(session: Session, item_id: int, data: StatusChange, clock: Clo
         )
         if note_required and not (data.note and data.note.strip()):
             raise _err("note", fr.ITEM_NOTE_REQUIRED)
-        _check_preconditions(session, item, data.status)
+        check_preconditions(session, item, data.status)
         previous = item.status
         item.status = data.status
         item.updated_at = stamp(clock)
-        _event(
+        write_event(
             session,
             item,
             "status",
@@ -615,7 +617,7 @@ def change_status(session: Session, item_id: int, data: StatusChange, clock: Clo
             item.approved_at = item.updated_at
             item.approved_unit_net_cents = amounts.net_unit_eur_cents
             item.approved_total_qty_milli = amounts.total_qty_milli
-            _event(
+            write_event(
                 session,
                 item,
                 "approval",
@@ -660,7 +662,7 @@ def replace_product(
             if data.discount_bp is not None
             else (supplier.default_discount_bp if supplier else 0)
         )
-        fx = _resolve_fx(session, old.project_id, currency, data.fx_rate_micro)
+        fx = resolve_fx(session, old.project_id, currency, data.fx_rate_micro)
         now = stamp(clock)
         code = old.item_code
         suffix = 1
@@ -718,7 +720,7 @@ def replace_product(
         old.status = "replaced"
         old.replaced_by_id = new.id
         old.updated_at = now
-        _event(
+        write_event(
             session,
             old,
             "status",
@@ -728,13 +730,13 @@ def replace_product(
             new_value=str(new.id),
             note=data.note,
         )
-        _event(
+        write_event(
             session,
             new,
             "created",
             clock,
             to_status="specified",
-            new_value=_price_json(new),
+            new_value=price_json(new),
             note=f"remplace {old.item_code}",
         )
     session.refresh(new)
@@ -749,26 +751,26 @@ def refresh_from_catalogue(session: Session, item_id: int, clock: Clock) -> Proj
             raise ConflictError(fr.ITEM_NO_PRODUCT_TO_REFRESH)
         product = session.get(Product, item.product_id)
         assert product is not None
-        before = _price_json(item)
+        before = price_json(item)
         if product.list_price_cents is not None:
             item.unit_cost_cents = money.list_price_ht_cents(
                 product.list_price_cents, product.list_price_tax_mode, product.list_price_vat_bp
             )
             if product.list_price_currency != item.currency:
                 item.currency = product.list_price_currency
-                item.fx_rate_micro = _resolve_fx(session, item.project_id, item.currency, None)
+                item.fx_rate_micro = resolve_fx(session, item.project_id, item.currency, None)
         item.lead_time_weeks = (
             product.lead_time_weeks if product.lead_time_weeks is not None else item.lead_time_weeks
         )
         item.updated_at = stamp(clock)
-        if item.approved_at is not None and _price_json(item) != before:
-            _event(
+        if item.approved_at is not None and price_json(item) != before:
+            write_event(
                 session,
                 item,
                 "price",
                 clock,
                 old_value=before,
-                new_value=_price_json(item),
+                new_value=price_json(item),
                 note="catalogue",
             )
     session.refresh(item)

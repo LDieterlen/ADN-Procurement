@@ -1541,6 +1541,128 @@
         "title": "ItemFileUpdate",
         "type": "object"
       },
+      "ItemQuoteRead": {
+        "description": "One row of the comparison of `GET /project-items/{id}/quotes`.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "declined": {
+            "title": "Declined",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discountBp": {
+            "title": "Discountbp",
+            "type": "integer"
+          },
+          "fxRateMicro": {
+            "title": "Fxratemicro",
+            "type": "integer"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "netUnitCents": {
+            "title": "Netunitcents",
+            "type": "integer"
+          },
+          "netUnitEurCents": {
+            "title": "Netuniteurcents",
+            "type": "integer"
+          },
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "integer"
+          },
+          "quoteLineId": {
+            "title": "Quotelineid",
+            "type": "integer"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "retained": {
+            "title": "Retained",
+            "type": "boolean"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          },
+          "supplierName": {
+            "title": "Suppliername",
+            "type": "string"
+          },
+          "unitCostCents": {
+            "title": "Unitcostcents",
+            "type": "integer"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "quoteId",
+          "quoteLineId",
+          "supplierId",
+          "supplierName",
+          "reference",
+          "quotedOn",
+          "validUntil",
+          "currency",
+          "fxRateMicro",
+          "unitCostCents",
+          "discountBp",
+          "leadTimeWeeks",
+          "description",
+          "netUnitCents",
+          "netUnitEurCents",
+          "retained",
+          "declined"
+        ],
+        "title": "ItemQuoteRead",
+        "type": "object"
+      },
       "LineAmountsRead": {
         "properties": {
           "amountCounted": {
@@ -4775,6 +4897,598 @@
           }
         },
         "title": "ProjectUpdate",
+        "type": "object"
+      },
+      "QuoteCreate": {
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "lines": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/QuoteLineCreate"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "reference": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "supplierId",
+          "reference"
+        ],
+        "title": "QuoteCreate",
+        "type": "object"
+      },
+      "QuoteFileAttach": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId"
+        ],
+        "title": "QuoteFileAttach",
+        "type": "object"
+      },
+      "QuoteFileRead": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "ext": {
+            "title": "Ext",
+            "type": "string"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "mimeType": {
+            "title": "Mimetype",
+            "type": "string"
+          },
+          "originalName": {
+            "title": "Originalname",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId",
+          "caption",
+          "sha256",
+          "ext",
+          "mimeType",
+          "originalName",
+          "sizeBytes"
+        ],
+        "title": "QuoteFileRead",
+        "type": "object"
+      },
+      "QuoteLineCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discountBp": {
+            "default": 0,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Discountbp",
+            "type": "integer"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "unitCostCents": {
+            "minimum": 0.0,
+            "title": "Unitcostcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projectItemId",
+          "unitCostCents"
+        ],
+        "title": "QuoteLineCreate",
+        "type": "object"
+      },
+      "QuoteLineRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discountBp": {
+            "title": "Discountbp",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCode": {
+            "title": "Itemcode",
+            "type": "string"
+          },
+          "itemName": {
+            "title": "Itemname",
+            "type": "string"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "netUnitCents": {
+            "title": "Netunitcents",
+            "type": "integer"
+          },
+          "netUnitEurCents": {
+            "title": "Netuniteurcents",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "quoteId": {
+            "title": "Quoteid",
+            "type": "integer"
+          },
+          "retainedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retainedat"
+          },
+          "unitCostCents": {
+            "title": "Unitcostcents",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "projectItemId",
+          "itemCode",
+          "itemName",
+          "unitCostCents",
+          "discountBp",
+          "leadTimeWeeks",
+          "description",
+          "notes",
+          "retainedAt",
+          "netUnitCents",
+          "netUnitEurCents",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuoteLineRead",
+        "type": "object"
+      },
+      "QuoteLineUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discountBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discountbp"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "unitCostCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unitcostcents"
+          }
+        },
+        "title": "QuoteLineUpdate",
+        "type": "object"
+      },
+      "QuoteRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "declinedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declinedat"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteFileRead"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "fxRateMicro": {
+            "title": "Fxratemicro",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteLineRead"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "retainedCount": {
+            "title": "Retainedcount",
+            "type": "integer"
+          },
+          "supplierId": {
+            "title": "Supplierid",
+            "type": "integer"
+          },
+          "supplierName": {
+            "title": "Suppliername",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "supplierId",
+          "supplierName",
+          "reference",
+          "quotedOn",
+          "validUntil",
+          "currency",
+          "fxRateMicro",
+          "declinedAt",
+          "notes",
+          "retainedCount",
+          "lines",
+          "files",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuoteRead",
+        "type": "object"
+      },
+      "QuoteUpdate": {
+        "properties": {
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "validUntil": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validuntil"
+          }
+        },
+        "title": "QuoteUpdate",
         "type": "object"
       },
       "ReplaceProduct": {
@@ -8150,6 +8864,53 @@
         ]
       }
     },
+    "/api/v1/project-items/{item_id}/quotes": {
+      "get": {
+        "operationId": "listProjectItemQuotes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ItemQuoteRead"
+                  },
+                  "title": "Response Listprojectitemquotes",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Item Quotes",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
     "/api/v1/project-items/{item_id}/refresh": {
       "post": {
         "operationId": "refreshProjectItemFromCatalogue",
@@ -8874,6 +9635,104 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/quotes": {
+      "get": {
+        "operationId": "listQuotes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuoteRead"
+                  },
+                  "title": "Response Listquotes",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Quotes",
+        "tags": [
+          "quotes"
+        ]
+      },
+      "post": {
+        "operationId": "createQuote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Quote",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/status": {
       "post": {
         "operationId": "changeProjectStatus",
@@ -9132,6 +9991,473 @@
         "summary": "Reorder Zones",
         "tags": [
           "zones"
+        ]
+      }
+    },
+    "/api/v1/quote-lines/{line_id}": {
+      "delete": {
+        "operationId": "deleteQuoteLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Line Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Line",
+        "tags": [
+          "quotes"
+        ]
+      },
+      "patch": {
+        "operationId": "updateQuoteLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Line Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteLineUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Line",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quote-lines/{line_id}/retain": {
+      "post": {
+        "operationId": "retainQuoteLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Line Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retain Line",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quotes/{quote_id}": {
+      "delete": {
+        "operationId": "deleteQuote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Quote",
+        "tags": [
+          "quotes"
+        ]
+      },
+      "get": {
+        "operationId": "getQuote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Quote",
+        "tags": [
+          "quotes"
+        ]
+      },
+      "patch": {
+        "operationId": "updateQuote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Quote",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quotes/{quote_id}/decline": {
+      "post": {
+        "operationId": "declineQuote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline Quote",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quotes/{quote_id}/files": {
+      "post": {
+        "operationId": "attachQuoteFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteFileAttach"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attach File",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quotes/{quote_id}/files/{file_id}": {
+      "delete": {
+        "operationId": "detachQuoteFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detach File",
+        "tags": [
+          "quotes"
+        ]
+      }
+    },
+    "/api/v1/quotes/{quote_id}/lines": {
+      "post": {
+        "operationId": "addQuoteLine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "quote_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Quote Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteLineCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Line",
+        "tags": [
+          "quotes"
         ]
       }
     },

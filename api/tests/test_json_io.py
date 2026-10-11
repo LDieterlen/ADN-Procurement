@@ -38,7 +38,7 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0007"
+    assert document["schemaRevision"] == "0008"
     assert list(document["tables"]) == [
         "setting",
         "client",
@@ -56,6 +56,9 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
         "code_sequence",
         "project_item_file",
         "budget_line",
+        "quote",
+        "quote_line",
+        "quote_file",
     ]
     first = document["tables"]["client"][0]
     assert first["name"] == "Famille Martin" and first["countryCode"] == "FR"
@@ -86,6 +89,9 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
             "code_sequence": 0,
             "project_item_file": 0,
             "budget_line": 0,
+            "quote": 0,
+            "quote_line": 0,
+            "quote_file": 0,
         }
         assert export_json(fresh, clock) == document
     finally:
@@ -113,7 +119,7 @@ def test_import_with_replace_overwrites_everything(engine: Engine, clock: Clock)
     [
         ({"schemaRevision": "9999"}, "inconnue"),
         ({"format": "autre"}, "Format attendu"),
-        ({"tables": {"setting": [], "client": [], "quote": []}}, "Tables inconnues"),
+        ({"tables": {"setting": [], "client": [], "invoice": []}}, "Tables inconnues"),
         (
             {"tables": {"setting": [], "client": [{"name": "x", "colour": "bleu"}]}},
             "Colonnes inconnues",

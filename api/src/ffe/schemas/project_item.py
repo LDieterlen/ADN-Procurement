@@ -23,7 +23,7 @@ ItemStatus = Literal[
 Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
 ItemFileKind = Literal["image", "quote", "approval", "drawing", "other"]
 EventKind = Literal[
-    "created", "status", "price", "fx", "qty", "product", "placement", "approval", "other"
+    "created", "status", "price", "fx", "qty", "product", "placement", "approval", "quote", "other"
 ]
 
 Short = Annotated[str | None, Field(max_length=200)]
