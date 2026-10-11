@@ -650,6 +650,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pos */
+        get: operations["listPurchaseOrders"];
+        put?: never;
+        /** Create Po */
+        post: operations["createPurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/quotes": {
         parameters: {
             query?: never;
@@ -731,6 +749,128 @@ export interface paths {
         put?: never;
         /** Reorder Zones */
         post: operations["reorderZones"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-order-lines/{line_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Line */
+        delete: operations["deletePurchaseOrderLine"];
+        options?: never;
+        head?: never;
+        /** Update Line */
+        patch: operations["updatePurchaseOrderLine"];
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Po */
+        get: operations["getPurchaseOrder"];
+        put?: never;
+        post?: never;
+        /** Delete Po */
+        delete: operations["deletePurchaseOrder"];
+        options?: never;
+        head?: never;
+        /** Update Po */
+        patch: operations["updatePurchaseOrder"];
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach File */
+        post: operations["attachPurchaseOrderFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Detach File */
+        delete: operations["detachPurchaseOrderFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue Po */
+        post: operations["issuePurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Lines */
+        post: operations["addPurchaseOrderLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Status */
+        post: operations["changePurchaseOrderStatus"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1106,6 +1246,8 @@ export interface components {
             budgetCents: number | null;
             /** Categoryid */
             categoryId: number | null;
+            /** Engagedcents */
+            engagedCents: number;
             /** Label */
             label: string;
             /** Multiplier */
@@ -1134,6 +1276,8 @@ export interface components {
             contingencyBp: number;
             /** Contingencycents */
             contingencyCents: number;
+            /** Engagedcents */
+            engagedCents: number;
             /** Globalcents */
             globalCents: number | null;
             /** Remainingcents */
@@ -1623,6 +1767,184 @@ export interface components {
             sortOrder?: number | null;
             /** Zoneid */
             zoneId?: number | null;
+        };
+        /** PoCreate */
+        PoCreate: {
+            /** Expecteddeliveryon */
+            expectedDeliveryOn?: string | null;
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /**
+             * Itemids
+             * @default []
+             */
+            itemIds: number[];
+            /** Notes */
+            notes?: string | null;
+            /** Supplierid */
+            supplierId: number;
+        };
+        /** PoFileAttach */
+        PoFileAttach: {
+            /** Caption */
+            caption?: string | null;
+            /** Fileid */
+            fileId: number;
+        };
+        /** PoFileRead */
+        PoFileRead: {
+            /** Caption */
+            caption: string | null;
+            /** Ext */
+            ext: string;
+            /** Fileid */
+            fileId: number;
+            /** Mimetype */
+            mimeType: string;
+            /** Originalname */
+            originalName: string;
+            /** Sha256 */
+            sha256: string;
+            /** Sizebytes */
+            sizeBytes: number;
+        };
+        /** PoLineRead */
+        PoLineRead: {
+            /** Description */
+            description: string;
+            /** Discountbp */
+            discountBp: number;
+            /** Id */
+            id: number;
+            /** Itemcode */
+            itemCode: string;
+            /** Itemstatus */
+            itemStatus: string;
+            /** Netunitcents */
+            netUnitCents: number;
+            /** Netuniteurcents */
+            netUnitEurCents: number;
+            /** Projectitemid */
+            projectItemId: number;
+            /** Purchaseorderid */
+            purchaseOrderId: number;
+            /** Qtymilli */
+            qtyMilli: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Totalcents */
+            totalCents: number;
+            /** Totaleurcents */
+            totalEurCents: number;
+            /** Unitcostcents */
+            unitCostCents: number;
+            /** Vatratebp */
+            vatRateBp: number;
+        };
+        /** PoLineUpdate */
+        PoLineUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Discountbp */
+            discountBp?: number | null;
+            /** Qtymilli */
+            qtyMilli?: number | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Unitcostcents */
+            unitCostCents?: number | null;
+            /** Vatratebp */
+            vatRateBp?: number | null;
+        };
+        /** PoLinesAdd */
+        PoLinesAdd: {
+            /** Itemids */
+            itemIds: number[];
+        };
+        /** PoRead */
+        PoRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Currency */
+            currency: string;
+            /** Deliveryaddress */
+            deliveryAddress: string | null;
+            /** Deliverycontact */
+            deliveryContact: string | null;
+            /** Expecteddeliveryon */
+            expectedDeliveryOn: string | null;
+            /** Files */
+            files: components["schemas"]["PoFileRead"][];
+            /** Fxratemicro */
+            fxRateMicro: number;
+            /** Id */
+            id: number;
+            /** Internalnotes */
+            internalNotes: string | null;
+            /** Issuedon */
+            issuedOn: string | null;
+            /** Lines */
+            lines: components["schemas"]["PoLineRead"][];
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /** Paymentterms */
+            paymentTerms: string | null;
+            /** Projectid */
+            projectId: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "issued" | "acknowledged" | "partially_delivered" | "closed" | "cancelled";
+            /** Supplierid */
+            supplierId: number;
+            /** Suppliername */
+            supplierName: string;
+            /** Supplierref */
+            supplierRef: string | null;
+            /** Totalcents */
+            totalCents: number;
+            /** Totaleurcents */
+            totalEurCents: number;
+            /** Ttceurcents */
+            ttcEurCents: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Vatbyratebp */
+            vatByRateBp: {
+                [key: string]: number;
+            };
+            /** Vatcents */
+            vatCents: number;
+        };
+        /** PoStatusChange */
+        PoStatusChange: {
+            /** Note */
+            note?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "acknowledged" | "closed" | "cancelled";
+        };
+        /** PoUpdate */
+        PoUpdate: {
+            /** Deliveryaddress */
+            deliveryAddress?: string | null;
+            /** Deliverycontact */
+            deliveryContact?: string | null;
+            /** Expecteddeliveryon */
+            expectedDeliveryOn?: string | null;
+            /** Internalnotes */
+            internalNotes?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Paymentterms */
+            paymentTerms?: string | null;
+            /** Supplierref */
+            supplierRef?: string | null;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -4465,6 +4787,72 @@ export interface operations {
             };
         };
     };
+    listPurchaseOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listQuotes: {
         parameters: {
             query?: never;
@@ -4687,6 +5075,335 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ZoneRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deletePurchaseOrderLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updatePurchaseOrderLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoLineUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deletePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updatePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachPurchaseOrderFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoFileAttach"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detachPurchaseOrderFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issuePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addPurchaseOrderLines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoLinesAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    changePurchaseOrderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoRead"];
                 };
             };
             /** @description Validation Error */

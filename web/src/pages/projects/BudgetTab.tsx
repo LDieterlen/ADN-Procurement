@@ -130,6 +130,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             <th className="px-2 py-1 text-right">Contingence ({budget.contingencyBp / 100} %) HT EUR</th>
             <th className="px-2 py-1 text-right">Prescrit HT EUR</th>
             <th className="px-2 py-1 text-right">Validé HT EUR</th>
+            <th className="px-2 py-1 text-right">Engagé HT EUR</th>
             <th className="px-2 py-1 text-right">Reste HT EUR</th>
             <th className="px-2 py-1">Écart</th>
           </tr>
@@ -141,6 +142,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             <td className="px-2 py-1 text-right">{centsToText(budget.contingencyCents)}</td>
             <td className="px-2 py-1 text-right">{centsToText(budget.specifiedCents)}</td>
             <td className="px-2 py-1 text-right">{centsToText(budget.approvedCents)}</td>
+            <td className="px-2 py-1 text-right">{centsToText(budget.engagedCents)}</td>
             <td className={`px-2 py-1 text-right ${budget.remainingCents !== null && budget.remainingCents < 0 ? 'text-red-700' : ''}`}>
               {budget.remainingCents === null ? '—' : centsToText(budget.remainingCents)}
             </td>
@@ -160,6 +162,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             {view === 'zone' && <th className="px-2 py-1 text-right">Par clé HT EUR</th>}
             <th className="px-2 py-1 text-right">Prescrit HT EUR</th>
             <th className="px-2 py-1 text-right">Validé HT EUR</th>
+            <th className="px-2 py-1 text-right">Engagé HT EUR</th>
             <th className="px-2 py-1 text-right">Reste HT EUR</th>
             <th className="px-2 py-1">Écart</th>
           </tr>
@@ -167,7 +170,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-2 py-2 text-neutral-400">
+              <td colSpan={9} className="px-2 py-2 text-neutral-400">
                 Aucune ligne.
               </td>
             </tr>
@@ -186,6 +189,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
               )}
               <td className="px-2 py-1 text-right">{centsToText(row.specifiedCents)}</td>
               <td className="px-2 py-1 text-right">{centsToText(row.approvedCents)}</td>
+              <td className="px-2 py-1 text-right">{centsToText(row.engagedCents)}</td>
               <td className={`px-2 py-1 text-right ${row.remainingCents !== null && row.remainingCents < 0 ? 'text-red-700' : ''}`}>
                 {row.remainingCents === null ? '—' : centsToText(row.remainingCents)}
               </td>

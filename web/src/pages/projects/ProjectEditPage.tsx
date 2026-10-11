@@ -20,10 +20,11 @@ import { ProjectForm, toPayload, type ProjectFormValues } from './ProjectForm'
 import { StatusBadge } from './ProjectsPage'
 import { BudgetTab } from './BudgetTab'
 import { ItemsTab } from './ItemsTab'
+import { OrdersTab } from './OrdersTab'
 import { QuotesTab } from './QuotesTab'
 import { ZonesTab } from './ZonesTab'
 
-type Tab = 'infos' | 'zones' | 'items' | 'quotes' | 'budget'
+type Tab = 'infos' | 'zones' | 'items' | 'quotes' | 'orders' | 'budget'
 
 export function ProjectEditPage() {
   const params = useParams<{ id: string }>()
@@ -131,7 +132,7 @@ export function ProjectEditPage() {
       {errors.banner && !project && null}
       {project && (
         <nav className="flex gap-1 border-b border-neutral-200" aria-label="Onglets du projet">
-          {(['infos', 'zones', 'items', 'quotes', 'budget'] as Tab[]).map((t) => (
+          {(['infos', 'zones', 'items', 'quotes', 'orders', 'budget'] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -139,7 +140,17 @@ export function ProjectEditPage() {
               className={`px-3 py-1.5 text-sm ${tab === t ? 'border-b-2 border-neutral-900 font-medium' : 'text-neutral-600'}`}
               aria-current={tab === t ? 'page' : undefined}
             >
-              {t === 'infos' ? 'Infos' : t === 'zones' ? 'Zones' : t === 'items' ? 'Lignes' : t === 'quotes' ? 'Devis' : 'Budget'}
+              {t === 'infos'
+                ? 'Infos'
+                : t === 'zones'
+                  ? 'Zones'
+                  : t === 'items'
+                    ? 'Lignes'
+                    : t === 'quotes'
+                      ? 'Devis'
+                      : t === 'orders'
+                        ? 'Commandes'
+                        : 'Budget'}
             </button>
           ))}
         </nav>
@@ -164,6 +175,7 @@ export function ProjectEditPage() {
       {project && tab === 'zones' && <ZonesTab projectId={project.id} readOnly={readOnly} />}
       {project && tab === 'items' && <ItemsTab projectId={project.id} readOnly={readOnly} />}
       {project && tab === 'quotes' && <QuotesTab projectId={project.id} readOnly={readOnly} />}
+      {project && tab === 'orders' && <OrdersTab projectId={project.id} readOnly={readOnly} />}
       {project && tab === 'budget' && <BudgetTab projectId={project.id} readOnly={readOnly} />}
       <ConfirmDialog open={errors.dialog !== null} title={errors.dialog?.title ?? ''} actions={errors.dialog?.actions ?? []}>
         {errors.dialog?.message}

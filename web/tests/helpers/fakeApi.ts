@@ -19,6 +19,8 @@ type BudgetRowRead = components['schemas']['BudgetRowRead']
 type SettingRead = components['schemas']['SettingRead']
 type QuoteRead = components['schemas']['QuoteRead']
 type QuoteLineRead = components['schemas']['QuoteLineRead']
+type PoRead = components['schemas']['PoRead']
+type PoLineRead = components['schemas']['PoLineRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -36,6 +38,7 @@ export type FakeApi = {
   budgets: BudgetLineRead[]
   setting: SettingRead
   quotes: QuoteRead[]
+  purchaseOrders: PoRead[]
   lastBackupAt: string | null
   backupDirOk: boolean
   events: {
@@ -424,6 +427,55 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     return json(201, created)
   }
   if (sub === 'summary' && method === 'GET') return json(200, summaryOf(state, project.id))
+  if (sub === 'purchase-orders' && method === 'GET')
+    return json(
+      200,
+      state.purchaseOrders.filter((o) => o.projectId === project.id),
+    )
+  if (sub === 'purchase-orders' && method === 'POST') {
+    if (CLOSED.includes(project.status)) return readOnly()
+    const q = body as { supplierId: number; itemIds: number[]; expectedDeliveryOn: string | null }
+    const supplier = state.suppliers.find((s) => s.id === q.supplierId)
+    if (!supplier) return validation('supplierId', 'Fournisseur introuvable.')
+    const year = 2026
+    const count = state.purchaseOrders.filter((o) => o.number.startsWith(`PO-${year}-`)).length + 1
+    const first = state.items.find((i) => i.id === q.itemIds[0])
+    const po: PoRead = {
+      id: state.purchaseOrders.length + 1,
+      projectId: project.id,
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      number: `PO-${year}-${String(count).padStart(3, '0')}`,
+      status: 'draft',
+      currency: supplier.currency,
+      fxRateMicro: supplier.currency === 'EUR' ? 1_000_000 : (first?.fxRateMicro ?? 1_000_000),
+      issuedOn: null,
+      expectedDeliveryOn: q.expectedDeliveryOn,
+      supplierRef: null,
+      deliveryAddress: project.deliveryAddress ?? project.siteAddress,
+      deliveryContact: project.deliveryContact,
+      paymentTerms: null,
+      notes: null,
+      internalNotes: null,
+      totalCents: 0,
+      totalEurCents: 0,
+      vatByRateBp: {},
+      vatCents: 0,
+      ttcEurCents: 0,
+      lines: [],
+      files: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    for (const [index, itemId] of q.itemIds.entries()) {
+      const problem = poLineProblem(state, po, itemId)
+      if (problem) return validation(`itemIds.${index}`, problem)
+      po.lines.push(poLineRow(state, po, itemId))
+    }
+    poTotals(po)
+    state.purchaseOrders.push(po)
+    return json(201, po)
+  }
   if (sub === 'quotes' && method === 'GET')
     return json(
       200,
@@ -715,6 +767,7 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
       budgetCents: b,
       specifiedCents: spec,
       approvedCents: appr,
+      engagedCents: engagedOf(state, zoneId, categoryId),
       remainingCents: b === null ? null : b - spec,
       alert: alertOf(b, spec),
     }
@@ -727,6 +780,7 @@ function summaryOf(state: FakeApi, projectId: number): ProjectSummaryRead {
     contingencyCents: globalCents === null ? 0 : divRound(globalCents * contingencyBp, 10000),
     specifiedCents: specified,
     approvedCents: approved,
+    engagedCents: engagedOf(state, null, null),
     remainingCents: globalCents === null ? null : globalCents - specified,
     alert: alertOf(globalCents, specified),
     byZone: zoneRows.map((z) => row(z.zoneId, null, z.zoneName, z.multiplier, z.specifiedCents, 0)),
@@ -1068,6 +1122,7 @@ export function installFakeApi(
     lastBackupAt: null,
     backupDirOk: true,
     quotes: [],
+    purchaseOrders: [],
     requests: [],
     down: false,
     restore: () => {
@@ -1122,7 +1177,7 @@ export function installFakeApi(
       })
     }
     const route =
-      /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines)(?:\/(.+))?$/.exec(
+      /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard|quotes|quote-lines|purchase-orders|purchase-order-lines)(?:\/(.+))?$/.exec(
         url.pathname,
       )
     if (route) {
@@ -1140,6 +1195,8 @@ export function installFakeApi(
       if (collection === 'placements') response = handlePlacements(state, method, rest, body)
       if (collection === 'quotes') response = handleQuotes(state, method, rest, body)
       if (collection === 'quote-lines') response = handleQuoteLines(state, method, rest, body)
+      if (collection === 'purchase-orders') response = handlePurchaseOrders(state, method, rest, body)
+      if (collection === 'purchase-order-lines') response = handlePurchaseOrderLines(state, method, rest, body)
       if (collection === 'dashboard' && method === 'GET') {
         response = json(
           200,
@@ -1326,6 +1383,193 @@ function handleQuoteLines(state: FakeApi, method: string, rest: string | undefin
       item.status = 'quoted'
     }
     return json(200, item)
+  }
+  return undefined
+}
+
+let poLineSeq = 1
+
+function engagedOf(state: FakeApi, zoneId: number | null, categoryId: number | null): number {
+  let total = 0
+  for (const po of state.purchaseOrders) {
+    if (!['issued', 'acknowledged', 'partially_delivered', 'closed'].includes(po.status)) continue
+    for (const line of po.lines) {
+      const item = state.items.find((i) => i.id === line.projectItemId)
+      if (!item) continue
+      if (categoryId !== null && item.categoryId !== categoryId) continue
+      if (zoneId === null) total += line.totalEurCents
+      else
+        for (const p of item.placements)
+          if (p.zoneId === zoneId) total += divRound(line.netUnitEurCents * p.qtyMilli * (state.zones.find((z) => z.id === zoneId)?.multiplier ?? 1), 1000)
+    }
+  }
+  return total
+}
+
+function poLineProblem(state: FakeApi, po: PoRead, itemId: number): string | null {
+  const item = state.items.find((i) => i.id === itemId)
+  if (!item || item.projectId !== po.projectId) return 'La ligne n’appartient pas à ce projet.'
+  if (item.supplierId !== po.supplierId) return `La ligne ${item.itemCode} n’est pas chez ce fournisseur.`
+  if (item.status !== 'approved') return `La ligne ${item.itemCode} doit être validée (statut « validé ») pour être commandée.`
+  return null
+}
+
+function poLineRow(state: FakeApi, po: PoRead, itemId: number): PoLineRead {
+  const item = state.items.find((i) => i.id === itemId)!
+  const qty = item.placements.reduce((sum, p) => sum + p.qtyMilli * (state.zones.find((z) => z.id === p.zoneId)?.multiplier ?? 1), 0)
+  const line: PoLineRead = {
+    id: poLineSeq++,
+    purchaseOrderId: po.id,
+    projectItemId: item.id,
+    itemCode: item.itemCode,
+    itemStatus: item.status,
+    description: item.name,
+    qtyMilli: qty,
+    unitCostCents: item.unitCostCents,
+    discountBp: item.discountBp,
+    vatRateBp: item.vatRateBp,
+    sortOrder: po.lines.length,
+    netUnitCents: 0,
+    totalCents: 0,
+    netUnitEurCents: 0,
+    totalEurCents: 0,
+  }
+  poLineAmounts(po, line)
+  return line
+}
+
+function poLineAmounts(po: PoRead, line: PoLineRead): void {
+  line.netUnitCents = divRound(line.unitCostCents * (10000 - line.discountBp), 10000)
+  line.totalCents = divRound(line.netUnitCents * line.qtyMilli, 1000)
+  line.netUnitEurCents = divRound(line.netUnitCents * po.fxRateMicro, 1_000_000)
+  line.totalEurCents = divRound(line.netUnitEurCents * line.qtyMilli, 1000)
+}
+
+function poTotals(po: PoRead): void {
+  po.totalCents = po.lines.reduce((s, l) => s + l.totalCents, 0)
+  po.totalEurCents = po.lines.reduce((s, l) => s + l.totalEurCents, 0)
+  po.vatCents = divRound(po.totalEurCents * 2000, 10000)
+  po.vatByRateBp = { 2000: po.vatCents }
+  po.ttcEurCents = po.totalEurCents + po.vatCents
+}
+
+function handlePurchaseOrders(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
+  if (!match) return undefined
+  const po = state.purchaseOrders.find((o) => o.id === Number(match[1]))
+  if (!po) return error(404, 'not_found', `Bon de commande n° ${match[1]} introuvable.`)
+  const sub = match[2]
+  const notDraft = () => error(409, 'conflict', `Bon de commande ${po.number} ${po.status} : seules les modifications du brouillon sont possibles.`)
+  if (!sub && method === 'GET') return json(200, po)
+  if (!sub && method === 'PATCH') {
+    Object.assign(po, body, { updatedAt: LATER })
+    return json(200, po)
+  }
+  if (!sub && method === 'DELETE') {
+    if (po.status !== 'draft') return notDraft()
+    state.purchaseOrders = state.purchaseOrders.filter((o) => o.id !== po.id)
+    return new Response(null, { status: 204 })
+  }
+  if (sub === 'issue' && method === 'POST') {
+    if (po.status !== 'draft') return notDraft()
+    if (po.lines.length === 0) return validation('lines', 'Un bon de commande s’émet avec au moins une ligne.')
+    for (const line of po.lines) {
+      const item = state.items.find((i) => i.id === line.projectItemId)!
+      if (item.status !== 'approved') return error(409, 'conflict', `La ligne ${item.itemCode} doit être validée (statut « validé ») pour être commandée.`)
+      item.orderRef = po.number
+      if (po.expectedDeliveryOn) item.expectedDeliveryOn = po.expectedDeliveryOn
+      state.events.push({
+        id: state.events.length + 1,
+        projectItemId: item.id,
+        kind: 'status',
+        fromStatus: 'approved',
+        toStatus: 'ordered',
+        oldValue: null,
+        newValue: null,
+        changedAt: LATER,
+        note: po.number,
+      })
+      item.status = 'ordered'
+      line.itemStatus = 'ordered'
+    }
+    po.status = 'issued'
+    po.issuedOn = '2026-10-10'
+    return json(200, po)
+  }
+  if (sub === 'status' && method === 'POST') {
+    const s = body as { status: PoRead['status']; note: string | null }
+    if (s.status === 'cancelled' && po.status !== 'draft') {
+      if (!s.note?.trim()) return validation('note', 'Une note est obligatoire pour annuler un bon de commande émis.')
+      for (const line of po.lines) {
+        const item = state.items.find((i) => i.id === line.projectItemId)!
+        state.events.push({
+          id: state.events.length + 1,
+          projectItemId: item.id,
+          kind: 'status',
+          fromStatus: item.status,
+          toStatus: 'cancelled',
+          oldValue: null,
+          newValue: null,
+          changedAt: LATER,
+          note: `BC ${po.number} annulé : ${s.note.trim()}`,
+        })
+        item.status = 'cancelled'
+        line.itemStatus = 'cancelled'
+      }
+    }
+    po.status = s.status
+    return json(200, po)
+  }
+  if (sub === 'lines' && method === 'POST') {
+    if (po.status !== 'draft') return notDraft()
+    for (const [index, itemId] of (body as { itemIds: number[] }).itemIds.entries()) {
+      const problem = poLineProblem(state, po, itemId)
+      if (problem) return validation(`itemIds.${index}`, problem)
+      po.lines.push(poLineRow(state, po, itemId))
+    }
+    poTotals(po)
+    return json(201, po)
+  }
+  if (sub === 'files' && method === 'POST') {
+    const f = body as { fileId: number; caption: string | null }
+    const file = state.files.find((x) => x.id === f.fileId)
+    if (!file) return error(404, 'not_found', `Fichier n° ${f.fileId} introuvable.`)
+    po.files.push({
+      fileId: file.id,
+      caption: f.caption,
+      sha256: file.sha256,
+      ext: file.ext,
+      mimeType: file.mimeType,
+      originalName: file.originalName,
+      sizeBytes: file.sizeBytes,
+    })
+    return json(201, po)
+  }
+  const fileMatch = /^files\/(\d+)$/.exec(sub ?? '')
+  if (fileMatch && method === 'DELETE') {
+    po.files = po.files.filter((f) => f.fileId !== Number(fileMatch[1]))
+    return json(200, po)
+  }
+  return undefined
+}
+
+function handlePurchaseOrderLines(state: FakeApi, method: string, rest: string | undefined, body: unknown): Response | undefined {
+  const match = /^(\d+)$/.exec(rest ?? '')
+  if (!match) return undefined
+  const po = state.purchaseOrders.find((o) => o.lines.some((l) => l.id === Number(match[1])))
+  const line = po?.lines.find((l) => l.id === Number(match[1]))
+  if (!po || !line) return error(404, 'not_found', `Ligne de bon de commande n° ${match[1]} introuvable.`)
+  if (po.status !== 'draft') return error(409, 'conflict', `Bon de commande ${po.number} ${po.status} : seules les modifications du brouillon sont possibles.`)
+  if (method === 'PATCH') {
+    Object.assign(line, body)
+    poLineAmounts(po, line)
+    poTotals(po)
+    return json(200, po)
+  }
+  if (method === 'DELETE') {
+    po.lines = po.lines.filter((l) => l.id !== line.id)
+    poTotals(po)
+    return json(200, po)
   }
   return undefined
 }
