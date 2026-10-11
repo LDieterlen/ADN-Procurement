@@ -149,7 +149,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : 2 devis pour une ligne, un retenu, le prix change et l'historique l'enregistre.
 - **Décisions préalables** : D10a.1 revalider la machine à états avec des cas réels (obligatoire) ; D10a.2 un devis = un fournisseur, un projet (défaut).
 - **Risques** : devis multi-devises vs `fx_rate_micro` de la ligne.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 10a close` (hashes dans le JOURNAL). D10a.2 : défaut (ADR-0006) ; D10a.1 (revalidation de la machine à états avec des cas réels) : **à faire par l'utilisateur** ; en attendant, `test_transitions.py` (chaque paire) et `test_api_quote.py` (retenir depuis brouillon, validé, commandé) tiennent lieu de cas. Critère prouvé par `test_api_quote.py` : 2 devis pour `LUM-001`, Flos retenu → 1 100,00 € EUR, puis Tom Dixon → 1 180 GBP −15 %, événement `quote` à chaque fois, une seule ligne retenue. Multi-devises : devise et taux figés sur le devis, copiés sur la ligne.
 
 ## Étape 10b — Bons de commande
 
@@ -230,6 +230,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, besoin, étape où le reprendre), au lieu d'entrer dans le code. Vidé ou promu en étape lors d'une revue de feuille de route.
 
 - 2026-10-11 — `ffe db restore --with-files` : recopier `FFE_BACKUP_DIR/files/` vers `files/` par la CLI (aujourd'hui manuel, RUNBOOK §5) ; à reprendre avec 10c ou à la première restauration réelle.
+- 2026-10-11 — Devis : édition en place d'une ligne de devis et « dé-retenir » dans l'UI (API prête : `PATCH /quote-lines/{id}`) ; à reprendre après usage (10a).
 - 2026-10-11 — Tableau de bord : préférences de tri et de masquage des projets `prospect` (étape 8, défaut : tous les projets non clos) ; à reprendre après usage.
 
 ## Reporté volontairement
