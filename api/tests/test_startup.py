@@ -85,7 +85,7 @@ def test_pending_migration_makes_a_pre_migrate_backup(settings: Settings, clock:
     started.close()
     again = run_startup(settings, clock)
     try:
-        assert again.backup_path is not None and "pre-migrate-0010" in again.backup_path
+        assert again.backup_path is not None and "pre-migrate-0011" in again.backup_path
         assert current_revision(again.engine) == head_revision()
     finally:
         again.close()

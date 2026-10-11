@@ -7,6 +7,7 @@ from ffe.api.v1 import (
     category,
     client,
     delivery,
+    export,
     file,
     health,
     manufacturer,
@@ -38,5 +39,6 @@ router.include_router(quote.router)
 router.include_router(purchase_order.router)
 router.include_router(delivery.router)
 router.include_router(supplier_invoice.router)
+router.include_router(export.router)
 router.include_router(setting.router)
 router.include_router(system.router)

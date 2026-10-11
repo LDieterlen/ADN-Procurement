@@ -38,7 +38,7 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0010"
+    assert document["schemaRevision"] == "0011"
     assert list(document["tables"]) == [
         "setting",
         "client",
@@ -66,6 +66,7 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
         "delivery",
         "delivery_line",
         "supplier_invoice",
+        "project_file",
     ]
     first = document["tables"]["client"][0]
     assert first["name"] == "Famille Martin" and first["countryCode"] == "FR"
@@ -106,6 +107,7 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
             "delivery": 0,
             "delivery_line": 0,
             "supplier_invoice": 0,
+            "project_file": 0,
         }
         assert export_json(fresh, clock) == document
     finally:

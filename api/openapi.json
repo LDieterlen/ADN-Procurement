@@ -4583,6 +4583,62 @@
         "title": "ProjectCreate",
         "type": "object"
       },
+      "ProjectFileRead": {
+        "properties": {
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issuedAt": {
+            "title": "Issuedat",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "schedule_xlsx",
+              "book_pdf"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "originalName": {
+            "title": "Originalname",
+            "type": "string"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          },
+          "variant": {
+            "enum": [
+              "internal",
+              "client"
+            ],
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "fileId",
+          "kind",
+          "variant",
+          "issuedAt",
+          "originalName",
+          "sizeBytes"
+        ],
+        "title": "ProjectFileRead",
+        "type": "object"
+      },
       "ProjectItemCreate": {
         "description": "From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free.",
         "properties": {
@@ -10786,6 +10842,106 @@
         "summary": "Put Budget Lines",
         "tags": [
           "budgets"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/exports": {
+      "get": {
+        "operationId": "listProjectExports",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectFileRead"
+                  },
+                  "title": "Response Listprojectexports",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Exports",
+        "tags": [
+          "exports"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/exports/schedule.xlsx": {
+      "get": {
+        "operationId": "exportSchedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "variant",
+            "required": false,
+            "schema": {
+              "default": "internal",
+              "enum": [
+                "internal",
+                "client"
+              ],
+              "title": "Variant",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Schedule",
+        "tags": [
+          "exports"
         ]
       }
     },
