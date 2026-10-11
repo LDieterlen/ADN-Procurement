@@ -2,7 +2,7 @@
 // computed here; the issued exports are listed below with their download links.
 import { useQueryClient } from '@tanstack/react-query'
 import { fileContentUrl } from '../../api/queries/product'
-import { EXPORT_VARIANT_LABELS, exportKeys, scheduleExportUrl, useProjectExports } from '../../api/queries/projectFile'
+import { bookExportUrl, EXPORT_VARIANT_LABELS, exportKeys, scheduleExportUrl, useProjectExports } from '../../api/queries/projectFile'
 
 export function ExportsBar({ projectId }: { projectId: number }) {
   const exports = useProjectExports(projectId)
@@ -17,6 +17,9 @@ export function ExportsBar({ projectId }: { projectId: number }) {
         </a>
         <a href={scheduleExportUrl(projectId, 'client')} download className="underline" onClick={refresh}>
           Schedule xlsx (client)
+        </a>
+        <a href={bookExportUrl(projectId)} download className="underline" onClick={refresh}>
+          Book PDF (client)
         </a>
       </div>
       {exports.data && exports.data.length > 0 && (

@@ -33,6 +33,7 @@ describe('exports xlsx', () => {
     const internal = await screen.findByRole('link', { name: 'Schedule xlsx (interne)' })
     expect(internal.getAttribute('href')).toBe('/api/v1/projects/1/exports/schedule.xlsx?variant=internal')
     expect(screen.getByRole('link', { name: 'Schedule xlsx (client)' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/schedule.xlsx?variant=client')
+    expect(screen.getByRole('link', { name: 'Book PDF (client)' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/book.pdf')
     const issued = await screen.findByRole('list', { name: 'Exports émis' })
     const link = within(issued).getByRole('link', { name: '2026-001-schedule-client-2026-10-11.xlsx' })
     expect(link.getAttribute('href')).toBe('/api/v1/files/7/content')

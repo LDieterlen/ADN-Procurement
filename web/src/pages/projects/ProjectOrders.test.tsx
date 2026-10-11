@@ -133,6 +133,7 @@ describe('onglet Commandes', () => {
     await user.click(screen.getByRole('button', { name: 'Créer le bon de commande' }))
     const card = await screen.findByRole('article', { name: 'Bon de commande PO-2026-001' })
     await user.click(within(card).getByRole('button', { name: 'Document' }))
+    expect(within(card).getByRole('link', { name: 'PDF' }).getAttribute('href')).toBe('/api/v1/purchase-orders/1/pdf')
     const doc = await screen.findByRole('document', { name: 'Bon de commande PO-2026-001' })
     expect(within(doc).getByText('Atelier X')).toBeTruthy()
     expect(within(doc).getByText('Tom Dixon')).toBeTruthy()

@@ -15,6 +15,10 @@ export function scheduleExportUrl(projectId: number, variant: ExportVariant): st
   return `/api/v1/projects/${projectId}/exports/schedule.xlsx?variant=${variant}`
 }
 
+export function bookExportUrl(projectId: number): string {
+  return `/api/v1/projects/${projectId}/exports/book.pdf`
+}
+
 export function useProjectExports(projectId: number | undefined) {
   return useQuery({
     queryKey: exportKeys.list(projectId ?? 0),

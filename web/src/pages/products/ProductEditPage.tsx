@@ -107,6 +107,19 @@ export function ProductFiles({ product }: { product: ProductRead }) {
                 <span>{KIND_LABELS[file.kind]}</span>
                 {file.isPrimary && <span className="rounded bg-green-100 px-1 text-green-800">Principale</span>}
               </div>
+              {file.kind === 'image' && (
+                <input
+                  defaultValue={file.licenseNote ?? ''}
+                  placeholder="Licence (ex. photo fournisseur, usage interne)"
+                  aria-label={`Licence de ${file.originalName}`}
+                  className="w-full rounded border border-neutral-300 px-1 py-0.5 text-xs"
+                  onBlur={(event) => {
+                    const note = event.target.value.trim() || null
+                    if (note !== (file.licenseNote ?? null))
+                      void updateFile.mutateAsync({ productId: product.id, fileId: file.fileId, data: { licenseNote: note } })
+                  }}
+                />
+              )}
               <div className="flex gap-2">
                 {file.kind === 'image' && !file.isPrimary && (
                   <button

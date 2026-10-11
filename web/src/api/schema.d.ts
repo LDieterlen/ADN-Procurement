@@ -701,6 +701,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/exports/book.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Book */
+        get: operations["exportBook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/exports/schedule.xlsx": {
         parameters: {
             query?: never;
@@ -976,6 +993,23 @@ export interface paths {
         put?: never;
         /** Add Lines */
         post: operations["addPurchaseOrderLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/purchase-orders/{po_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Pdf */
+        get: operations["exportPurchaseOrderPdf"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1671,6 +1705,8 @@ export interface components {
             ext: string;
             /** Id */
             id: number;
+            /** Licensenote */
+            licenseNote?: string | null;
             /** Mimetype */
             mimeType: string;
             /** Originalname */
@@ -2328,6 +2364,8 @@ export interface components {
              * @enum {string}
              */
             kind: "image" | "datasheet" | "drawing" | "other";
+            /** Licensenote */
+            licenseNote?: string | null;
             /** Mimetype */
             mimeType: string;
             /** Originalname */
@@ -2347,6 +2385,8 @@ export interface components {
             isPrimary?: boolean | null;
             /** Kind */
             kind?: ("image" | "datasheet" | "drawing" | "other") | null;
+            /** Licensenote */
+            licenseNote?: string | null;
             /** Sortorder */
             sortOrder?: number | null;
         };
@@ -5174,6 +5214,37 @@ export interface operations {
             };
         };
     };
+    exportBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     exportSchedule: {
         parameters: {
             query?: {
@@ -5994,6 +6065,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportPurchaseOrderPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                po_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
                 };
             };
             /** @description Validation Error */

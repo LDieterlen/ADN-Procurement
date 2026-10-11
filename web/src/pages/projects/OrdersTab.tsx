@@ -307,6 +307,9 @@ function OrderCard({ po, projectId, readOnly }: { po: PoRead; projectId: number;
           <Button variant="ghost" onClick={() => setPrinting(true)}>
             Document
           </Button>
+          <a href={`/api/v1/purchase-orders/${po.id}/pdf`} download className="rounded px-2 py-1 text-sm underline">
+            PDF
+          </a>
           {!locked && draft && (
             <>
               <Button
