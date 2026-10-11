@@ -24,6 +24,58 @@ PROJECT_CLIENT_MUST_BE_ACTIVE = "Le client est archivé."
 CLIENT_HAS_OPEN_PROJECTS = (
     "Le client n° {id} a {count} projet(s) non clos : les clore ou les annuler avant d'archiver."
 )
+ITEM_STATUS_LABELS: dict[str, str] = {
+    "draft": "Brouillon",
+    "specified": "Spécifié",
+    "quoted": "Chiffré",
+    "approved": "Validé",
+    "ordered": "Commandé",
+    "delivered": "Livré",
+    "installed": "Installé",
+    "cancelled": "Annulé",
+    "replaced": "Remplacé",
+}
+ITEM_KIND_LABELS: dict[str, str] = {
+    "ffe": "FF&E",
+    "ose": "OS&E",
+    "custom": "Sur mesure",
+    "existing": "Existant",
+    "fee": "Frais",
+}
+TRANSITION_MESSAGES: dict[str, str] = {
+    "same_status": "La ligne est déjà dans ce statut.",
+    "replaced_only_by_action": "« Remplacé » ne se pose que par l'action « remplacer le produit ».",
+    "no_return_after_ordered": "Commandée ou au-delà : aucun retour en arrière, seulement « annulé » avec une note.",
+    "reopen_after_ordered": "Cette ligne a été commandée : elle ne se rouvre pas (créer une nouvelle ligne).",
+    "invalid_transition": "Transition de statut impossible.",
+}
+ITEM_NOTE_REQUIRED = "Une note est obligatoire pour cette transition."
+ITEM_NEEDS_NAME = "Un libellé est nécessaire."
+ITEM_NEEDS_PRODUCT = "Un produit est nécessaire (sauf sur mesure, existant ou frais)."
+ITEM_NEEDS_ZONE = "Au moins un placement dans une zone est nécessaire (sauf frais)."
+ITEM_NEEDS_SUPPLIER = "Un fournisseur est nécessaire pour chiffrer."
+ITEM_NEEDS_PRICE = "Un prix unitaire supérieur à zéro est nécessaire pour chiffrer."
+ITEM_NEEDS_ORDER_REF = "Une référence de commande est nécessaire pour passer en « commandé »."
+ITEM_CATEGORY_REQUIRED = "Une catégorie est nécessaire sans produit."
+ITEM_NAME_REQUIRED = "Un libellé est nécessaire sans produit."
+ITEM_FX_REQUIRED = "Un taux de change est nécessaire pour une devise autre que l'euro."
+ITEM_FX_EUR_IS_ONE = "En euros, le taux de change vaut 1 000 000 (parité)."
+ITEM_EXISTING_IS_FREE = "Une ligne « existant » a un prix nul."
+ITEM_CODE_IMMUTABLE = "Le code article ne se modifie qu'en brouillon."
+ITEM_CODE_TAKEN = "Ce code article est déjà utilisé dans le projet."
+ITEM_READ_ONLY_TERMINAL = "Ligne {status} : plus aucune modification."
+ITEM_DELETE_ONLY_DRAFT = "Seul un brouillon sans historique se supprime ; annuler la ligne sinon."
+ITEM_REPLACE_ONLY_APPROVED = (
+    "Le remplacement n'est possible que depuis « validé » (avant : changer le produit en place)."
+)
+ITEM_NO_PRODUCT_TO_REFRESH = "Cette ligne n'est pas liée à un produit du catalogue."
+PLACEMENT_ZONE_NOT_IN_PROJECT = "La zone n'appartient pas à ce projet."
+PLACEMENT_ZONE_ARCHIVED = "La zone est archivée."
+PLACEMENT_ZONE_TAKEN = "La ligne est déjà placée dans cette zone."
+PLACEMENT_PIECE_QTY = "Quantité entière attendue pour cette unité (multiple de 1 000 millièmes)."
+PLACEMENT_LAST_ONE = (
+    "Une ligne garde au moins un placement : modifier celui-ci plutôt que le supprimer."
+)
 ZONE_CODE_TAKEN = "Une zone de ce projet porte déjà ce code."
 ZONE_NOT_EMPTY = "La zone contient des lignes ou un budget : l'archiver plutôt que la supprimer."
 ZONE_REORDER_MISMATCH = "La liste doit contenir exactement les zones actives du projet."

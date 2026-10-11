@@ -21,6 +21,7 @@ from ffe.schemas.client import ClientRead
 from ffe.schemas.file import FileRead
 from ffe.schemas.manufacturer import ManufacturerRead
 from ffe.schemas.project import ProjectRead
+from ffe.schemas.project_item import EventRead, PlacementRead
 from ffe.schemas.supplier import SupplierRead
 from ffe.schemas.zone import ZoneRead
 
@@ -38,6 +39,11 @@ TABLE_ORDER: tuple[str, ...] = (
     "product_file",
     "project",
     "zone",
+    "project_item",
+    "project_item_placement",
+    "project_item_event",
+    "code_sequence",
+    "project_item_file",
 )
 # Row validation before insert (D4.11); `setting` gets its schema with its API (step 9);
 # `product` and `product_file` rows are validated by the database (STRICT, CHECK, FK) only.
@@ -49,6 +55,8 @@ ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
     "file": FileRead,
     "project": ProjectRead,
     "zone": ZoneRead,
+    "project_item_placement": PlacementRead,
+    "project_item_event": EventRead,
 }
 
 
@@ -73,7 +81,7 @@ def export_json(engine: Engine, clock: Callable[[], datetime]) -> dict[str, Any]
     tables: dict[str, list[dict[str, Any]]] = {}
     with engine.connect() as conn:
         for table in _tables():
-            rows = conn.execute(select(table).order_by(table.c.id)).mappings().all()
+            rows = conn.execute(select(table).order_by(*table.primary_key.columns)).mappings().all()
             tables[table.name] = [{to_camel(k): v for k, v in row.items()} for row in rows]
     return {
         "format": FORMAT,
@@ -115,7 +123,9 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                 conn.execute(delete(table))
         for table in _tables():
             rows: list[dict[str, Any]] = tables.get(table.name, [])
-            existing = conn.execute(select(table.c.id)).all()
+            existing: list[Any] = (
+                list(conn.execute(select(table.c.id)).all()) if "id" in table.c else []
+            )
             if table.name == "setting":
                 # Single row, seeded by migration 0001: an import overwrites it.
                 conn.execute(delete(table))

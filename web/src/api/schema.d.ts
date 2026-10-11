@@ -265,6 +265,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/placements/{placement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Placement */
+        delete: operations["deletePlacement"];
+        options?: never;
+        head?: never;
+        /** Update Placement */
+        patch: operations["updatePlacement"];
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -370,6 +388,145 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/project-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Item */
+        get: operations["getProjectItem"];
+        put?: never;
+        post?: never;
+        /** Delete Item */
+        delete: operations["deleteProjectItem"];
+        options?: never;
+        head?: never;
+        /** Update Item */
+        patch: operations["updateProjectItem"];
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events */
+        get: operations["listProjectItemEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach File */
+        post: operations["attachProjectItemFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Detach File */
+        delete: operations["detachProjectItemFile"];
+        options?: never;
+        head?: never;
+        /** Update File */
+        patch: operations["updateProjectItemFile"];
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/placements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Placement */
+        post: operations["addPlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh From Catalogue */
+        post: operations["refreshProjectItemFromCatalogue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace Product */
+        post: operations["replaceProjectItemProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Status */
+        post: operations["changeProjectItemStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -406,6 +563,24 @@ export interface paths {
         patch: operations["updateProject"];
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/project-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Items */
+        get: operations["listProjectItems"];
+        put?: never;
+        /** Create Item */
+        post: operations["createProjectItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/status": {
         parameters: {
             query?: never;
@@ -417,6 +592,23 @@ export interface paths {
         put?: never;
         /** Change Project Status */
         post: operations["changeProjectStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["getProjectSummary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -735,6 +927,27 @@ export interface components {
             /** Siren */
             siren?: string | null;
         };
+        /** EventRead */
+        EventRead: {
+            /** Changedat */
+            changedAt: string;
+            /** Fromstatus */
+            fromStatus: string | null;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /** Newvalue */
+            newValue: string | null;
+            /** Note */
+            note: string | null;
+            /** Oldvalue */
+            oldValue: string | null;
+            /** Projectitemid */
+            projectItemId: number;
+            /** Tostatus */
+            toStatus: string | null;
+        };
         /** FileRead */
         FileRead: {
             /** Createdat */
@@ -773,6 +986,97 @@ export interface components {
             ok: boolean;
             /** Schemarevision */
             schemaRevision: string | null;
+        };
+        /** ItemFileAttach */
+        ItemFileAttach: {
+            /** Caption */
+            caption?: string | null;
+            /** Fileid */
+            fileId: number;
+            /**
+             * Isprimary
+             * @default false
+             */
+            isPrimary: boolean;
+            /**
+             * Kind
+             * @default other
+             * @enum {string}
+             */
+            kind: "image" | "quote" | "approval" | "drawing" | "other";
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
+        };
+        /** ItemFileRead */
+        ItemFileRead: {
+            /** Caption */
+            caption: string | null;
+            /** Ext */
+            ext: string;
+            /** Fileid */
+            fileId: number;
+            /** Isprimary */
+            isPrimary: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "quote" | "approval" | "drawing" | "other";
+            /** Mimetype */
+            mimeType: string;
+            /** Originalname */
+            originalName: string;
+            /** Sha256 */
+            sha256: string;
+            /** Sizebytes */
+            sizeBytes: number;
+            /** Sortorder */
+            sortOrder: number;
+        };
+        /** ItemFileUpdate */
+        ItemFileUpdate: {
+            /** Caption */
+            caption?: string | null;
+            /** Isprimary */
+            isPrimary?: boolean | null;
+            /** Kind */
+            kind?: ("image" | "quote" | "approval" | "drawing" | "other") | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+        };
+        /** LineAmountsRead */
+        LineAmountsRead: {
+            /** Amountcounted */
+            amountCounted: boolean;
+            /** Approvedcents */
+            approvedCents: number | null;
+            /** Counted */
+            counted: boolean;
+            /** Itemcode */
+            itemCode: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
+            /** Netunitcents */
+            netUnitCents: number;
+            /** Netuniteurcents */
+            netUnitEurCents: number;
+            /** Projectitemid */
+            projectItemId: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
+            /** Totalhtcents */
+            totalHtCents: number;
+            /** Totalqtymilli */
+            totalQtyMilli: number;
         };
         /** ManufacturerCreate */
         ManufacturerCreate: {
@@ -829,6 +1133,53 @@ export interface components {
             items: components["schemas"]["SupplierRead"][];
             /** Total */
             total: number;
+        };
+        /** PlacementCreate */
+        PlacementCreate: {
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Qtymilli
+             * @default 1000
+             */
+            qtyMilli: number;
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
+            /** Zoneid */
+            zoneId?: number | null;
+        };
+        /** PlacementRead */
+        PlacementRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Notes */
+            notes: string | null;
+            /** Projectitemid */
+            projectItemId: number;
+            /** Qtymilli */
+            qtyMilli: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Zoneid */
+            zoneId: number | null;
+        };
+        /** PlacementUpdate */
+        PlacementUpdate: {
+            /** Notes */
+            notes?: string | null;
+            /** Qtymilli */
+            qtyMilli?: number | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Zoneid */
+            zoneId?: number | null;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -1112,6 +1463,237 @@ export interface components {
             /** Starton */
             startOn?: string | null;
         };
+        /**
+         * ProjectItemCreate
+         * @description From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free.
+         */
+        ProjectItemCreate: {
+            /** Categoryid */
+            categoryId?: number | null;
+            /** Clientdescription */
+            clientDescription?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Depthmm */
+            depthMm?: number | null;
+            /** Diametermm */
+            diameterMm?: number | null;
+            /** Discountbp */
+            discountBp?: number | null;
+            /** Expecteddeliveryon */
+            expectedDeliveryOn?: string | null;
+            /** Finish */
+            finish?: string | null;
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /** Heightmm */
+            heightMm?: number | null;
+            /** Internalnotes */
+            internalNotes?: string | null;
+            /** Itemcode */
+            itemCode?: string | null;
+            /**
+             * Kind
+             * @default ffe
+             * @enum {string}
+             */
+            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Materials */
+            materials?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Placements */
+            placements?: components["schemas"]["PlacementCreate"][] | null;
+            /** Productid */
+            productId?: number | null;
+            /** Quoteref */
+            quoteRef?: string | null;
+            /** Quotevaliduntil */
+            quoteValidUntil?: string | null;
+            /** Quotedon */
+            quotedOn?: string | null;
+            /** Requiredonsite */
+            requiredOnSite?: string | null;
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Unit */
+            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
+            /** Unitcostcents */
+            unitCostCents?: number | null;
+            /** Vatratebp */
+            vatRateBp?: number | null;
+            /** Widthmm */
+            widthMm?: number | null;
+        };
+        /** ProjectItemRead */
+        ProjectItemRead: {
+            /** Approvedat */
+            approvedAt: string | null;
+            /** Approvedtotalqtymilli */
+            approvedTotalQtyMilli: number | null;
+            /** Approvedunitnetcents */
+            approvedUnitNetCents: number | null;
+            /** Categoryid */
+            categoryId: number;
+            /** Clientdescription */
+            clientDescription: string | null;
+            /** Color */
+            color: string | null;
+            /** Createdat */
+            createdAt: string;
+            /** Currency */
+            currency: string;
+            /** Depthmm */
+            depthMm: number | null;
+            /** Diametermm */
+            diameterMm: number | null;
+            /** Discountbp */
+            discountBp: number;
+            /** Expecteddeliveryon */
+            expectedDeliveryOn: string | null;
+            /** Files */
+            files: components["schemas"]["ItemFileRead"][];
+            /** Finish */
+            finish: string | null;
+            /** Fxratemicro */
+            fxRateMicro: number;
+            /** Heightmm */
+            heightMm: number | null;
+            /** Id */
+            id: number;
+            /** Internalnotes */
+            internalNotes: string | null;
+            /** Itemcode */
+            itemCode: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
+            /** Leadtimeweeks */
+            leadTimeWeeks: number | null;
+            /** Materials */
+            materials: string | null;
+            /** Name */
+            name: string;
+            /** Onhold */
+            onHold: boolean;
+            /** Orderref */
+            orderRef: string | null;
+            /** Placements */
+            placements: components["schemas"]["PlacementRead"][];
+            /** Productid */
+            productId: number | null;
+            /** Projectid */
+            projectId: number;
+            /** Quoteref */
+            quoteRef: string | null;
+            /** Quotevaliduntil */
+            quoteValidUntil: string | null;
+            /** Quotedon */
+            quotedOn: string | null;
+            /** Replacedbyid */
+            replacedById: number | null;
+            /** Requiredonsite */
+            requiredOnSite: string | null;
+            /** Sortorder */
+            sortOrder: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
+            /** Supplierid */
+            supplierId: number | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
+            /** Unitcostcents */
+            unitCostCents: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Vatratebp */
+            vatRateBp: number;
+            /** Widthmm */
+            widthMm: number | null;
+        };
+        /**
+         * ProjectItemUpdate
+         * @description Absent = unchanged. `status` never here (POST …/status), placements have their own routes.
+         */
+        ProjectItemUpdate: {
+            /** Categoryid */
+            categoryId?: number | null;
+            /** Clientdescription */
+            clientDescription?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Depthmm */
+            depthMm?: number | null;
+            /** Diametermm */
+            diameterMm?: number | null;
+            /** Discountbp */
+            discountBp?: number | null;
+            /** Expecteddeliveryon */
+            expectedDeliveryOn?: string | null;
+            /** Finish */
+            finish?: string | null;
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /** Heightmm */
+            heightMm?: number | null;
+            /** Internalnotes */
+            internalNotes?: string | null;
+            /** Itemcode */
+            itemCode?: string | null;
+            /** Kind */
+            kind?: ("ffe" | "ose" | "custom" | "existing" | "fee") | null;
+            /** Leadtimeweeks */
+            leadTimeWeeks?: number | null;
+            /** Materials */
+            materials?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Onhold */
+            onHold?: boolean | null;
+            /** Orderref */
+            orderRef?: string | null;
+            /** Productid */
+            productId?: number | null;
+            /** Quoteref */
+            quoteRef?: string | null;
+            /** Quotevaliduntil */
+            quoteValidUntil?: string | null;
+            /** Quotedon */
+            quotedOn?: string | null;
+            /** Requiredonsite */
+            requiredOnSite?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Unit */
+            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
+            /** Unitcostcents */
+            unitCostCents?: number | null;
+            /** Vatratebp */
+            vatRateBp?: number | null;
+            /** Widthmm */
+            widthMm?: number | null;
+        };
         /** ProjectRead */
         ProjectRead: {
             /** Clientid */
@@ -1154,6 +1736,29 @@ export interface components {
              */
             status: "prospect" | "active" | "delivered" | "closed" | "cancelled";
         };
+        /** ProjectSummaryRead */
+        ProjectSummaryRead: {
+            /** Approvedcents */
+            approvedCents: number;
+            /** Lines */
+            lines: components["schemas"]["LineAmountsRead"][];
+            /** Osecents */
+            oseCents: number;
+            /** Projectid */
+            projectId: number;
+            /** Specifiedcents */
+            specifiedCents: number;
+            /** Ttccents */
+            ttcCents: number;
+            /** Vatbyratebp */
+            vatByRateBp: {
+                [key: string]: number;
+            };
+            /** Vatcents */
+            vatCents: number;
+            /** Zones */
+            zones: components["schemas"]["ZoneAmountsRead"][];
+        };
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Clientid */
@@ -1176,6 +1781,36 @@ export interface components {
             siteAddress?: string | null;
             /** Starton */
             startOn?: string | null;
+        };
+        /**
+         * ReplaceProduct
+         * @description « Remplacer le produit » from `approved`: a new line takes the code, the old one is `replaced`.
+         */
+        ReplaceProduct: {
+            /** Currency */
+            currency?: string | null;
+            /** Discountbp */
+            discountBp?: number | null;
+            /** Fxratemicro */
+            fxRateMicro?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Productid */
+            productId: number;
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Unitcostcents */
+            unitCostCents?: number | null;
+        };
+        /** StatusChange */
+        StatusChange: {
+            /** Note */
+            note?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
         };
         /** SupplierCreate */
         SupplierCreate: {
@@ -1323,6 +1958,19 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** ZoneAmountsRead */
+        ZoneAmountsRead: {
+            /** Multiplier */
+            multiplier: number;
+            /** Specifiedcents */
+            specifiedCents: number;
+            /** Zonecode */
+            zoneCode: string | null;
+            /** Zoneid */
+            zoneId: number | null;
+            /** Zonename */
+            zoneName: string;
         };
         /** ZoneCreate */
         ZoneCreate: {
@@ -2071,6 +2719,72 @@ export interface operations {
             };
         };
     };
+    deletePlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updatePlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listProducts: {
         parameters: {
             query?: {
@@ -2374,6 +3088,371 @@ export interface operations {
             };
         };
     };
+    getProjectItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteProjectItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProjectItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProjectItemEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachProjectItemFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemFileAttach"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detachProjectItemFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProjectItemFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+                file_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemFileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addPlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refreshProjectItemFromCatalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replaceProjectItemProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceProduct"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    changeProjectItemStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listProjects: {
         parameters: {
             query?: {
@@ -2505,6 +3584,79 @@ export interface operations {
             };
         };
     };
+    listProjectItems: {
+        parameters: {
+            query?: {
+                zoneId?: number | null;
+                status?: ("draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced") | null;
+                categoryId?: number | null;
+                supplierId?: number | null;
+                kind?: ("ffe" | "ose" | "custom" | "existing" | "fee") | null;
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProjectItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     changeProjectStatus: {
         parameters: {
             query?: never;
@@ -2527,6 +3679,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProjectSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSummaryRead"];
                 };
             };
             /** @description Validation Error */

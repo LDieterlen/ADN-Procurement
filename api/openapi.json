@@ -615,6 +615,94 @@
         "title": "ClientUpdate",
         "type": "object"
       },
+      "EventRead": {
+        "properties": {
+          "changedAt": {
+            "title": "Changedat",
+            "type": "string"
+          },
+          "fromStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fromstatus"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "newValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newvalue"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "oldValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldvalue"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "toStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tostatus"
+          }
+        },
+        "required": [
+          "id",
+          "projectItemId",
+          "kind",
+          "fromStatus",
+          "toStatus",
+          "oldValue",
+          "newValue",
+          "changedAt",
+          "note"
+        ],
+        "title": "EventRead",
+        "type": "object"
+      },
       "FileRead": {
         "properties": {
           "createdAt": {
@@ -740,6 +828,271 @@
           "backupDirOk"
         ],
         "title": "HealthRead",
+        "type": "object"
+      },
+      "ItemFileAttach": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "isPrimary": {
+            "default": false,
+            "title": "Isprimary",
+            "type": "boolean"
+          },
+          "kind": {
+            "default": "other",
+            "enum": [
+              "image",
+              "quote",
+              "approval",
+              "drawing",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sortOrder": {
+            "default": 0,
+            "title": "Sortorder",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId"
+        ],
+        "title": "ItemFileAttach",
+        "type": "object"
+      },
+      "ItemFileRead": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "ext": {
+            "title": "Ext",
+            "type": "string"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "isPrimary": {
+            "title": "Isprimary",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "image",
+              "quote",
+              "approval",
+              "drawing",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mimeType": {
+            "title": "Mimetype",
+            "type": "string"
+          },
+          "originalName": {
+            "title": "Originalname",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId",
+          "kind",
+          "isPrimary",
+          "caption",
+          "sortOrder",
+          "sha256",
+          "ext",
+          "mimeType",
+          "originalName",
+          "sizeBytes"
+        ],
+        "title": "ItemFileRead",
+        "type": "object"
+      },
+      "ItemFileUpdate": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "isPrimary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isprimary"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "image",
+                  "quote",
+                  "approval",
+                  "drawing",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          }
+        },
+        "title": "ItemFileUpdate",
+        "type": "object"
+      },
+      "LineAmountsRead": {
+        "properties": {
+          "amountCounted": {
+            "title": "Amountcounted",
+            "type": "boolean"
+          },
+          "approvedCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvedcents"
+          },
+          "counted": {
+            "title": "Counted",
+            "type": "boolean"
+          },
+          "itemCode": {
+            "title": "Itemcode",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ffe",
+              "ose",
+              "custom",
+              "existing",
+              "fee"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "netUnitCents": {
+            "title": "Netunitcents",
+            "type": "integer"
+          },
+          "netUnitEurCents": {
+            "title": "Netuniteurcents",
+            "type": "integer"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "specified",
+              "quoted",
+              "approved",
+              "ordered",
+              "delivered",
+              "installed",
+              "cancelled",
+              "replaced"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "totalHtCents": {
+            "title": "Totalhtcents",
+            "type": "integer"
+          },
+          "totalQtyMilli": {
+            "title": "Totalqtymilli",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projectItemId",
+          "itemCode",
+          "status",
+          "kind",
+          "counted",
+          "amountCounted",
+          "totalQtyMilli",
+          "netUnitCents",
+          "netUnitEurCents",
+          "totalHtCents",
+          "approvedCents"
+        ],
+        "title": "LineAmountsRead",
         "type": "object"
       },
       "ManufacturerCreate": {
@@ -949,6 +1302,160 @@
           "total"
         ],
         "title": "Page[SupplierRead]",
+        "type": "object"
+      },
+      "PlacementCreate": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "qtyMilli": {
+            "default": 1000,
+            "minimum": 0.0,
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "default": 0,
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "title": "PlacementCreate",
+        "type": "object"
+      },
+      "PlacementRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          },
+          "qtyMilli": {
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "required": [
+          "id",
+          "projectItemId",
+          "zoneId",
+          "qtyMilli",
+          "sortOrder",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "PlacementRead",
+        "type": "object"
+      },
+      "PlacementUpdate": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "qtyMilli": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qtymilli"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          }
+        },
+        "title": "PlacementUpdate",
         "type": "object"
       },
       "ProductCreate": {
@@ -2203,6 +2710,1144 @@
         "title": "ProjectCreate",
         "type": "object"
       },
+      "ProjectItemCreate": {
+        "description": "From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free.",
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "clientDescription": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientdescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "depthMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depthmm"
+          },
+          "diameterMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diametermm"
+          },
+          "discountBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discountbp"
+          },
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "heightMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heightmm"
+          },
+          "internalNotes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internalnotes"
+          },
+          "itemCode": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemcode"
+          },
+          "kind": {
+            "default": "ffe",
+            "enum": [
+              "ffe",
+              "ose",
+              "custom",
+              "existing",
+              "fee"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "materials": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materials"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "placements": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PlacementCreate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placements"
+          },
+          "productId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productid"
+          },
+          "quoteRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoteref"
+          },
+          "quoteValidUntil": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotevaliduntil"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "requiredOnSite": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requiredonsite"
+          },
+          "sortOrder": {
+            "default": 0,
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "supplierId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierid"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "piece",
+                  "pair",
+                  "set",
+                  "lot",
+                  "m",
+                  "m2",
+                  "roll"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "unitCostCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unitcostcents"
+          },
+          "vatRateBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vatratebp"
+          },
+          "widthMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widthmm"
+          }
+        },
+        "title": "ProjectItemCreate",
+        "type": "object"
+      },
+      "ProjectItemRead": {
+        "properties": {
+          "approvedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvedat"
+          },
+          "approvedTotalQtyMilli": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvedtotalqtymilli"
+          },
+          "approvedUnitNetCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approvedunitnetcents"
+          },
+          "categoryId": {
+            "title": "Categoryid",
+            "type": "integer"
+          },
+          "clientDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientdescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "depthMm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depthmm"
+          },
+          "diameterMm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diametermm"
+          },
+          "discountBp": {
+            "title": "Discountbp",
+            "type": "integer"
+          },
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ItemFileRead"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "fxRateMicro": {
+            "title": "Fxratemicro",
+            "type": "integer"
+          },
+          "heightMm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heightmm"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "internalNotes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internalnotes"
+          },
+          "itemCode": {
+            "title": "Itemcode",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ffe",
+              "ose",
+              "custom",
+              "existing",
+              "fee"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "materials": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materials"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "onHold": {
+            "title": "Onhold",
+            "type": "boolean"
+          },
+          "orderRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderref"
+          },
+          "placements": {
+            "items": {
+              "$ref": "#/components/schemas/PlacementRead"
+            },
+            "title": "Placements",
+            "type": "array"
+          },
+          "productId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productid"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "quoteRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoteref"
+          },
+          "quoteValidUntil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotevaliduntil"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "replacedById": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacedbyid"
+          },
+          "requiredOnSite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requiredonsite"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "specified",
+              "quoted",
+              "approved",
+              "ordered",
+              "delivered",
+              "installed",
+              "cancelled",
+              "replaced"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supplierId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierid"
+          },
+          "unit": {
+            "enum": [
+              "piece",
+              "pair",
+              "set",
+              "lot",
+              "m",
+              "m2",
+              "roll"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "unitCostCents": {
+            "title": "Unitcostcents",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "vatRateBp": {
+            "title": "Vatratebp",
+            "type": "integer"
+          },
+          "widthMm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widthmm"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "itemCode",
+          "categoryId",
+          "productId",
+          "supplierId",
+          "name",
+          "clientDescription",
+          "kind",
+          "unit",
+          "finish",
+          "color",
+          "materials",
+          "widthMm",
+          "depthMm",
+          "heightMm",
+          "diameterMm",
+          "unitCostCents",
+          "currency",
+          "fxRateMicro",
+          "discountBp",
+          "vatRateBp",
+          "leadTimeWeeks",
+          "requiredOnSite",
+          "quotedOn",
+          "quoteValidUntil",
+          "expectedDeliveryOn",
+          "quoteRef",
+          "orderRef",
+          "status",
+          "onHold",
+          "replacedById",
+          "approvedAt",
+          "approvedUnitNetCents",
+          "approvedTotalQtyMilli",
+          "sortOrder",
+          "internalNotes",
+          "createdAt",
+          "updatedAt",
+          "placements",
+          "files"
+        ],
+        "title": "ProjectItemRead",
+        "type": "object"
+      },
+      "ProjectItemUpdate": {
+        "description": "Absent = unchanged. `status` never here (POST …/status), placements have their own routes.",
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "clientDescription": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientdescription"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "depthMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depthmm"
+          },
+          "diameterMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diametermm"
+          },
+          "discountBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discountbp"
+          },
+          "expectedDeliveryOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expecteddeliveryon"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "heightMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heightmm"
+          },
+          "internalNotes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internalnotes"
+          },
+          "itemCode": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemcode"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ffe",
+                  "ose",
+                  "custom",
+                  "existing",
+                  "fee"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "leadTimeWeeks": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtimeweeks"
+          },
+          "materials": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materials"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "onHold": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onhold"
+          },
+          "orderRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderref"
+          },
+          "productId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productid"
+          },
+          "quoteRef": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quoteref"
+          },
+          "quoteValidUntil": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotevaliduntil"
+          },
+          "quotedOn": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotedon"
+          },
+          "requiredOnSite": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requiredonsite"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          },
+          "supplierId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierid"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "piece",
+                  "pair",
+                  "set",
+                  "lot",
+                  "m",
+                  "m2",
+                  "roll"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "unitCostCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unitcostcents"
+          },
+          "vatRateBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vatratebp"
+          },
+          "widthMm": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Widthmm"
+          }
+        },
+        "title": "ProjectItemUpdate",
+        "type": "object"
+      },
       "ProjectRead": {
         "properties": {
           "clientId": {
@@ -2350,6 +3995,68 @@
         "title": "ProjectStatusChange",
         "type": "object"
       },
+      "ProjectSummaryRead": {
+        "properties": {
+          "approvedCents": {
+            "title": "Approvedcents",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineAmountsRead"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "oseCents": {
+            "title": "Osecents",
+            "type": "integer"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          },
+          "ttcCents": {
+            "title": "Ttccents",
+            "type": "integer"
+          },
+          "vatByRateBp": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Vatbyratebp",
+            "type": "object"
+          },
+          "vatCents": {
+            "title": "Vatcents",
+            "type": "integer"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneAmountsRead"
+            },
+            "title": "Zones",
+            "type": "array"
+          }
+        },
+        "required": [
+          "projectId",
+          "lines",
+          "zones",
+          "specifiedCents",
+          "approvedCents",
+          "oseCents",
+          "vatByRateBp",
+          "vatCents",
+          "ttcCents"
+        ],
+        "title": "ProjectSummaryRead",
+        "type": "object"
+      },
       "ProjectUpdate": {
         "properties": {
           "clientId": {
@@ -2476,6 +4183,128 @@
           }
         },
         "title": "ProjectUpdate",
+        "type": "object"
+      },
+      "ReplaceProduct": {
+        "description": "« Remplacer le produit » from `approved`: a new line takes the code, the old one is `replaced`.",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "discountBp": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discountbp"
+          },
+          "fxRateMicro": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fxratemicro"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "productId": {
+            "title": "Productid",
+            "type": "integer"
+          },
+          "supplierId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplierid"
+          },
+          "unitCostCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unitcostcents"
+          }
+        },
+        "required": [
+          "productId"
+        ],
+        "title": "ReplaceProduct",
+        "type": "object"
+      },
+      "StatusChange": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "specified",
+              "quoted",
+              "approved",
+              "ordered",
+              "delivered",
+              "installed",
+              "cancelled",
+              "replaced"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusChange",
         "type": "object"
       },
       "SupplierCreate": {
@@ -3167,6 +4996,53 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "ZoneAmountsRead": {
+        "properties": {
+          "multiplier": {
+            "title": "Multiplier",
+            "type": "integer"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          },
+          "zoneCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zonecode"
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoneid"
+          },
+          "zoneName": {
+            "title": "Zonename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "zoneId",
+          "zoneCode",
+          "zoneName",
+          "multiplier",
+          "specifiedCents"
+        ],
+        "title": "ZoneAmountsRead",
         "type": "object"
       },
       "ZoneCreate": {
@@ -4405,6 +6281,100 @@
         ]
       }
     },
+    "/api/v1/placements/{placement_id}": {
+      "delete": {
+        "operationId": "deletePlacement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "placement_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Placement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Placement",
+        "tags": [
+          "project-items"
+        ]
+      },
+      "patch": {
+        "operationId": "updatePlacement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "placement_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Placement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Placement",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
     "/api/v1/products": {
       "get": {
         "operationId": "listProducts",
@@ -4937,6 +6907,550 @@
         ]
       }
     },
+    "/api/v1/project-items/{item_id}": {
+      "delete": {
+        "operationId": "deleteProjectItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Item",
+        "tags": [
+          "project-items"
+        ]
+      },
+      "get": {
+        "operationId": "getProjectItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Item",
+        "tags": [
+          "project-items"
+        ]
+      },
+      "patch": {
+        "operationId": "updateProjectItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectItemUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Item",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/events": {
+      "get": {
+        "operationId": "listProjectItemEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventRead"
+                  },
+                  "title": "Response Listprojectitemevents",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/files": {
+      "post": {
+        "operationId": "attachProjectItemFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemFileAttach"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attach File",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/files/{file_id}": {
+      "delete": {
+        "operationId": "detachProjectItemFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detach File",
+        "tags": [
+          "project-items"
+        ]
+      },
+      "patch": {
+        "operationId": "updateProjectItemFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemFileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update File",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/placements": {
+      "post": {
+        "operationId": "addPlacement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Placement",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/refresh": {
+      "post": {
+        "operationId": "refreshProjectItemFromCatalogue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh From Catalogue",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/replace": {
+      "post": {
+        "operationId": "replaceProjectItemProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceProduct"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Product",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/status": {
+      "post": {
+        "operationId": "changeProjectItemStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Status",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "operationId": "listProjects",
@@ -5147,6 +7661,222 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/project-items": {
+      "get": {
+        "operationId": "listProjectItems",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "zoneId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zoneid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "specified",
+                    "quoted",
+                    "approved",
+                    "ordered",
+                    "delivered",
+                    "installed",
+                    "cancelled",
+                    "replaced"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "categoryId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoryid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "supplierId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Supplierid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ffe",
+                    "ose",
+                    "custom",
+                    "existing",
+                    "fee"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectItemRead"
+                  },
+                  "title": "Response Listprojectitems",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Items",
+        "tags": [
+          "project-items"
+        ]
+      },
+      "post": {
+        "operationId": "createProjectItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectItemCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Item",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/status": {
       "post": {
         "operationId": "changeProjectStatus",
@@ -5197,6 +7927,49 @@
         "summary": "Change Project Status",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/summary": {
+      "get": {
+        "operationId": "getProjectSummary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Summary",
+        "tags": [
+          "project-items"
         ]
       }
     },

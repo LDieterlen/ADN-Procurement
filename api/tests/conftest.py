@@ -21,12 +21,23 @@ from ffe.config import PERSIST_ROOT, Settings
 from ffe.db.engine import create_db_engine
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock, Deps
-from ffe.models import Category, Client, File, Manufacturer, Product, Project, Supplier, Zone
+from ffe.models import (
+    Category,
+    Client,
+    File,
+    Manufacturer,
+    Product,
+    Project,
+    ProjectItem,
+    Supplier,
+    Zone,
+)
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.manufacturer import ManufacturerCreate
 from ffe.schemas.product import ProductCreate
 from ffe.schemas.project import ProjectCreate
+from ffe.schemas.project_item import ProjectItemCreate
 from ffe.schemas.supplier import SupplierCreate
 from ffe.schemas.zone import ZoneCreate
 from ffe.services.category import create_category
@@ -35,6 +46,7 @@ from ffe.services.file import store_upload
 from ffe.services.manufacturer import create_manufacturer
 from ffe.services.product import create_product
 from ffe.services.project import create_project
+from ffe.services.project_item import create_item
 from ffe.services.supplier import create_supplier
 from ffe.services.zone import create_zone
 
@@ -165,3 +177,14 @@ def make_zone(session: Session, clock: Clock, project_id: int, **overrides: Any)
     data: dict[str, Any] = {"code": "CHA", "name": "Chambre type A", "multiplier": 12}
     data.update(overrides)
     return create_zone(session, project_id, ZoneCreate(**data), clock)
+
+
+def make_item(session: Session, clock: Clock, project_id: int, **overrides: Any) -> ProjectItem:
+    """A free line (no product) in a fresh level-1 category unless `category_id` is given."""
+    if "category_id" not in overrides and "product_id" not in overrides:
+        overrides["category_id"] = make_category(
+            session, clock, name=f"Cat {next(_counter)}", code=f"C{next(_counter) % 90 + 10}"
+        ).id
+    data: dict[str, Any] = {"name": "Ligne", "unit_cost_cents": 10000}
+    data.update(overrides)
+    return create_item(session, project_id, ProjectItemCreate(**data), clock)
