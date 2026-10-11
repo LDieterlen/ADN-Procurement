@@ -30,6 +30,7 @@ import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { CURRENCIES } from '../suppliers/SupplierForm'
+import { ExportsBar } from './ExportsBar'
 import { ItemPanel } from './ItemPanel'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
@@ -207,6 +208,7 @@ export function ItemsTab({ projectId, readOnly }: { projectId: number; readOnly:
 
   return (
     <section className="space-y-4">
+      <ExportsBar projectId={projectId} />
       <div className="no-print flex flex-wrap items-center gap-3">
         {!readOnly && adding === null && (
           <>

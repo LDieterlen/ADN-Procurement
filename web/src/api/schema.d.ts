@@ -684,6 +684,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Exports */
+        get: operations["listProjectExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/exports/schedule.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Schedule */
+        get: operations["exportSchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/project-items": {
         parameters: {
             query?: never;
@@ -2469,6 +2503,31 @@ export interface components {
             siteAddress?: string | null;
             /** Starton */
             startOn?: string | null;
+        };
+        /** ProjectFileRead */
+        ProjectFileRead: {
+            /** Fileid */
+            fileId: number;
+            /** Id */
+            id: number;
+            /** Issuedat */
+            issuedAt: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "schedule_xlsx" | "book_pdf";
+            /** Originalname */
+            originalName: string;
+            /** Projectid */
+            projectId: number;
+            /** Sizebytes */
+            sizeBytes: number;
+            /**
+             * Variant
+             * @enum {string}
+             */
+            variant: "internal" | "client";
         };
         /**
          * ProjectItemCreate
@@ -5071,6 +5130,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetLineRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProjectExports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFileRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportSchedule: {
+        parameters: {
+            query?: {
+                variant?: "internal" | "client";
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
                 };
             };
             /** @description Validation Error */

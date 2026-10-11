@@ -23,6 +23,7 @@ type PoRead = components['schemas']['PoRead']
 type PoLineRead = components['schemas']['PoLineRead']
 type DeliveryRead = components['schemas']['DeliveryRead']
 type InvoiceRead = components['schemas']['InvoiceRead']
+type ProjectFileRead = components['schemas']['ProjectFileRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -43,6 +44,7 @@ export type FakeApi = {
   purchaseOrders: PoRead[]
   deliveries: DeliveryRead[]
   invoices: InvoiceRead[]
+  exports: ProjectFileRead[]
   lastBackupAt: string | null
   backupDirOk: boolean
   events: {
@@ -431,6 +433,11 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     return json(201, created)
   }
   if (sub === 'summary' && method === 'GET') return json(200, summaryOf(state, project.id))
+  if (sub === 'exports' && method === 'GET')
+    return json(
+      200,
+      state.exports.filter((e) => e.projectId === project.id),
+    )
   if (sub === 'purchase-orders' && method === 'GET')
     return json(
       200,
@@ -1134,6 +1141,7 @@ export function installFakeApi(
     purchaseOrders: [],
     deliveries: [],
     invoices: [],
+    exports: [],
     requests: [],
     down: false,
     restore: () => {
