@@ -702,6 +702,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["getSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Settings */
+        patch: operations["updateSettings"];
+        trace?: never;
+    };
     "/api/v1/suppliers": {
         parameters: {
             query?: never;
@@ -766,6 +784,23 @@ export interface paths {
         put?: never;
         /** Unarchive Supplier */
         post: operations["unarchiveSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Backup */
+        post: operations["createBackup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -844,6 +879,19 @@ export interface components {
             projectItemId?: number | null;
             /** Zoneid */
             zoneId?: number | null;
+        };
+        /** BackupRead */
+        BackupRead: {
+            /** At */
+            at: string;
+            /** Copiedto */
+            copiedTo: string | null;
+            /** Copyerror */
+            copyError: string | null;
+            /** Path */
+            path: string;
+            /** Quickcheck */
+            quickCheck: string;
         };
         /** Body_uploadFile */
         Body_uploadFile: {
@@ -1162,6 +1210,8 @@ export interface components {
         };
         /** HealthRead */
         HealthRead: {
+            /** Backupdir */
+            backupDir: string;
             /** Backupdirok */
             backupDirOk: boolean;
             /** Dbpath */
@@ -1170,6 +1220,10 @@ export interface components {
             isDevDb: boolean;
             /** Lastbackupat */
             lastBackupAt: string | null;
+            /** Lastquickcheck */
+            lastQuickCheck: string | null;
+            /** Logpath */
+            logPath: string | null;
             /** Ok */
             ok: boolean;
             /** Schemarevision */
@@ -2000,6 +2054,58 @@ export interface components {
             supplierId?: number | null;
             /** Unitcostcents */
             unitCostCents?: number | null;
+        };
+        /** SettingRead */
+        SettingRead: {
+            /** Agencyaddress */
+            agencyAddress: string | null;
+            /** Agencyemail */
+            agencyEmail: string | null;
+            /** Agencyname */
+            agencyName: string;
+            /** Agencyphone */
+            agencyPhone: string | null;
+            /** Agencysiret */
+            agencySiret: string | null;
+            /** Agencyvatnumber */
+            agencyVatNumber: string | null;
+            /** Basecurrency */
+            baseCurrency: string;
+            /** Createdat */
+            createdAt: string;
+            /** Defaultcontingencybp */
+            defaultContingencyBp: number;
+            /** Defaultvatbp */
+            defaultVatBp: number;
+            /** Id */
+            id: number;
+            /** Projectcodeprefix */
+            projectCodePrefix: string;
+            /** Seedcategoryversion */
+            seedCategoryVersion: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** SettingUpdate */
+        SettingUpdate: {
+            /** Agencyaddress */
+            agencyAddress?: string | null;
+            /** Agencyemail */
+            agencyEmail?: string | null;
+            /** Agencyname */
+            agencyName?: string | null;
+            /** Agencyphone */
+            agencyPhone?: string | null;
+            /** Agencysiret */
+            agencySiret?: string | null;
+            /** Agencyvatnumber */
+            agencyVatNumber?: string | null;
+            /** Defaultcontingencybp */
+            defaultContingencyBp?: number | null;
+            /** Defaultvatbp */
+            defaultVatBp?: number | null;
+            /** Projectcodeprefix */
+            projectCodePrefix?: string | null;
         };
         /** StatusChange */
         StatusChange: {
@@ -4142,6 +4248,59 @@ export interface operations {
             };
         };
     };
+    getSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRead"];
+                };
+            };
+        };
+    };
+    updateSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listSuppliers: {
         parameters: {
             query?: {
@@ -4335,6 +4494,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupRead"];
                 };
             };
         };

@@ -25,7 +25,14 @@ export function HealthPage() {
             <dt className="text-neutral-500">Dernière sauvegarde</dt>
             <dd>{health.data.lastBackupAt ?? 'aucune'}</dd>
             <dt className="text-neutral-500">Dossier de copie Windows</dt>
-            <dd>{health.data.backupDirOk ? 'accessible' : <span className="text-amber-800">absent ou non accessible (FFE_BACKUP_DIR)</span>}</dd>
+            <dd>
+              {health.data.backupDir} —{' '}
+              {health.data.backupDirOk ? 'accessible' : <span className="text-amber-800">absent ou non accessible (FFE_BACKUP_DIR)</span>}
+            </dd>
+            <dt className="text-neutral-500">Dernier quick_check</dt>
+            <dd>{health.data.lastQuickCheck ?? '—'}</dd>
+            <dt className="text-neutral-500">Journal</dt>
+            <dd>{health.data.logPath ?? '—'}</dd>
           </dl>
         </>
       )}

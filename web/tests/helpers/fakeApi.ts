@@ -16,6 +16,7 @@ type ProjectItemRead = components['schemas']['ProjectItemRead']
 type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 type BudgetLineRead = components['schemas']['BudgetLineRead']
 type BudgetRowRead = components['schemas']['BudgetRowRead']
+type SettingRead = components['schemas']['SettingRead']
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -31,6 +32,9 @@ export type FakeApi = {
   zones: ZoneRead[]
   items: ProjectItemRead[]
   budgets: BudgetLineRead[]
+  setting: SettingRead
+  lastBackupAt: string | null
+  backupDirOk: boolean
   events: {
     id: number
     projectItemId: number
@@ -971,6 +975,24 @@ export function installFakeApi(
       updatedAt: NOW,
       ...b,
     })),
+    setting: {
+      id: 1,
+      defaultVatBp: 2000,
+      baseCurrency: 'EUR',
+      seedCategoryVersion: 1,
+      projectCodePrefix: '',
+      defaultContingencyBp: 1000,
+      agencyName: '',
+      agencyAddress: null,
+      agencyEmail: null,
+      agencyPhone: null,
+      agencySiret: null,
+      agencyVatNumber: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    },
+    lastBackupAt: null,
+    backupDirOk: true,
     requests: [],
     down: false,
     restore: () => {
@@ -988,7 +1010,41 @@ export function installFakeApi(
     if (state.down) throw new TypeError('Failed to fetch')
 
     if (url.pathname === '/api/v1/health') {
-      return json(200, { ok: true, dbPath: '/tmp/ffe.sqlite', isDevDb: true, schemaRevision: '0002', lastBackupAt: null, backupDirOk: true })
+      return json(200, {
+        ok: true,
+        dbPath: '/tmp/ffe.sqlite',
+        isDevDb: true,
+        schemaRevision: '0007',
+        lastBackupAt: state.lastBackupAt,
+        backupDir: '/tmp/ffe-sauvegardes',
+        backupDirOk: state.backupDirOk,
+        lastQuickCheck: state.lastBackupAt ? 'ok' : null,
+        logPath: '/tmp/ffe/logs/ffe.log',
+      })
+    }
+    if (url.pathname === '/api/v1/settings' && method === 'GET') return json(200, state.setting)
+    if (url.pathname === '/api/v1/settings' && method === 'PATCH') {
+      const patch = body as Partial<SettingRead>
+      if (typeof patch.agencySiret === 'string' && !/^[0-9]{14}$/.test(patch.agencySiret.replace(/ /g, '')))
+        return json(422, {
+          code: 'validation_error',
+          message: 'Données invalides.',
+          details: [{ field: 'agencySiret', message: 'Format attendu : 14 chiffres.' }],
+        })
+      Object.assign(state.setting, patch, { updatedAt: LATER })
+      if (typeof patch.agencySiret === 'string') state.setting.agencySiret = patch.agencySiret.replace(/ /g, '')
+      return json(200, state.setting)
+    }
+    if (url.pathname === '/api/v1/system/backup' && method === 'POST') {
+      state.lastBackupAt = '2026-10-10T08:00:00Z'
+      const copied = state.backupDirOk
+      return json(200, {
+        path: '/tmp/ffe/backups/ffe-20261010-080000.sqlite',
+        copiedTo: copied ? '/tmp/ffe-sauvegardes/ffe-20261010-080000.sqlite' : null,
+        copyError: copied ? null : 'Dossier de copie absent ou non accessible : /tmp/ffe-sauvegardes',
+        quickCheck: 'ok',
+        at: '2026-10-10T08:00:00Z',
+      })
     }
     const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|zones|project-items|placements|dashboard)(?:\/(.+))?$/.exec(
       url.pathname,

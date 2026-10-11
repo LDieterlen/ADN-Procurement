@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/suppliers', label: 'Fournisseurs' },
   { to: '/manufacturers', label: 'Fabricants' },
   { to: '/categories', label: 'Catégories' },
+  { to: '/settings', label: 'Réglages' },
   { to: '/health', label: 'Santé' },
 ]
 

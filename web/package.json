@@ -12,7 +12,9 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "check": "tsc --noEmit && prettier --check . && vitest run",
-    "gen:api": "node scripts/gen-api.ts"
+    "gen:api": "node scripts/gen-api.ts",
+    "e2e": "PLAYWRIGHT_BROWSERS_PATH=$HOME/.persist/ms-playwright playwright test",
+    "e2e:install": "PLAYWRIGHT_BROWSERS_PATH=$HOME/.persist/ms-playwright playwright install chromium"
   },
   "dependencies": {
     "@tailwindcss/vite": "4.3.3",
@@ -25,6 +27,7 @@
     "tailwindcss": "4.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
