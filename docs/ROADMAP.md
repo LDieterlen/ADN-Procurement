@@ -167,7 +167,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : réception partielle puis totale ; factures d'acompte et de solde ; budget cohérent.
 - **Décisions préalables** : D10c.1 factures + paiements en une table (défaut) ; D10c.2 réception partielle autorisée (défaut).
 - **Risques** : trésorerie TTC et TVA d'achat hors périmètre → exporter, ne pas comptabiliser.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 10c close` (hashes dans le JOURNAL). D10c.1 et D10c.2 : défauts (ADR-0008). Critère prouvé par `test_api_delivery_invoice.py` : réception 6/12 puis 6/12 + 2/2 → `partially_delivered` puis `closed`, lignes `delivered` ; acompte 3 885 GBP (4 545,45 €) et solde 9 065 GBP → Facturé 15 151,50 €, Payé 4 545,45 € après paiement, Engagé 15 151,56 € inchangé. TVA et TTC des factures enregistrés tels quels, jamais sommés dans le budget.
 
 ## F1 — Exports xlsx
 
@@ -230,6 +230,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, besoin, étape où le reprendre), au lieu d'entrer dans le code. Vidé ou promu en étape lors d'une revue de feuille de route.
 
 - 2026-10-11 — `ffe db restore --with-files` : recopier `FFE_BACKUP_DIR/files/` vers `files/` par la CLI (aujourd'hui manuel, RUNBOOK §5) ; à reprendre avec 10c ou à la première restauration réelle.
+- 2026-10-11 — Réceptions et factures : paiements partiels ou multiples par facture (`payment` additive, ADR-0008 « Repli ») ; alerte « facture échue » dans `GET /projects/{id}/alerts` ; à reprendre après usage.
 - 2026-10-11 — Bons de commande : « Engagé » sur le tableau de bord multi-projets ; export PDF du document (aujourd'hui : impression navigateur) ; à reprendre avec F1–F2.
 - 2026-10-11 — Devis : édition en place d'une ligne de devis et « dé-retenir » dans l'UI (API prête : `PATCH /quote-lines/{id}`) ; à reprendre après usage (10a).
 - 2026-10-11 — Tableau de bord : préférences de tri et de masquage des projets `prospect` (étape 8, défaut : tous les projets non clos) ; à reprendre après usage.
