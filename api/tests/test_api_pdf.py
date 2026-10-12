@@ -15,7 +15,6 @@ from conftest import (
     PNG_BYTES,
     make_category,
     make_location,
-    make_manufacturer,
     make_project,
     make_supplier,
 )
@@ -53,7 +52,6 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         multiplier=12,
     )
     lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
-    flos = make_manufacturer(session, clock, name="Flos")
     dixon = make_supplier(
         session,
         clock,
@@ -70,7 +68,6 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         json={
             "name": "Beat Light Fat",
             "categoryId": lud.id,
-            "manufacturerId": flos.id,
             "reference": "BLS01",
             "supplierId": dixon.id,
             "finish": "laiton",
@@ -130,7 +127,7 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert [a["item_code"] for a in lobby["articles"]] == ["LOB-LUD-01", "LOB-LUD-02"]
     assert [a["item_code"] for a in room["articles"]] == ["LOB-LUD-01"]
     beat = lobby["articles"][0]
-    assert beat["manufacturer"] == "Flos" and beat["reference"] == "BLS01"
+    assert beat["reference"] == "BLS01" and beat["supplier_name"] == "Tom Dixon"
     assert beat["representative"] == "Djamel Sabeur" and beat["email"] == "djamel@example.com"
     assert (
         beat["photo"] == world["photo"]["sha256"] + ".png"

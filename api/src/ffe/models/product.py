@@ -15,7 +15,7 @@ class Product(TimestampedMixin, Base):
         CheckConstraint("list_price_cents IS NULL OR list_price_cents >= 0", name="list_price_min"),
         CheckConstraint("length(currency) = 3", name="currency_length"),
         Index("ix_product_category_id", "category_id"),
-        Index("ix_product_manufacturer_id", "manufacturer_id", "reference"),
+        Index("ix_product_reference", "supplier_id", "reference"),
         Index("ix_product_supplier_id", "supplier_id"),
         Index("ix_product_archived_at", "archived_at", "name"),
         STRICT,
@@ -25,9 +25,6 @@ class Product(TimestampedMixin, Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     category_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("category.id", ondelete="RESTRICT"), nullable=False
-    )
-    manufacturer_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("manufacturer.id", ondelete="RESTRICT")
     )
     reference: Mapped[str | None] = mapped_column(Text)
     supplier_id: Mapped[int | None] = mapped_column(

@@ -9,14 +9,12 @@ from ffe.models import Category, Project
 from ffe.schemas.budget import BudgetLineIn, BudgetLinesPut
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.location import LocationCreate
-from ffe.schemas.manufacturer import ManufacturerCreate
 from ffe.schemas.project import ProjectCreate
 from ffe.schemas.project_item import PlacementCreate, ProjectItemCreate, StatusChange
 from ffe.schemas.supplier import SupplierCreate
 from ffe.services.budget import put_budget_lines
 from ffe.services.client import create_client
 from ffe.services.location import create_location
-from ffe.services.manufacturer import create_manufacturer
 from ffe.services.project import create_project
 from ffe.services.project_item import change_status, create_item
 from ffe.services.supplier import create_supplier
@@ -37,8 +35,6 @@ def seed_demo(engine: Engine, clock: Clock) -> Project | None:
         client = create_client(
             session, ClientCreate(name="Belvédère Hospitality", kind="company"), clock
         )
-        flos = create_manufacturer(session, ManufacturerCreate(name="Flos"), clock)
-        tacchini = create_manufacturer(session, ManufacturerCreate(name="Tacchini"), clock)
         silvera = create_supplier(
             session,
             SupplierCreate(
@@ -111,7 +107,6 @@ def seed_demo(engine: Engine, clock: Clock) -> Project | None:
             ProjectItemCreate(
                 name="Canapé Sesann 3 places",
                 category_id=types["AS"],
-                manufacturer_id=tacchini.id,
                 supplier_id=silvera.id,
                 reference="SESANN-3",
                 family="edition",
@@ -131,7 +126,6 @@ def seed_demo(engine: Engine, clock: Clock) -> Project | None:
             ProjectItemCreate(
                 name="Lampe de chevet IC Lights T1",
                 category_id=types["LUD"],
-                manufacturer_id=flos.id,
                 supplier_id=silvera.id,
                 reference="IC-T1-LOW",
                 family="edition",

@@ -16,7 +16,6 @@ from ffe.models import (
     Category,
     Client,
     Location,
-    Manufacturer,
     Product,
     Project,
     ProjectItem,
@@ -42,7 +41,6 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
     locations = {
         z.id: z for z in session.scalars(select(Location).where(Location.project_id == project_id))
     }
-    manufacturers = {m.id: m.name for m in session.scalars(select(Manufacturer))}
     suppliers = {s.id: s for s in session.scalars(select(Supplier))}
     categories = {c.id: c for c in session.scalars(select(Category))}
     rows: list[dict[str, Any]] = []
@@ -74,9 +72,6 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
                     "family": fr.ITEM_FAMILY_LABELS.get(item.family or "", ""),
                     "usage": fr.ITEM_USAGE_LABELS.get(item.usage or "", ""),
                     "comments": item.comments,
-                    "manufacturer": (
-                        manufacturers.get(item.manufacturer_id) if item.manufacturer_id else None
-                    ),
                     "reference": item.reference,
                     "finish": item.finish,
                     "dimensions": item.dimensions,

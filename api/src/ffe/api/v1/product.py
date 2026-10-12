@@ -27,13 +27,12 @@ def list_products(
     q: Annotated[str | None, Query(max_length=200)] = None,
     include_archived: Annotated[bool, Query(alias="includeArchived")] = False,
     category_id: Annotated[int | None, Query(alias="categoryId", ge=1)] = None,
-    manufacturer_id: Annotated[int | None, Query(alias="manufacturerId", ge=1)] = None,
     supplier_id: Annotated[int | None, Query(alias="supplierId", ge=1)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[ProductRead]:
     items, total = service.list_products(
-        session, q, include_archived, category_id, manufacturer_id, supplier_id, limit, offset
+        session, q, include_archived, category_id, supplier_id, limit, offset
     )
     return Page(items=[ProductRead.from_model(p) for p in items], total=total)
 

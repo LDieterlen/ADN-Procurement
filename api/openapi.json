@@ -2079,17 +2079,6 @@
             ],
             "title": "Listpricecents"
           },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
-          },
           "name": {
             "maxLength": 200,
             "minLength": 1,
@@ -2418,17 +2407,6 @@
             ],
             "title": "Listpricecents"
           },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
-          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -2486,7 +2464,6 @@
           "id",
           "name",
           "categoryId",
-          "manufacturerId",
           "reference",
           "supplierId",
           "listPriceCents",
@@ -2563,17 +2540,6 @@
               }
             ],
             "title": "Listpricecents"
-          },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
           },
           "name": {
             "anyOf": [
@@ -2913,17 +2879,6 @@
             "title": "Kind",
             "type": "string"
           },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
-          },
           "name": {
             "anyOf": [
               {
@@ -3197,17 +3152,6 @@
             "title": "Kind",
             "type": "string"
           },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
-          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -3348,7 +3292,6 @@
           "kind",
           "categoryId",
           "productId",
-          "manufacturerId",
           "supplierId",
           "name",
           "reference",
@@ -3496,17 +3439,6 @@
               }
             ],
             "title": "Itemcode"
-          },
-          "manufacturerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manufacturerid"
           },
           "name": {
             "anyOf": [
@@ -6111,23 +6043,6 @@
                 }
               ],
               "title": "Categoryid"
-            }
-          },
-          {
-            "in": "query",
-            "name": "manufacturerId",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Manufacturerid"
             }
           },
           {

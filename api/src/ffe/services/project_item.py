@@ -18,7 +18,6 @@ from ffe.i18n import fr
 from ffe.models import (
     Category,
     Location,
-    Manufacturer,
     Product,
     ProjectItem,
     ProjectItemEvent,
@@ -47,7 +46,6 @@ PRICE_FIELDS = ("unit_cost_cents", "currency", "fx_rate_micro", "discount_bp")
 COPIED_FROM_PRODUCT = (
     "name",
     "category_id",
-    "manufacturer_id",
     "reference",
     "supplier_id",
     "finish",
@@ -266,9 +264,6 @@ def _resolve_defaults(
     _check_reference(session, Category, "categoryId", values["category_id"], "Type de produit")
     if not values["name"]:
         raise _err("name", fr.ITEM_NAME_REQUIRED)
-    _check_reference(
-        session, Manufacturer, "manufacturerId", values["manufacturer_id"], "Fabricant"
-    )
     supplier = _check_reference(
         session, Supplier, "supplierId", values["supplier_id"], "Fournisseur"
     )
@@ -287,15 +282,14 @@ def _resolve_defaults(
 
 
 def _catalogue_product(session: Session, values: dict[str, Any], now: str) -> Product:
-    """ADR-0013: a free article joins the catalogue — the active twin (manufacturer + reference)
+    """ADR-0013: a free article joins the catalogue — the active twin (supplier + reference)
     if there is one, else a new product built from the sheet."""
-    twin = find_twin(session, values["manufacturer_id"], values["reference"])
+    twin = find_twin(session, values["supplier_id"], values["reference"])
     if twin is not None:
         return twin
     product = Product(
         name=values["name"],
         category_id=values["category_id"],
-        manufacturer_id=values["manufacturer_id"],
         reference=values["reference"],
         supplier_id=values["supplier_id"],
         list_price_cents=values["unit_cost_cents"] or None,
@@ -522,9 +516,6 @@ def update_item(
         elif "category_id" in changes and changes["category_id"] is None:
             raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
         _check_reference(session, Product, "productId", changes.get("product_id"), "Produit")
-        _check_reference(
-            session, Manufacturer, "manufacturerId", changes.get("manufacturer_id"), "Fabricant"
-        )
         _check_reference(session, Supplier, "supplierId", changes.get("supplier_id"), "Fournisseur")
         if (
             "category_id" in changes

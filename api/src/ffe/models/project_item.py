@@ -45,7 +45,6 @@ class ProjectItem(TimestampedMixin, Base):
         Index("ix_project_item_product_id", "product_id"),
         Index("ix_project_item_supplier_id", "supplier_id"),
         Index("ix_project_item_category_id", "category_id"),
-        Index("ix_project_item_manufacturer_id", "manufacturer_id"),
         STRICT,
     )
 
@@ -60,9 +59,6 @@ class ProjectItem(TimestampedMixin, Base):
     )
     product_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("product.id", ondelete="RESTRICT")
-    )
-    manufacturer_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("manufacturer.id", ondelete="RESTRICT")
     )
     supplier_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("supplier.id", ondelete="RESTRICT")

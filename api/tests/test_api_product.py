@@ -1,4 +1,4 @@
-"""`/products`: catalogue sheet, filters, duplicate by manufacturer reference, file junctions."""
+"""`/products`: catalogue sheet, filters, duplicate by supplier reference, file junctions."""
 
 from typing import Any
 
@@ -11,7 +11,6 @@ from conftest import (
     PNG_BYTES,
     make_category,
     make_file,
-    make_manufacturer,
     make_product,
     make_supplier,
 )
@@ -62,29 +61,29 @@ def test_references_must_exist_and_be_active(
 ) -> None:
     missing = post(client, {"name": "A", "categoryId": 999})
     assert missing.status_code == 422 and missing.json()["details"][0]["field"] == "categoryId"
-    archived = make_manufacturer(session, clock, name="Old")
-    client.post(f"/api/v1/manufacturers/{archived.id}/archive")
-    response = post(client, {"name": "A", "categoryId": lum, "manufacturerId": archived.id})
+    archived = make_supplier(session, clock, name="Old")
+    client.post(f"/api/v1/suppliers/{archived.id}/archive")
+    response = post(client, {"name": "A", "categoryId": lum, "supplierId": archived.id})
     assert response.status_code == 422
     assert response.json()["details"] == [
-        {"field": "manufacturerId", "message": "Le fabricant est archivé."}
+        {"field": "supplierId", "message": "Le fournisseur est archivé."}
     ]
 
 
-def test_duplicate_manufacturer_reference(
+def test_duplicate_supplier_reference(
     client: TestClient, session: Session, clock: Clock, lum: int
 ) -> None:
-    flos = make_manufacturer(session, clock, name="Flos")
+    flos = make_supplier(session, clock, name="Flos")
     first = post(
         client,
-        {"name": "Arco", "categoryId": lum, "manufacturerId": flos.id, "reference": "F0300"},
+        {"name": "Arco", "categoryId": lum, "supplierId": flos.id, "reference": "F0300"},
     ).json()
     dup = post(
         client,
         {
             "name": "Arco noir",
             "categoryId": lum,
-            "manufacturerId": flos.id,
+            "supplierId": flos.id,
             "reference": " f0300 ",
         },
     )
@@ -98,14 +97,14 @@ def test_duplicate_manufacturer_reference(
         {
             "name": "Arco noir",
             "categoryId": lum,
-            "manufacturerId": flos.id,
+            "supplierId": flos.id,
             "reference": "F0300",
         },
         force="true",
     )
     assert forced.status_code == 201  # same reference, other finish
     assert (
-        post(client, {"name": "Sans ref", "categoryId": lum, "manufacturerId": flos.id}).status_code
+        post(client, {"name": "Sans ref", "categoryId": lum, "supplierId": flos.id}).status_code
         == 201
     )
 
@@ -114,14 +113,14 @@ def test_list_filters_and_search(
     client: TestClient, session: Session, clock: Clock, lum: int
 ) -> None:
     tab = make_category(session, clock, name="Tables", code="TAB").id
-    flos = make_manufacturer(session, clock, name="Flos")
+    flos = make_supplier(session, clock, name="Flos")
     dixon = make_supplier(session, clock, name="Tom Dixon")
     make_product(
         session,
         clock,
         name="Arco",
         category_id=lum,
-        manufacturer_id=flos.id,
+        supplier_id=flos.id,
         reference="F0300",
     )
     make_product(
@@ -136,7 +135,7 @@ def test_list_filters_and_search(
     names = lambda params: [p["name"] for p in client.get(URL, params=params).json()["items"]]  # noqa: E731
     assert names({}) == ["Arco", "Beat Light", "Table Tulip"]
     assert names({"categoryId": lum}) == ["Arco", "Beat Light"]
-    assert names({"manufacturerId": flos.id}) == ["Arco"]
+    assert names({"supplierId": flos.id}) == ["Arco"]
     assert names({"supplierId": dixon.id}) == ["Beat Light"]
     assert names({"q": "bls"}) == ["Beat Light"]
     assert names({"q": "f0300"}) == ["Arco"]

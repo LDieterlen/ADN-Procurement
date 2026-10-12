@@ -1,4 +1,4 @@
-"""`product` service: catalogue sheet, filters, duplicate by manufacturer reference, file junctions."""
+"""`product` service: catalogue sheet, filters, duplicate by supplier reference, file junctions."""
 
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from ffe.errors import (
     ValidationAppError,
 )
 from ffe.i18n import fr
-from ffe.models import Category, Manufacturer, Product, ProductFile, Supplier
+from ffe.models import Category, Product, ProductFile, Supplier
 from ffe.schemas.product import ProductCreate, ProductFileAttach, ProductFileUpdate, ProductUpdate
 from ffe.services.base import normalize_key, stamp
 from ffe.services.common import archive as common_archive
@@ -30,7 +30,6 @@ def list_products(
     q: str | None,
     include_archived: bool,
     category_id: int | None,
-    manufacturer_id: int | None,
     supplier_id: int | None,
     limit: int,
     offset: int,
@@ -40,8 +39,6 @@ def list_products(
         query = query.where(Product.archived_at.is_(None))
     if category_id is not None:
         query = query.where(Product.category_id == category_id)
-    if manufacturer_id is not None:
-        query = query.where(Product.manufacturer_id == manufacturer_id)
     if supplier_id is not None:
         query = query.where(Product.supplier_id == supplier_id)
     rows = search(list(session.scalars(query)), q, ("name", "reference"))
@@ -53,10 +50,9 @@ def get_product(session: Session, product_id: int) -> Product:
 
 
 def check_references(session: Session, data: dict[str, object]) -> None:
-    """Referenced category / manufacturer / supplier must exist and be active (422 by field)."""
+    """Referenced category / supplier must exist and be active (422 by field)."""
     checks = (
         ("category_id", Category, "categoryId", fr.CATEGORY_MUST_BE_ACTIVE),
-        ("manufacturer_id", Manufacturer, "manufacturerId", fr.MANUFACTURER_MUST_BE_ACTIVE),
         ("supplier_id", Supplier, "supplierId", fr.SUPPLIER_MUST_BE_ACTIVE),
     )
     for column, model, field, archived_message in checks:
@@ -79,17 +75,13 @@ def check_references(session: Session, data: dict[str, object]) -> None:
             raise ValidationAppError([ErrorDetail(field, archived_message)])
 
 
-def find_twin(
-    session: Session, manufacturer_id: int | None, reference: str | None
-) -> Product | None:
-    """The active product with the same manufacturer and reference, if any."""
-    if manufacturer_id is None or not reference:
+def find_twin(session: Session, supplier_id: int | None, reference: str | None) -> Product | None:
+    """The active product with the same supplier and reference, if any."""
+    if supplier_id is None or not reference:
         return None
     key = normalize_key(reference)
     for other in session.scalars(
-        select(Product).where(
-            Product.manufacturer_id == manufacturer_id, Product.archived_at.is_(None)
-        )
+        select(Product).where(Product.supplier_id == supplier_id, Product.archived_at.is_(None))
     ):
         if other.reference and normalize_key(other.reference) == key:
             return other
@@ -98,17 +90,17 @@ def find_twin(
 
 def _check_duplicate_ref(
     session: Session,
-    manufacturer_id: int | None,
+    supplier_id: int | None,
     reference: str | None,
     exclude_id: int | None,
     force: bool,
 ) -> None:
-    if manufacturer_id is None or not reference:
+    if supplier_id is None or not reference:
         return
     key = normalize_key(reference)
     rows = session.execute(
         select(Product.id, Product.reference, Product.archived_at).where(
-            Product.manufacturer_id == manufacturer_id
+            Product.supplier_id == supplier_id
         )
     ).all()
     for other_id, other_ref, archived_at in rows:
@@ -126,7 +118,7 @@ def create_product(
     with session.begin():
         values = data.model_dump()
         check_references(session, values)
-        _check_duplicate_ref(session, data.manufacturer_id, data.reference, None, force)
+        _check_duplicate_ref(session, data.supplier_id, data.reference, None, force)
         now = stamp(clock)
         product = Product(**values, created_at=now, updated_at=now)
         session.add(product)
@@ -138,12 +130,12 @@ def update_product(session: Session, product_id: int, data: ProductUpdate, clock
         product = ensure_active(get_product(session, product_id), RESOURCE)
         changes = data.model_dump(exclude_unset=True)
         check_references(session, changes)
-        manufacturer_id = changes.get("manufacturer_id", product.manufacturer_id)
+        supplier_id = changes.get("supplier_id", product.supplier_id)
         reference = changes.get("reference", product.reference)
-        if ("manufacturer_id" in changes or "reference" in changes) and (
-            manufacturer_id != product.manufacturer_id or reference != product.reference
+        if ("supplier_id" in changes or "reference" in changes) and (
+            supplier_id != product.supplier_id or reference != product.reference
         ):
-            _check_duplicate_ref(session, manufacturer_id, reference, product_id, False)
+            _check_duplicate_ref(session, supplier_id, reference, product_id, False)
         for field_name, value in changes.items():
             setattr(product, field_name, value)
         product.updated_at = stamp(clock)

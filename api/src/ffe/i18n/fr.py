@@ -87,7 +87,6 @@ PRODUCT_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
 PRODUCT_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
 PRODUCT_FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
 CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
-MANUFACTURER_MUST_BE_ACTIVE = "Le fabricant est archivé."
 SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 
 CATEGORY_NAME_TAKEN = "Un type de produit porte déjà ce nom."

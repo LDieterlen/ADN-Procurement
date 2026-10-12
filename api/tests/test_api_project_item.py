@@ -13,7 +13,6 @@ from conftest import (
     make_file,
     make_item,
     make_location,
-    make_manufacturer,
     make_product,
     make_project,
     make_supplier,
@@ -34,7 +33,6 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
         session, clock, project.id, code="CHA", name="Chambre typo A", multiplier=12
     )
     lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
-    flos = make_manufacturer(session, clock, name="Flos")
     dixon = make_supplier(
         session, clock, name="Tom Dixon", currency="GBP", default_discount_bp=1500
     )
@@ -43,7 +41,6 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
         clock,
         name="Beat Light Fat",
         category_id=lud.id,
-        manufacturer_id=flos.id,
         reference="BLS01",
         supplier_id=dixon.id,
         list_price_cents=125_000,
@@ -57,7 +54,6 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
         "lob": lob,
         "cha": cha,
         "lud": lud,
-        "flos": flos,
         "dixon": dixon,
         "lamp": lamp,
     }
@@ -82,7 +78,7 @@ def test_create_from_catalogue_copies_the_sheet_and_the_price(
     body = created.json()
     assert body["itemCode"] == "CHA-LUD-01" and body["status"] == "to_quote"
     assert body["name"] == "Beat Light Fat" and body["reference"] == "BLS01"
-    assert body["manufacturerId"] == world["flos"].id and body["supplierId"] == world["dixon"].id
+    assert body["supplierId"] == world["dixon"].id
     assert body["finish"] == "laiton" and body["dimensions"] == "Ø 36 × H 30 cm"
     assert body["sourceUrl"] == "https://example.com/beat"
     assert body["unitCostCents"] == 125_000 and body["currency"] == "GBP"
@@ -132,7 +128,6 @@ def test_free_article_joins_the_catalogue_unless_asked_otherwise(
         json={
             "name": "Chaise Gau",
             "categoryId": world["lud"].id,
-            "manufacturerId": world["flos"].id,
             "reference": "GAU-1",
             "supplierId": world["dixon"].id,
             "unitCostCents": 42_000,
@@ -147,13 +142,13 @@ def test_free_article_joins_the_catalogue_unless_asked_otherwise(
     assert product["dimensions"] == "L 45 cm" and product["supplierId"] == world["dixon"].id
     events = client.get(f"/api/v1/project-items/{free['id']}/events").json()
     assert "catalogue" in events[0]["note"]
-    # Same manufacturer and reference again: linked to the existing product, no duplicate.
+    # Same supplier and reference again: linked to the existing product, no duplicate.
     again = client.post(
         base(world),
         json={
             "name": "Chaise Gau (autre projet de couleur)",
             "categoryId": world["lud"].id,
-            "manufacturerId": world["flos"].id,
+            "supplierId": world["dixon"].id,
             "reference": " gau-1 ",
             "fxRateMicro": GBP,
             "currency": "GBP",

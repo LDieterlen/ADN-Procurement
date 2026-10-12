@@ -72,7 +72,6 @@ class ProjectItemCreate(BaseSchema):
     product_id: int | None = None
     add_to_catalogue: bool = True
     category_id: int | None = None
-    manufacturer_id: int | None = None
     supplier_id: int | None = None
     name: Short = None
     reference: Short = None
@@ -104,7 +103,6 @@ class ProjectItemUpdate(BaseSchema):
 
     product_id: int | None = None
     category_id: int | None = None
-    manufacturer_id: int | None = None
     supplier_id: int | None = None
     name: Annotated[str | None, Field(min_length=1, max_length=200)] = None
     reference: Short = None
@@ -203,7 +201,6 @@ class ProjectItemRead(BaseSchema):
     kind: ItemKind
     category_id: int | None
     product_id: int | None
-    manufacturer_id: int | None
     supplier_id: int | None
     name: str
     reference: str | None

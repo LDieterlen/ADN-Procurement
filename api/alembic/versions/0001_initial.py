@@ -156,7 +156,6 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("category_id", sa.Integer(), nullable=False),
-        sa.Column("manufacturer_id", sa.Integer(), nullable=True),
         sa.Column("reference", sa.Text(), nullable=True),
         sa.Column("supplier_id", sa.Integer(), nullable=True),
         sa.Column("list_price_cents", sa.Integer(), nullable=True),
@@ -181,12 +180,6 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["manufacturer_id"],
-            ["manufacturer.id"],
-            name=op.f("fk_product_manufacturer_id_manufacturer"),
-            ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
             ["supplier_id"],
             ["supplier.id"],
             name=op.f("fk_product_supplier_id_supplier"),
@@ -198,9 +191,7 @@ def upgrade() -> None:
     with op.batch_alter_table("product", schema=None) as batch_op:
         batch_op.create_index("ix_product_archived_at", ["archived_at", "name"], unique=False)
         batch_op.create_index("ix_product_category_id", ["category_id"], unique=False)
-        batch_op.create_index(
-            "ix_product_manufacturer_id", ["manufacturer_id", "reference"], unique=False
-        )
+        batch_op.create_index("ix_product_reference", ["supplier_id", "reference"], unique=False)
         batch_op.create_index("ix_product_supplier_id", ["supplier_id"], unique=False)
 
     op.create_table(
@@ -366,7 +357,6 @@ def upgrade() -> None:
         sa.Column("kind", sa.Text(), server_default="product", nullable=False),
         sa.Column("category_id", sa.Integer(), nullable=True),
         sa.Column("product_id", sa.Integer(), nullable=True),
-        sa.Column("manufacturer_id", sa.Integer(), nullable=True),
         sa.Column("supplier_id", sa.Integer(), nullable=True),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("reference", sa.Text(), nullable=True),
@@ -427,12 +417,6 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["manufacturer_id"],
-            ["manufacturer.id"],
-            name=op.f("fk_project_item_manufacturer_id_manufacturer"),
-            ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
             ["product_id"],
             ["product.id"],
             name=op.f("fk_project_item_product_id_product"),
@@ -457,7 +441,6 @@ def upgrade() -> None:
     )
     with op.batch_alter_table("project_item", schema=None) as batch_op:
         batch_op.create_index("ix_project_item_category_id", ["category_id"], unique=False)
-        batch_op.create_index("ix_project_item_manufacturer_id", ["manufacturer_id"], unique=False)
         batch_op.create_index("ix_project_item_product_id", ["product_id"], unique=False)
         batch_op.create_index(
             "ix_project_item_project_id", ["project_id", "sort_order"], unique=False
@@ -674,7 +657,6 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_item_status")
         batch_op.drop_index("ix_project_item_project_id")
         batch_op.drop_index("ix_project_item_product_id")
-        batch_op.drop_index("ix_project_item_manufacturer_id")
         batch_op.drop_index("ix_project_item_category_id")
 
     op.drop_table("project_item")
@@ -700,7 +682,7 @@ def downgrade() -> None:
     op.drop_table("project")
     with op.batch_alter_table("product", schema=None) as batch_op:
         batch_op.drop_index("ix_product_supplier_id")
-        batch_op.drop_index("ix_product_manufacturer_id")
+        batch_op.drop_index("ix_product_reference")
         batch_op.drop_index("ix_product_category_id")
         batch_op.drop_index("ix_product_archived_at")
 

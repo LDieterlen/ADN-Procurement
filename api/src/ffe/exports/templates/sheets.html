@@ -49,7 +49,6 @@
         {% if a["drawing"] %}<img class="photo drawing" src="{{ a["drawing"] }}" alt="Dessin {{ a["item_code"] }}">{% endif %}
       </div>
       <table class="facts">
-        <tr><th>Fabricant</th></tr><tr><td>{{ a["manufacturer"] or "" }}</td></tr>
         <tr><th>Nom produit</th></tr><tr><td>{{ a["name"] }}</td></tr>
         <tr><th>Référence</th></tr><tr><td>{{ a["reference"] or "" }}</td></tr>
         <tr><th>Fournisseur</th></tr><tr><td>{{ a["supplier_name"] or "" }}</td></tr>

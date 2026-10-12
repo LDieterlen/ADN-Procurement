@@ -26,7 +26,6 @@ def _strip(value: Any) -> Any:
 class ProductCreate(BaseSchema):
     name: Name
     category_id: int
-    manufacturer_id: int | None = None
     reference: Short = None
     supplier_id: int | None = None
     list_price_cents: Cents = None
@@ -45,7 +44,6 @@ class ProductCreate(BaseSchema):
 class ProductUpdate(BaseSchema):
     name: Name | None = None
     category_id: int | None = None
-    manufacturer_id: int | None = None
     reference: Short = None
     supplier_id: int | None = None
     list_price_cents: Cents = None
@@ -102,7 +100,6 @@ class ProductRead(BaseSchema):
     id: int
     name: str
     category_id: int
-    manufacturer_id: int | None
     reference: str | None
     supplier_id: int | None
     list_price_cents: int | None
