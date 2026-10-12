@@ -229,7 +229,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : 3 URL de fournisseurs réels donnent une fiche pré-remplie ; une URL sans JSON-LD donne au moins titre + image ; rien n'est enregistré sans confirmation.
 - **Décisions préalables** : DF5.1 dédoublonnage par `url_hash` puis `gtin` puis `(marque, ref)` avec confirmation (défaut) ; DF5.2 bonus Shopify `/products/<handle>.json` (défaut : non).
 - **Risques** : anti-bot ; CGU ; aucune capture en masse, jamais de crawl.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-12 — commits `feat(api)`, `feat(web)` (hashes dans le JOURNAL). DF5.1 : pas de dédoublonnage automatique (l'article ou le produit créé porte `sourceUrl` ; le doublon fabricant + référence du catalogue s'applique) ; DF5.2 bonus Shopify : non — défauts (ADR-0014). Périmètre volontairement générique : JSON-LD → OpenGraph → titre, aucune règle par site ; table `product_source` non créée (pas de code pour plus tard). Critère : vérifié sur tikamoon.com (nom, marque, référence, photo, prix, description) ; `test_api_capture.py` (trois sources, formats de prix, refus 422, image conservée une fois), `ItemNewPage.test.tsx` et `ProductsPage.test.tsx` (fiche pré-remplie, fabricant créé, photo jointe). **À vérifier par l'utilisateur** : deux ou trois pages de ses fournisseurs réels.
 
 ## F6 — Extension navigateur
 
