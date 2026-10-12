@@ -1,6 +1,7 @@
 // The article form fields (ADR-0013), shared by the creation page and the article page: the spec
 // sheet, then the budget block. Rendered inside a `Form`; the page owns the submit button.
 import { useWatch, type UseFormReturn } from 'react-hook-form'
+import type { CapturePreviewRead } from '../../api/queries/capture'
 import type { ProductRead } from '../../api/queries/product'
 import {
   ITEM_FAMILY_LABELS,
@@ -104,6 +105,19 @@ export function fromProduct(product: ProductRead, current: ItemFormValues): Item
     sourceUrl: product.sourceUrl ?? '',
     unitCostCents: product.listPriceCents,
     currency: product.listPriceCents !== null ? product.currency : current.currency,
+  }
+}
+
+/** A product page read by the server (ADR-0014): the generic fields, the rest stays as typed. */
+export function fromCapture(found: CapturePreviewRead, current: ItemFormValues, manufacturerId: number | null): ItemFormValues {
+  return {
+    ...current,
+    name: found.name ?? current.name,
+    manufacturerId: manufacturerId ?? current.manufacturerId,
+    reference: found.reference ?? current.reference,
+    sourceUrl: found.url,
+    unitCostCents: found.priceCents ?? current.unitCostCents,
+    currency: found.priceCents !== null && found.currency ? found.currency : current.currency,
   }
 }
 

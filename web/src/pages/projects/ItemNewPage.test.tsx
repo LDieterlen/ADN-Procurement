@@ -100,4 +100,43 @@ describe('page Nouvel article', () => {
     await screen.findByText('Fournisseur créé.')
     expect((screen.getByLabelText('Fournisseur') as HTMLSelectElement).value).toBe(String(api.suppliers.at(-1)?.id))
   })
+
+  test('coller une adresse : la fiche est pré-remplie, le fabricant créé, la photo jointe à la création', async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/new')
+    const box = await screen.findByRole('region', { name: 'Coller une adresse' })
+    await user.type(within(box).getByLabelText('Adresse de la fiche produit'), 'https://www.tikamoon.com/art-chaise-7718.htm')
+    await user.click(within(box).getByRole('button', { name: 'Lire la page' }))
+    expect(await within(box).findByText('Santino - Chaise en chêne massif et cuir')).toBeTruthy()
+    expect(within(box).getByText(/Tikamoon · réf. 7718 · 399,00 EUR affiché/)).toBeTruthy()
+    await user.click(within(box).getByRole('button', { name: 'Utiliser' }))
+    await screen.findByText(/Fiche pré-remplie/)
+    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('Santino - Chaise en chêne massif et cuir')
+    expect((screen.getByLabelText('Référence') as HTMLInputElement).value).toBe('7718')
+    expect((screen.getByLabelText('Prix unitaire HT') as HTMLInputElement).value).toBe('399,00')
+    expect((screen.getByLabelText('Lien internet') as HTMLInputElement).value).toBe('https://www.tikamoon.com/art-chaise-7718.htm')
+    expect(api.manufacturers.at(-1)?.name).toBe('Tikamoon')
+    expect((screen.getByLabelText('Fabricant') as HTMLSelectElement).value).toBe(String(api.manufacturers.at(-1)?.id))
+    expect(api.files).toHaveLength(1) // the image was downloaded by the server on « Utiliser »
+    await screen.findByRole('option', { name: 'AS — Assise' })
+    await user.selectOptions(screen.getByLabelText('Type'), '2')
+    await user.click(screen.getByRole('button', { name: "Créer l'article" }))
+    await screen.findByRole('heading', { name: 'Santino - Chaise en chêne massif et cuir' })
+    expect(api.items[0]).toMatchObject({
+      reference: '7718',
+      unitCostCents: 39_900,
+      manufacturerId: api.manufacturers.at(-1)?.id,
+      sourceUrl: 'https://www.tikamoon.com/art-chaise-7718.htm',
+    })
+    expect(api.items[0]?.files[0]).toMatchObject({ fileId: 1, isPrimary: true })
+  })
+
+  test('une page illisible affiche le message du serveur', async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/new')
+    const box = await screen.findByRole('region', { name: 'Coller une adresse' })
+    await user.type(within(box).getByLabelText('Adresse de la fiche produit'), 'https://shop.example.com/nothing')
+    await user.click(within(box).getByRole('button', { name: 'Lire la page' }))
+    expect(await within(box).findByRole('alert')).toHaveProperty('textContent', 'Aucune fiche produit lisible sur cette page.')
+  })
 })

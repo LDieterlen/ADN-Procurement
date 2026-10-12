@@ -5,19 +5,20 @@ import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
-import { useManufacturers } from '../../api/queries/manufacturer'
+import { useCreateManufacturer, useManufacturers } from '../../api/queries/manufacturer'
 import { useProducts } from '../../api/queries/product'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
-import { useCreateItem } from '../../api/queries/projectItem'
+import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
+import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { NewManufacturerModal, NewSupplierModal } from './InlineCreate'
-import { EMPTY_ITEM, fromProduct, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
+import { EMPTY_ITEM, fromCapture, fromProduct, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
 
@@ -33,7 +34,10 @@ export function ItemNewPage() {
   const [search, setSearch] = useState('')
   const products = useProducts({ ...ALL, q: search, categoryId: null, manufacturerId: null, supplierId: null, limit: 50 })
   const create = useCreateItem()
+  const attach = useAttachItemFile()
+  const createManufacturer = useCreateManufacturer()
   const toast = useToast()
+  const [captured, setCaptured] = useState<Captured | null>(null)
   const [modal, setModal] = useState<'manufacturer' | 'supplier' | null>(null)
   const [productId, setProductId] = useState<number | null>(null)
   const [addToCatalogue, setAddToCatalogue] = useState(true)
@@ -50,6 +54,28 @@ export function ItemNewPage() {
     setFormKey((k) => k + 1) // MoneyField and BpField keep their own text: remount them
   }
 
+  /** The brand read on the page becomes a manufacturer: the existing one, or a new one. */
+  async function manufacturerFor(brand: string | null): Promise<number | null> {
+    if (!brand) return null
+    const known = (manufacturers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
+    if (known) return known.id
+    try {
+      return (await createManufacturer.mutateAsync({ data: { name: brand, website: null, notes: null }, force: false })).id
+    } catch (error) {
+      if (isApiError(error) && error.existingId !== undefined) return error.existingId
+      return null
+    }
+  }
+
+  async function useCapture(result: Captured) {
+    setCaptured(result)
+    setProductId(null)
+    const manufacturerId = await manufacturerFor(result.preview.brand)
+    form.reset(fromCapture(result.preview, form.getValues(), manufacturerId))
+    setFormKey((k) => k + 1)
+    toast.show({ kind: 'success', message: 'Fiche pré-remplie depuis la page ; vérifier le prix (souvent TTC) et choisir le type.' })
+  }
+
   async function submit(values: ItemFormValues) {
     setBanner(null)
     const milli = textToMilli(qty)
@@ -64,7 +90,12 @@ export function ItemNewPage() {
           qtyMilli: milli,
         }),
       })
-      toast.show({ kind: 'success', message: `${created.itemCode} ajouté ; ajouter sa photo si besoin.` })
+      if (captured?.image) {
+        await attach
+          .mutateAsync({ itemId: created.id, data: { fileId: captured.image.id, kind: 'image', isPrimary: true, caption: null, sortOrder: 0 } })
+          .catch(() => undefined)
+      }
+      toast.show({ kind: 'success', message: `${created.itemCode} ajouté${captured?.image ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.` })
       navigate(`/projects/${projectId}/items/${created.id}`)
     } catch (error) {
       if (!isApiError(error)) throw error
@@ -123,6 +154,9 @@ export function ItemNewPage() {
         }
       />
       <div className="space-y-6">
+        <Card title="Coller une adresse" label="Coller une adresse">
+          <UrlCaptureBox onUse={(result) => void useCapture(result)} />
+        </Card>
         <Card title="Depuis le catalogue" label="Depuis le catalogue">
           <div className="grid grid-cols-3 gap-4">
             <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">

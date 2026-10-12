@@ -3,7 +3,7 @@ import { useRef, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
-import { useManufacturers } from '../../api/queries/manufacturer'
+import { useCreateManufacturer, useManufacturers } from '../../api/queries/manufacturer'
 import {
   fileContentUrl,
   useArchiveProduct,
@@ -19,6 +19,7 @@ import {
 } from '../../api/queries/product'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Button } from '../../components/ui/Button'
+import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { PageHeader } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -26,6 +27,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { useSubmitErrors } from '../common/useSubmitErrors'
 import { ProductForm, toPayload, type ProductFormValues } from './ProductForm'
+import { Card } from '../../components/ui/Card'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
 const KIND_LABELS = { image: 'Image', datasheet: 'Fiche technique', drawing: 'Dessin', other: 'Autre' } as const
@@ -161,14 +163,49 @@ export function ProductEditPage() {
   const update = useUpdateProduct()
   const archive = useArchiveProduct()
   const unarchive = useUnarchiveProduct()
+  const attach = useAttachProductFile()
+  const createManufacturer = useCreateManufacturer()
   const errors = useSubmitErrors('produit')
+  const [captured, setCaptured] = useState<Captured | null>(null)
+  const [prefill, setPrefill] = useState<Partial<ProductFormValues> | undefined>(undefined)
+  const [formKey, setFormKey] = useState(0)
+
+  async function useCapture(result: Captured) {
+    setCaptured(result)
+    const brand = result.preview.brand
+    let manufacturerId: number | null = null
+    if (brand) {
+      const known = (manufacturers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
+      if (known) manufacturerId = known.id
+      else
+        manufacturerId = await createManufacturer
+          .mutateAsync({ data: { name: brand, website: null, notes: null }, force: false })
+          .then((m) => m.id)
+          .catch((error: unknown) => (isApiError(error) && error.existingId !== undefined ? error.existingId : null))
+    }
+    setPrefill({
+      name: result.preview.name ?? '',
+      manufacturerId,
+      reference: result.preview.reference ?? '',
+      sourceUrl: result.preview.url,
+      listPriceCents: result.preview.priceCents,
+      currency: result.preview.priceCents !== null && result.preview.currency ? result.preview.currency : 'EUR',
+    })
+    setFormKey((k) => k + 1)
+    errors.toast.show({ kind: 'success', message: 'Fiche pré-remplie depuis la page ; vérifier le prix (souvent TTC) et choisir le type.' })
+  }
 
   async function submit(values: ProductFormValues, force = false) {
     errors.reset()
     try {
       if (id === undefined) {
         const created = await create.mutateAsync({ data: toPayload(values), force })
-        errors.toast.show({ kind: 'success', message: `Produit « ${created.name} » créé ; ajouter ses photos.` })
+        if (captured?.image) {
+          await attach
+            .mutateAsync({ productId: created.id, data: { fileId: captured.image.id, kind: 'image', isPrimary: true, caption: null, sortOrder: 0 } })
+            .catch(() => undefined)
+        }
+        errors.toast.show({ kind: 'success', message: `Produit « ${created.name} » créé${captured?.image ? ' avec sa photo' : ' ; ajouter ses photos'}.` })
         navigate(`/products/${created.id}`)
       } else {
         await update.mutateAsync({ id, data: toPayload(values) })
@@ -247,12 +284,18 @@ export function ProductEditPage() {
           </>
         }
       />
+      {!product && (
+        <Card title="Coller une adresse" label="Coller une adresse" className="max-w-4xl">
+          <UrlCaptureBox onUse={(result) => void useCapture(result)} />
+        </Card>
+      )}
       {archived ? (
         <p className="text-sm text-neutral-600">Produit archivé : restaurer pour modifier.</p>
       ) : (
         <ProductForm
-          key={product?.updatedAt ?? 'new'}
+          key={product?.updatedAt ?? `new-${formKey}`}
           initial={product}
+          prefill={prefill}
           categories={toOptions(categories.data)}
           manufacturers={toOptions(manufacturers.data?.items)}
           suppliers={toOptions(suppliers.data?.items)}

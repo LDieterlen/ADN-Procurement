@@ -1,6 +1,40 @@
 // GÉNÉRÉ par `npm run gen:api` depuis api/openapi.json — ne pas éditer à la main.
 
 export interface paths {
+    "/api/v1/captures/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Capture Image */
+        post: operations["captureImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview Capture */
+        get: operations["previewCapture"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -917,6 +951,35 @@ export interface components {
         BudgetLinesPut: {
             /** Lines */
             lines: components["schemas"]["BudgetLineIn"][];
+        };
+        /** CaptureImageIn */
+        CaptureImageIn: {
+            /** Url */
+            url: string;
+        };
+        /** CapturePreviewRead */
+        CapturePreviewRead: {
+            /** Brand */
+            brand: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Description */
+            description: string | null;
+            /** Imageurl */
+            imageUrl: string | null;
+            /** Name */
+            name: string | null;
+            /** Pricecents */
+            priceCents: number | null;
+            /** Reference */
+            reference: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "json-ld" | "opengraph" | "title";
+            /** Url */
+            url: string;
         };
         /** CategoryCreate */
         CategoryCreate: {
@@ -2049,6 +2112,70 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    captureImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptureImageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    previewCapture: {
+        parameters: {
+            query: {
+                url: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapturePreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listCategories: {
         parameters: {
             query?: {

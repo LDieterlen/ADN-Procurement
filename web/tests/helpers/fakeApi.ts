@@ -1096,6 +1096,39 @@ export function installFakeApi(
       Object.assign(state.setting, patch, { updatedAt: LATER })
       return json(200, state.setting)
     }
+    if (url.pathname === '/api/v1/captures/preview' && method === 'GET') {
+      const target = url.searchParams.get('url') ?? ''
+      if (!/^https?:\/\//.test(target)) return validation('url', 'Adresse attendue en http:// ou https://.')
+      if (target.includes('nothing')) return validation('url', 'Aucune fiche produit lisible sur cette page.')
+      return json(200, {
+        url: target,
+        name: 'Santino - Chaise en chêne massif et cuir',
+        brand: 'Tikamoon',
+        reference: '7718',
+        imageUrl: target.includes('noimage') ? null : 'https://media.example.com/7718.jpg',
+        priceCents: 39900,
+        currency: 'EUR',
+        description: 'Cette chaise associe le chêne et le cuir.',
+        source: 'json-ld',
+      })
+    }
+    if (url.pathname === '/api/v1/captures/image' && method === 'POST') {
+      const target = (body as { url: string }).url
+      const existing = state.files.find((f) => f.sourceUrl === target)
+      if (existing) return json(201, existing)
+      const file: FileRead = {
+        id: state.files.length + 1,
+        sha256: 'c'.repeat(64),
+        ext: 'jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 1234,
+        originalName: '7718.jpg',
+        sourceUrl: target,
+        createdAt: NOW,
+      }
+      state.files.push(file)
+      return json(201, file)
+    }
     if (url.pathname === '/api/v1/system/backup' && method === 'POST') {
       state.lastBackupAt = '2026-10-10T08:00:00Z'
       const copied = state.backupDirOk

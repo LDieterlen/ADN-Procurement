@@ -76,6 +76,7 @@ export function toPayload(v: ProductFormValues): ProductCreate {
 
 export function ProductForm({
   initial,
+  prefill,
   categories,
   manufacturers,
   suppliers,
@@ -88,6 +89,8 @@ export function ProductForm({
   onCreateSupplier,
 }: {
   initial?: ProductRead
+  /** Creation only: values pre-filled from a product page (ADR-0014); remount the form with a `key` to apply. */
+  prefill?: Partial<ProductFormValues>
   categories: PickerOption[]
   manufacturers: PickerOption[]
   suppliers: PickerOption[]
@@ -99,7 +102,7 @@ export function ProductForm({
   banner?: string | null
   serverErrors: ErrorDetail[]
 }) {
-  const form = useForm<ProductFormValues>({ defaultValues: initial ? fromProduct(initial) : EMPTY })
+  const form = useForm<ProductFormValues>({ defaultValues: initial ? fromProduct(initial) : { ...EMPTY, ...prefill } })
   const currency = useWatch({ control: form.control, name: 'currency' })
 
   useEffect(() => {
