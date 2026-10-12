@@ -6,7 +6,7 @@ Il s'adresse à un architecte d'intérieur ou décorateur qui gère seul ses pro
 
 ## État
 
-**Étape 1 (2026-10-09) : faite : squelette `api/` et `web/`.** L'API répond sur `GET /api/v1/health`, le front affiche « API OK », `./check.sh` enchaîne les deux chaînes d'outils et deux tests de fraîcheur gardent le contrat OpenAPI à jour. Aucune table : le modèle de données se valide à l'étape 2.
+**Au 2026-10-11 : étapes 1 à 10c, F1, F2 et F4 livrées** — référentiel, produits et fichiers, projets et zones, lignes avec placements et statuts, budgets et tableau de bord, sauvegardes et réglages, devis, bons de commande, réceptions et factures, exports xlsx et PDF, import de tarifs. Restent F3 (registre d'entreprises), F5 (coller une URL) et F6 (extension navigateur). Détail et décisions : [`docs/ROADMAP.md`](docs/ROADMAP.md) et [`docs/JOURNAL.md`](docs/JOURNAL.md).
 
 ## Architecture (3 couches)
 
@@ -22,11 +22,36 @@ Le dépôt vit sur `/workspaces/Perso/FFE` (montage 9p, vu depuis Windows). Les 
 
 ## Lancer
 
-Pré-requis : `uv` ≥ 0.12 et Node 24. Première fois (ou après reconstruction du devcontainer) : `mkdir -p ~/.venvs && ln -s ~/.venvs/ffe api/.venv` pour que le venv Python vive sur ext4 et non sur le montage 9p (6× plus rapide, voir `docs/ARCHITECTURE.md` §11) ; `uv` le crée ensuite tout seul.
+Pré-requis : `uv` ≥ 0.12 et Node 24. Toutes les commandes se tapent dans le terminal du devcontainer, depuis la racine du dépôt.
 
-- Développement : `cd api && uv run ffe serve --reload` (API sur `http://127.0.0.1:8000`) et, dans un autre terminal, `cd web && npm run dev` (interface sur `http://localhost:5180`, accessible depuis le navigateur Windows ; port fixe, distinct du 5173 par défaut de Vite utilisé par d'autres projets).
-- Usage réel : `cd web && npm run build` puis `cd api && uv run ffe serve` ; l'interface est servie sur `http://127.0.0.1:8000`.
-- Vérification du dépôt : `./check.sh`.
+```bash
+# Première fois (ou après reconstruction du devcontainer)
+mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pas sur le montage 9p
+(cd api && uv sync)                                   # dépendances Python
+(cd web && npm ci)                                    # dépendances front
+(cd api && uv run ffe db migrate && uv run ffe db seed)   # base de dev (~/.persist/ffe-dev) + catégories de départ
+
+# Développement : deux terminaux
+(cd api && uv run ffe serve --reload)   # API sur http://127.0.0.1:8000
+(cd web && npm run dev)                 # interface sur http://localhost:5180 (ouvrir depuis Windows)
+
+# Usage réel (base ~/.persist/ffe) : construire le front, puis servir le tout sur un seul port
+(cd web && npm run build)
+(cd api && uv run ffe db migrate --prod && uv run ffe db seed --prod)   # une fois
+(cd api && uv run ffe serve --prod)     # interface + API sur http://127.0.0.1:8000
+
+# Base de données (serveur arrêté) ; sans --prod, la base de dev
+(cd api && uv run ffe db backup --with-files)      # sauvegarde + copie vérifiée vers FFE_BACKUP_DIR
+(cd api && uv run ffe db restore <fichier.sqlite>) # restauration (sauvegarde « pre-restore » automatique)
+(cd api && uv run ffe db check --files)            # intégrité, comptages, orphelins, sha256 des fichiers
+(cd api && uv run ffe db export-json export.json --with-files)   # copie lisible + fichiers joints
+
+# Vérifications
+./check.sh                 # ruff, pyright, pytest, tsc, prettier, vitest : la porte avant tout commit
+(cd web && npm run e2e)    # deux parcours Playwright sur une API jetable (après `npm run e2e:install`)
+```
+
+Dossier de copie Windows des sauvegardes : `/workspaces/Perso/FFE-sauvegardes/` par défaut (variable `FFE_BACKUP_DIR`), à créer une fois ; la page Réglages signale s'il manque. Procédures en cas de problème : [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 ## Documentation
 
@@ -39,7 +64,8 @@ Pré-requis : `uv` ≥ 0.12 et Node 24. Première fois (ou après reconstruction
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Feuille de route étape par étape, critères de fini, idées parquées |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Vocabulaire métier FR/EN (FF&E, OS&E, schedule, book, lead time, placement, multiplicateur…) relié aux noms de tables |
 | [`docs/JOURNAL.md`](docs/JOURNAL.md) | Journal des sessions : date, décisions prises, commits, reste à faire |
-| [`docs/decisions/`](docs/decisions/) | Décisions d'architecture (ADR-0001 stack, 0002 emplacement et sauvegardes, 0003 argent et identifiants, 0004 langues et conventions, 0005 lignes, placements et prix) |
+| [`docs/decisions/`](docs/decisions/) | Décisions d'architecture, ADR-0001 à 0011 (stack, emplacement et sauvegardes, argent, langues, lignes et prix, devis, bons de commande, réceptions et factures, exports xlsx et PDF, import de tarifs) |
+| [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Procédures : base corrompue, disque plein, migration échouée, verrou, devcontainer reconstruit, prix faux validé |
 
 ## Feuille de route
 
