@@ -39,8 +39,6 @@ erDiagram
     location ||--o{ budget_line : "enveloppe localisation"
     category ||--o{ product : "type"
     category ||--o{ project_item : "type"
-    manufacturer ||--o{ product : "fabrique"
-    manufacturer ||--o{ project_item : "fabrique"
     supplier ||--o{ product : "fournisseur"
     supplier ||--o{ project_item : "fournisseur"
     supplier ||--o{ budget_line : "enveloppe fournisseur"
@@ -157,8 +155,7 @@ Un seul niveau. Seed (`ffe db seed`, 19 types) : AS Assise, TAB Table, TBR Tabou
 |---|---|---|---|---|---|
 | name | TEXT | non | — | `length > 0` | |
 | category_id | INTEGER | non | — | FK `category` RESTRICT | type |
-| manufacturer_id | INTEGER | oui | | FK `manufacturer` RESTRICT | |
-| reference | TEXT | oui | | | doublon = même fabricant + référence normalisée (409 `duplicate`, `?force=true`) |
+| reference | TEXT | oui | | | doublon = même fournisseur + référence normalisée (409 `duplicate`, `?force=true`) |
 | supplier_id | INTEGER | oui | | FK `supplier` RESTRICT | |
 | list_price_cents | INTEGER | oui | | `>= 0` | HT dans `currency` |
 | currency | TEXT | non | `'EUR'` | `length = 3` | |
@@ -181,7 +178,6 @@ Un seul niveau. Seed (`ffe db seed`, 19 types) : AS Assise, TAB Table, TBR Tabou
 | kind | TEXT | non | `'product'` | `IN ('product','fee')` | |
 | category_id | INTEGER | oui | | FK `category` RESTRICT ; `(kind = 'fee') = (category_id IS NULL)` | type ; obligatoire pour un article |
 | product_id | INTEGER | oui | | FK `product` RESTRICT | fiche catalogue d'origine ou créée depuis l'article |
-| manufacturer_id | INTEGER | oui | | FK `manufacturer` RESTRICT | |
 | supplier_id | INTEGER | oui | | FK `supplier` RESTRICT | obligatoire pour `fee` (règle d'app) |
 | name | TEXT | non | — | `length > 0` | désignation / nom produit |
 | reference | TEXT | oui | | | référence produit |
@@ -197,9 +193,9 @@ Un seul niveau. Seed (`ffe db seed`, 19 types) : AS Assise, TAB Table, TBR Tabou
 | indice | TEXT | oui | | | lettre de la diffusion des fiches où l'article a changé pour la dernière fois (§7) |
 | sort_order | INTEGER | non | 0 | | |
 
-Index : `(project_id, sort_order)`, `(project_id, status)`, `product_id`, `supplier_id`, `category_id`, `manufacturer_id`.
+Index : `(project_id, sort_order)`, `(project_id, status)`, `product_id`, `supplier_id`, `category_id`.
 
-Création (`services/project_item.create_item`) : depuis `product_id`, tout champ absent de la fiche (`name`, `category_id`, `manufacturer_id`, `reference`, `supplier_id`, `finish`, `dimensions`, `source_url`) et le prix sont copiés ; sans produit, `category_id` et `name` sont requis ; `currency` : donnée, sinon celle du produit à prix, sinon celle du fournisseur, sinon EUR ; `fx_rate_micro` : donné, sinon le dernier taux du projet pour cette devise, sinon 422 ; `add_to_catalogue` (défaut vrai) : un article libre crée un `product` depuis la fiche, ou se lie au jumeau actif (même fabricant + référence normalisée).
+Création (`services/project_item.create_item`) : depuis `product_id`, tout champ absent de la fiche (`name`, `category_id`, `reference`, `supplier_id`, `finish`, `dimensions`, `source_url`) et le prix sont copiés ; sans produit, `category_id` et `name` sont requis ; `currency` : donnée, sinon celle du produit à prix, sinon celle du fournisseur, sinon EUR ; `fx_rate_micro` : donné, sinon le dernier taux du projet pour cette devise, sinon 422 ; `add_to_catalogue` (défaut vrai) : un article libre crée un `product` depuis la fiche, ou se lie au jumeau actif (même fournisseur + référence normalisée).
 
 Exemple : `(3, 'CHA-LUD-01', 'product', 10, 23, 4, 9, 'Beat Light Fat', 'BLS01', 'edition', 'indoor', 'laiton', 'Ø 36 × H 30 cm', 'https://…', NULL, 125000, 'GBP', 1170000, 1500, 'DV-2026-118', 'A', NULL, 'approved', 'A', 0)`.
 

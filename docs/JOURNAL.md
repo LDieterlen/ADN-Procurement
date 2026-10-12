@@ -4,6 +4,14 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-12 — Retouche : le fabricant n'est plus rattaché aux produits ni aux articles
+
+**Compte rendu** : demande de l'utilisateur : dans son métier les fabricants sont des artisans particuliers ; les marques listées jusqu'ici (Flos, Tikamoon…) sont des fournisseurs. `manufacturer_id` retiré de `product` et de `project_item` (migration `0001_initial.py` régénérée, ADR-0012, base de dev à recréer) ; le doublon d'un produit et le jumeau d'un article libre se lisent désormais sur **fournisseur + référence normalisée** ; filtre `manufacturerId` retiré de `GET /products` ; PDF : ligne « Fabricant » retirée de la fiche, colonne « Référence » dans le listing. « Coller une adresse » : la marque lue devient un fournisseur (existant ou créé, devise EUR). Front : sélecteur « Fabricant » retiré des formulaires article et produit, filtre retiré du catalogue, modale `NewManufacturerModal` supprimée. La page « Fabricants » reste, annuaire indépendant. Docs : DATA_MODEL §4.8 et §4.10, API, GLOSSARY, ADR-0013/0014 annotées, CLAUDE.md, README.
+
+**Commits** : `feat(api): le fabricant n'est plus rattaché aux produits ni aux articles ; doublons sur fournisseur + référence`, `feat(web): sélecteur Fabricant retiré ; la marque capturée devient un fournisseur`, `docs(repo): fabricant détaché des produits et des articles`.
+
+**À vérifier** (5 min) : après `rm ~/.persist/ffe-dev/ffe.sqlite*`, `ffe db migrate` et `ffe db seed --demo` (API arrêtée), coller une adresse Tikamoon sur « Nouvel article » : « Tikamoon » apparaît dans Fournisseur ; la fiche PDF n'a plus de ligne Fabricant ; la page Fabricants est toujours là, vide.
+
 ## 2026-10-12 — Retouche : la photo visible avant « Créer »
 
 **Compte rendu** : demande de l'utilisateur. Nouveau composant `PendingPhoto` (vignette, « Déposer une photo », « Remplacer », « Retirer ») dans la carte Article de « Nouvel article » et au-dessus du formulaire « Nouveau produit » : la photo lue sur la page, celle du produit du catalogue choisi ou une photo déposée s'affiche immédiatement et est jointe à la création (sauf si le serveur l'a déjà copiée depuis le produit). Tests étendus (`img` nommée « Photo » visible avant « Créer »). `./check.sh web` vert. **Commit** : `feat(web)`.

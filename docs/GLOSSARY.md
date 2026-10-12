@@ -18,7 +18,7 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Indice | Revision index | Lettre de diffusion des fiches de prescription (A, B, C…) ; un article porte la lettre de la diffusion où il a changé pour la dernière fois. | `project_file.indice`, `project_item.indice` |
 | Indice de devis | Quote revision | Lettre de la version du devis fournisseur (A, B…), saisie sur l'article. | `project_item.quote_indice` |
 | Prescription / spécification | Specification / to specify | Choisir et documenter un produit précis pour un emplacement. | `project_item` |
-| Listing FF&E | FF&E schedule | Tableau synthétique des articles : code, type, désignation, fabricant, fournisseur, quantité, montant HT, état, indice. | Page projet ; `GET …/exports/list.pdf` |
+| Listing FF&E | FF&E schedule | Tableau synthétique des articles : code, type, désignation, référence, fournisseur, quantité, montant HT, état, indice. | Page projet ; `GET …/exports/list.pdf` |
 | Fiches de prescription / fiche de spec | Specification sheets / spec book | Fiches illustrées, une par article, remises au client ; jamais de prix. | `GET …/exports/sheets.pdf` ; `fee` exclu |
 | Fiche technique | Cut sheet / tear sheet / datasheet | Document fabricant : dimensions, finitions, normes. | `product_file.kind = 'datasheet'` ; `file` |
 | Délai de livraison | Lead time | Durée entre commande et disponibilité. | Retiré par ADR-0013 ; accroche DATA_MODEL §8 |
@@ -68,11 +68,11 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Projet | Project | Conteneur : client, statut, budget global, échéance, adresse du chantier. | `project` |
 | Implantation | Placement | Article × localisation × quantité ; un article peut avoir plusieurs implantations ; localisation NULL = « non affecté ». | `project_item_placement` |
 | Nombre / multiplicateur | Multiplier | Nombre d'exemplaires d'une localisation type (défaut 1). | `location.multiplier` |
-| Article | Project item | Instance projet d'une fiche de prescription : nom, référence, fabricant, fournisseur, dimensions, finitions, prix, devise, statut. Entité pivot. | `project_item` |
+| Article | Project item | Instance projet d'une fiche de prescription : nom, référence, fournisseur, dimensions, finitions, prix, devise, statut. Entité pivot. | `project_item` |
 | Quantité totale | Total quantity | Σ `qty_milli × location.multiplier` sur les implantations ; calculée. | `money.py` |
 | Code FF&E | Item code / tag | `<LOC>-<TYPE>-NN` (`CHA-LUD-01`), `FR-NN` pour les frais ; unique par projet, sur plans et fiches. | `project_item.item_code` ; `item_code_sequence` |
 | Fournisseur | Supplier / vendor | Qui vend ; porte le représentant, la devise et la remise par défaut. | `supplier` |
-| Fabricant / marque | Manufacturer / brand | Qui produit (Flos). Distinct du fournisseur. | `manufacturer` |
+| Fabricant | Manufacturer | Artisan ou atelier particulier, tenu en annuaire, **jamais rattaché** à un produit ni à un article (2026-10-12). La marque lue sur une page produit est un fournisseur. | `manufacturer` |
 | Client / donneur d'ordre | Client | Particulier ou société pour qui le projet est mené. | `client` |
 | Référence | Reference | Numéro de modèle ou code de l'article. | `product.reference`, `project_item.reference` |
 | Dimensions | Dimensions | Texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm ». | `product.dimensions`, `project_item.dimensions` |
