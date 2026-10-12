@@ -47,6 +47,10 @@ class ProjectItem(TimestampedMixin, Base):
             ondelete="RESTRICT",
         ),
         CheckConstraint("length(item_code) > 0", name="item_code_not_empty"),
+        CheckConstraint(
+            "location IS NULL OR location IN ('floor', 'wall', 'ceiling', 'door', 'other')",
+            name="location_enum",
+        ),
         CheckConstraint("length(name) > 0", name="name_not_empty"),
         CheckConstraint(f"kind IN ({ITEM_KINDS_SQL})", name="kind_enum"),
         CheckConstraint(f"unit IN ({UNITS_SQL})", name="unit_enum"),
@@ -157,6 +161,10 @@ class ProjectItem(TimestampedMixin, Base):
     approved_total_qty_milli: Mapped[int | None] = mapped_column(Integer)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     internal_notes: Mapped[str | None] = mapped_column(Text)
+    # Step 11 (ADR-0012): where the article goes (floor, wall, ceiling, door, other) and the
+    # revision letter of the prescription PDF in which the line last changed.
+    location: Mapped[str | None] = mapped_column(Text)
+    indice: Mapped[str | None] = mapped_column(Text)
 
     placements: Mapped[list[ProjectItemPlacement]] = relationship(
         ProjectItemPlacement,

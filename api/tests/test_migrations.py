@@ -22,32 +22,18 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
         assert current_revision(engine) is None
         assert has_pending(engine)
         upgrade_head(engine)
-        assert current_revision(engine) == head_revision() == "0013"
+        assert current_revision(engine) == head_revision() == "0001"
         assert not has_pending(engine)
         check(engine)  # raises when models and migrations differ
     finally:
         engine.dispose()
 
 
-def test_revision_chain_is_one_migration_per_step() -> None:
-    assert revision_chain() == [
-        "0001",
-        "0002",
-        "0003",
-        "0004",
-        "0005",
-        "0006",
-        "0007",
-        "0008",
-        "0009",
-        "0010",
-        "0011",
-        "0012",
-        "0013",
-    ]
+def test_revision_chain_is_a_single_initial_migration_until_v1() -> None:
+    assert revision_chain() == ["0001"]  # ADR-0012: regenerated from the models until v1
 
 
-def test_migration_0001_seeds_the_single_setting_row(engine: Engine) -> None:
+def test_initial_migration_seeds_the_single_setting_row(engine: Engine) -> None:
     with engine.connect() as conn:
         row = conn.execute(text("SELECT id, default_vat_bp, base_currency FROM setting")).one()
     assert tuple(row) == (1, 2000, "EUR")

@@ -45,7 +45,7 @@ TABLE_ORDER: tuple[str, ...] = (
     "project_item",
     "project_item_placement",
     "project_item_event",
-    "code_sequence",
+    "item_code_sequence",
     "project_item_file",
     "budget_line",
     "quote",

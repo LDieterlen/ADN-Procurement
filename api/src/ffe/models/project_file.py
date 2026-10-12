@@ -31,5 +31,6 @@ class ProjectFile(Base):
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     variant: Mapped[str] = mapped_column(Text, nullable=False)
     issued_at: Mapped[str] = mapped_column(Text, nullable=False)
+    indice: Mapped[str | None] = mapped_column(Text)  # prescription PDF: A, B, C… (ADR-0012)
 
     file: Mapped[File] = relationship(File, lazy="joined")

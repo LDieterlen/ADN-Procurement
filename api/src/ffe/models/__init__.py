@@ -4,11 +4,11 @@ from ffe.models.base import Base
 from ffe.models.budget_line import BudgetLine
 from ffe.models.category import Category
 from ffe.models.client import Client
-from ffe.models.code_sequence import CodeSequence
 from ffe.models.delivery import Delivery
 from ffe.models.delivery_line import DeliveryLine
 from ffe.models.file import File
 from ffe.models.import_batch import ImportBatch
+from ffe.models.item_code_sequence import ItemCodeSequence
 from ffe.models.manufacturer import Manufacturer
 from ffe.models.po_sequence import PoSequence
 from ffe.models.price_observation import PriceObservation
@@ -36,11 +36,11 @@ __all__ = [
     "BudgetLine",
     "Category",
     "Client",
-    "CodeSequence",
     "Delivery",
     "DeliveryLine",
     "File",
     "ImportBatch",
+    "ItemCodeSequence",
     "Manufacturer",
     "Product",
     "ProductFile",
