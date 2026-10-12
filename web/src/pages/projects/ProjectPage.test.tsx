@@ -37,6 +37,8 @@ describe('page projet', () => {
     expect(within(table).getByText('Hébergement')).toBeTruthy()
     expect(within(table).getByText('R+1')).toBeTruthy()
     expect(within(table).getByText('×12')).toBeTruthy()
+    expect(screen.queryByLabelText('Code')).toBeNull() // the form is folded until asked
+    await user.click(screen.getByRole('button', { name: '+ Ajouter une localisation' }))
     await user.type(screen.getByLabelText('Code'), 'cha')
     await user.type(screen.getByLabelText('Nom'), 'Doublon')
     await user.click(screen.getByRole('button', { name: 'Ajouter la localisation' }))
@@ -50,6 +52,7 @@ describe('page projet', () => {
     await user.type(screen.getByLabelText('Nombre'), '4')
     await user.click(screen.getByRole('button', { name: 'Ajouter la localisation' }))
     await within(table).findByText('Junior suite')
+    expect(screen.queryByLabelText('Code')).toBeNull() // folded again after the add
     expect(api.locations.at(-1)).toMatchObject({ code: 'SUI', zone: 'Hébergement', multiplier: 4, sortOrder: 30 })
     await user.click(screen.getByRole('button', { name: 'Descendre Lobby' }))
     await waitFor(() => expect(api.locations.find((l) => l.code === 'LOB')?.sortOrder).toBe(20))

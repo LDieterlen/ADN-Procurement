@@ -59,16 +59,9 @@ function LocationForm({
       form.setError(detail.field as Path<Values>, { type: 'server', message: detail.message })
   }
   return (
-    <Form
-      form={form}
-      onSubmit={async (values) => {
-        await onSubmit(values)
-        if (!initial) form.reset(EMPTY)
-      }}
-      banner={banner}
-    >
+    <Form form={form} onSubmit={onSubmit} banner={banner}>
       <div className="grid grid-cols-5 gap-3">
-        <TextInput name="code" label="Code" placeholder="CHA" />
+        <TextInput name="code" label="Code" placeholder="CHA" autoFocus />
         <TextInput name="name" label="Nom" placeholder="Chambre typo A" />
         <TextInput name="zone" label="Zone" placeholder="Hébergement" hint="Zones communes, Hébergement…" />
         <TextInput name="level" label="Niveau" placeholder="R+1" />
@@ -96,7 +89,7 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
   const unarchive = useUnarchiveLocation()
   const reorder = useReorderLocations()
   const toast = useToast()
-  const [editing, setEditing] = useState<number | null>(null)
+  const [editing, setEditing] = useState<'new' | number | null>(null)
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
 
@@ -114,8 +107,8 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
     setServerErrors([])
     setBanner(null)
     try {
-      if (editing === null) await create.mutateAsync({ projectId, data: toPayload(values) })
-      else await update.mutateAsync({ id: editing, data: toPayload(values) })
+      if (editing === 'new') await create.mutateAsync({ projectId, data: toPayload(values) })
+      else if (editing !== null) await update.mutateAsync({ id: editing, data: toPayload(values) })
       setEditing(null)
     } catch (error) {
       fail(error)
@@ -225,14 +218,19 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
         </table>
       )}
       {!readOnly && editing === null && (
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-          <h3 className="mb-3 text-sm font-semibold">Ajouter une localisation</h3>
+        <Button variant="secondary" onClick={() => setEditing('new')}>
+          + Ajouter une localisation
+        </Button>
+      )}
+      {!readOnly && editing === 'new' && (
+        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <h3 className="mb-4 text-base font-semibold">Nouvelle localisation</h3>
           <datalist id="zone-suggestions">
             {ZONE_SUGGESTIONS.map((z) => (
               <option key={z} value={z} />
             ))}
           </datalist>
-          <LocationForm onSubmit={submit} serverErrors={serverErrors} banner={banner} submitLabel="Ajouter la localisation" />
+          <LocationForm onSubmit={submit} onCancel={() => setEditing(null)} serverErrors={serverErrors} banner={banner} submitLabel="Ajouter la localisation" />
         </div>
       )}
     </Card>

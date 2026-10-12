@@ -22,6 +22,7 @@ test('créer un projet, une localisation et un article : les totaux viennent du 
   await expect(page.getByRole('heading', { name: 'Rénovation' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Synthèse budget' })).toContainText('50 000,00 €')
 
+  await page.getByRole('button', { name: '+ Ajouter une localisation' }).click()
   await page.getByLabel('Code', { exact: true }).fill('CHA')
   await page.getByLabel('Nom', { exact: true }).fill('Chambre typo A')
   await page.getByLabel('Zone', { exact: true }).fill('Hébergement')
