@@ -28,6 +28,9 @@ build/
 !.env.example
 .claude/settings.local.json
 
+# Annuaire et documents de l'agence (données personnelles de tiers)
+references/
+
 # Système
 .DS_Store
 Thumbs.db

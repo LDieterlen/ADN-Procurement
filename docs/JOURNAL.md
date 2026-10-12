@@ -4,6 +4,14 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-12 — Annuaire : professionnels, contacts enrichis, import du fichier de l'agence (ADR-0015)
+
+**Compte rendu** : demande de l'utilisateur avec son fichier `references/ANNUAIRE CONTACTS.csv` (148 lignes, 118 entrées uniques, cinq prestations). **Décisions (mode enchaîné)** : D15.1 la table `manufacturer` devient `professional` avec `kind` (fabricant · distributeur · éditeur · artisan), savoir-faire et deux contacts, onglet « Professionnels » ; D15.2 `supplier` gagne savoir-faire, portable et un second contact ; D15.3 « Fournisseur » → fournisseurs, toute autre prestation → professionnels, comme demandé ; D15.4 import par la CLI `ffe db import-contacts <csv>` (idempotent, lignes en double lues une fois, « Pierre Frey » présent en Éditeur et en Fabricant → second renommé « Pierre Frey (Fabricant) », e-mail invalide `mcourtaud@cvl luminaires.fr` mis en note, `NC` → vide) ; D15.5 le fichier reste hors dépôt (`references/` dans `.gitignore`, données personnelles de tiers). Schéma régénéré (`0001_initial.py`), `openapi.json` et `schema.d.ts` régénérés ; tests : `test_contact_import.py` (6), `test_api_professional.py` (+1), `test_api_supplier.py` (+1), `ProfessionalsPage.test.tsx` adapté. Docs : DATA_MODEL §4.6 et §4.7, API, GLOSSARY, ARCHITECTURE, ADR-0015, CLAUDE.md, README.
+
+**Commits** : `feat(api): annuaire — table professional, contacts enrichis du fournisseur, import CSV`, `feat(web): page Professionnels, contacts dans les formulaires fournisseur et professionnel`, `docs(repo): ADR-0015 annuaire et import des contacts`.
+
+**À vérifier** (5 min) : page « Professionnels » (prestation en pastille, savoir-faire, contact) ; fiche d'un fournisseur avec portable et contact 2 ; relancer `ffe db import-contacts "references/ANNUAIRE CONTACTS.csv"` : tout est « déjà présent ».
+
 ## 2026-10-12 — Retouche : le fabricant n'est plus rattaché aux produits ni aux articles
 
 **Compte rendu** : demande de l'utilisateur : dans son métier les fabricants sont des artisans particuliers ; les marques listées jusqu'ici (Flos, Tikamoon…) sont des fournisseurs. `manufacturer_id` retiré de `product` et de `project_item` (migration `0001_initial.py` régénérée, ADR-0012, base de dev à recréer) ; le doublon d'un produit et le jumeau d'un article libre se lisent désormais sur **fournisseur + référence normalisée** ; filtre `manufacturerId` retiré de `GET /products` ; PDF : ligne « Fabricant » retirée de la fiche, colonne « Référence » dans le listing. « Coller une adresse » : la marque lue devient un fournisseur (existant ou créé, devise EUR). Front : sélecteur « Fabricant » retiré des formulaires article et produit, filtre retiré du catalogue, modale `NewManufacturerModal` supprimée. La page « Fabricants » reste, annuaire indépendant. Docs : DATA_MODEL §4.8 et §4.10, API, GLOSSARY, ADR-0013/0014 annotées, CLAUDE.md, README.

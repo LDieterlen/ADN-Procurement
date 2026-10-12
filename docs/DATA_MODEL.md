@@ -12,7 +12,7 @@ Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centai
 
 | Terme | Définition | Tables |
 |---|---|---|
-| Référentiel | Données partagées entre projets, archivées plutôt que supprimées | `client`, `category` (types de produit), `manufacturer`, `supplier`, `product`, `file` |
+| Référentiel | Données partagées entre projets, archivées plutôt que supprimées | `client`, `category` (types de produit), `professional` (annuaire), `supplier`, `product`, `file` |
 | Instance projet | Ce qu'un projet fige : la fiche de l'article, son prix, sa devise, son taux, son fournisseur, son statut | `project`, `location`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `item_code_sequence`, `project_file` |
 | Article (`project_item`) | **Une fiche de prescription** dans un projet : « Beat Light Fat, Flos, réf. BLS01, laiton, Ø 36 × H 30 cm, 1 062,50 GBP HT net ». Porte le code FF&E (`CHA-LUD-01`), le prix figé, le statut unique. Jamais l'emplacement |
 | Implantation (`project_item_placement`) | **Un emplacement d'un article** : localisation + quantité par unité. La même lampe dans le lobby (×2) et en chambre typo A (×1, localisation ×12) = un article, deux implantations, quantité totale 14 (exemple suivi en §4.9, §4.10 et §6) |
@@ -72,7 +72,7 @@ erDiagram
 | UNIQUE métier | Jamais de colonne nullable dans un UNIQUE sans `COALESCE` ; index d'expression ou partiels écrits à la main dans la migration | Deux NULL sont distincts pour SQLite |
 | FK | `foreign_keys = ON` ; `ON DELETE RESTRICT` partout sauf enfants stricts en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `product_file`, `item_code_sequence` ; toute FK a un index | Un référentiel utilisé ne disparaît jamais |
 | FK composites | `UNIQUE (id, project_id)` sur `project_item` et `location` ; implantations et budgets référencent `(x_id, project_id)` | Aucune référence croisée entre projets |
-| Archivage | `archived_at` sur `client`, `supplier`, `manufacturer`, `category`, `product`, `location` ; `project` utilise `status` ; `project_item` le statut `cancelled` | On ne perd jamais une fiche vue par un client |
+| Archivage | `archived_at` sur `client`, `supplier`, `professional`, `category`, `product`, `location` ; `project` utilise `status` ; `project_item` le statut `cancelled` | On ne perd jamais une fiche vue par un client |
 | Suppression physique bornée | `project_item` en `to_quote` sans autre événement que `created` ; `location` sans implantation ni budget ; `project_item_placement` (jamais la dernière) ; `budget_line` (par le `PUT` en bloc) ; jointures fichier | Règle d'app testée + RESTRICT en filet |
 | Fichiers | `file` dédoublonné par `sha256`, stocké `FFE_DATA_DIR/files/<sha256>.<ext>` ; `unlink` seulement si plus aucune jointure (`product_file`, `project_item_file`, `project_file`) | Une seule logique |
 | Nommage des contraintes | `naming_convention` SQLAlchemy (`pk_`, `fk_`, `uq_`, `ck_<table>_<nom>`, `ix_`) ; chaque CHECK nommé | Alembic batch exige des noms |
@@ -134,16 +134,29 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 
 Un seul niveau. Seed (`ffe db seed`, 19 types) : AS Assise, TAB Table, TBR Tabouret, MOB Gros mobilier, LIT Lit, TAP Tapis, RID Rideau, LIN Linge, LUA Luminaire architectural, LUD Luminaire décoratif, MIR Miroir, DEC Décoration, ART Artwork, ACC Accessoire, ACA Accastillage, QUI Quincaillerie, SIG Signalétique, EQU Équipement, DIV Divers.
 
-### 4.6 `manufacturer`
+### 4.6 `professional` — annuaire
 
-`name` (`length > 0`, `UNIQUE lower(name)`), `website`, `notes`, `archived_at`.
+Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tissu, artisans d'art : un carnet d'adresses, **jamais rattaché** à un produit ni à un article (ADR-0015). Chargé par `ffe db import-contacts <csv>`.
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| name | TEXT | non | — | `length > 0` ; `UNIQUE lower(name)` | doublon détecté par nom normalisé (409 `duplicate`) |
+| kind | TEXT | non | `'manufacturer'` | `IN ('manufacturer','distributor','publisher','artisan')` | prestation : Fabricant · Distributeur · Éditeur · Artisan |
+| specialty | TEXT | oui | | | savoir-faire (Confection, Tapis, Luminaire sur-mesure…) |
+| contact_name, phone, mobile, email | TEXT | oui | | | contact 1 |
+| contact2_name, contact2_phone, contact2_email | TEXT | oui | | | contact 2 |
+| website, notes | TEXT | oui | | | |
+| archived_at | TS | oui | | | |
 
 ### 4.7 `supplier`
 
 | Colonne | Type | Null | Défaut | Contrainte | Commentaire |
 |---|---|---|---|---|---|
 | name | TEXT | non | — | `length > 0` | doublon détecté par nom normalisé (409 `duplicate`) |
-| contact_name, email, phone, website | TEXT | oui | | | représentant imprimé sur la fiche de spec |
+| specialty | TEXT | oui | | | savoir-faire (Mobilier, Luminaire, Sanitaire…) |
+| contact_name, email, phone, mobile | TEXT | oui | | | représentant imprimé sur la fiche de spec (nom, e-mail, téléphone) |
+| contact2_name, contact2_phone, contact2_email | TEXT | oui | | | second contact (back office…) |
+| website | TEXT | oui | | | |
 | currency | TEXT | non | `'EUR'` | `length = 3` | devise par défaut des articles |
 | default_discount_bp | INTEGER | non | 0 | `BETWEEN 0 AND 10000` | copiée sur l'article |
 | notes | TEXT | oui | | | |

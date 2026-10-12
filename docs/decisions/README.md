@@ -47,3 +47,4 @@ Comment revenir en arrière ou faire évoluer, et à quel coût.
 | [ADR-0012](ADR-0012-prescription-codes-indice.md) | Prescription simple : codes zone-typologie, localisation, indice de diffusion, schéma repris de zéro jusqu'à la v1 | partiellement remplacée par ADR-0013 (codes, localisation) | 2026-10-12 |
 | [ADR-0013](ADR-0013-recentrage-prescription-budget.md) | Recentrage : fiche d'article autonome, statut unique, localisations, budget par axes, modules d'achat retirés | acceptée | 2026-10-12 |
 | [ADR-0014](ADR-0014-coller-une-adresse.md) | « Coller une adresse » : lecture générique d'une page produit, côté serveur, à la demande | acceptée | 2026-10-12 |
+| [ADR-0015](ADR-0015-annuaire-professionnels.md) | Annuaire : `professional` (prestation, savoir-faire, deux contacts) détaché des produits, contacts enrichis du fournisseur, import CSV | acceptée | 2026-10-12 |

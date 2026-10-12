@@ -1,6 +1,6 @@
 # FFE — outil de procurement FF&E
 
-Outil **local et mono-utilisateur** pour prescrire, chiffrer et suivre le mobilier, les luminaires et les équipements (FF&E) d'un projet d'aménagement intérieur, en résidentiel comme en hôtellerie. Il remplace les tableurs de *schedule* : un référentiel réutilisable (clients, fournisseurs, produits, fichiers, annuaire de fabricants), des projets découpés en zones (avec multiplicateur, par exemple « Chambre A × 12 »), des lignes de spécification placées dans une ou plusieurs zones, des prix figés en plusieurs devises (totaux en EUR), des statuts suivis de la prescription à l'installation, et des budgets par zone ou catégorie.
+Outil **local et mono-utilisateur** pour prescrire, chiffrer et suivre le mobilier, les luminaires et les équipements (FF&E) d'un projet d'aménagement intérieur, en résidentiel comme en hôtellerie. Il remplace les tableurs de *schedule* : un référentiel réutilisable (clients, fournisseurs, produits, fichiers, annuaire de professionnels), des projets découpés en zones (avec multiplicateur, par exemple « Chambre A × 12 »), des lignes de spécification placées dans une ou plusieurs zones, des prix figés en plusieurs devises (totaux en EUR), des statuts suivis de la prescription à l'installation, et des budgets par zone ou catégorie.
 
 Il s'adresse à un architecte d'intérieur ou décorateur qui gère seul ses projets et veut un outil fiable, simple, qui tourne sur sa machine sans dépendre d'un service en ligne.
 

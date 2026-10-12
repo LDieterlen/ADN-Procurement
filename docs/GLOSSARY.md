@@ -71,8 +71,9 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Article | Project item | Instance projet d'une fiche de prescription : nom, référence, fournisseur, dimensions, finitions, prix, devise, statut. Entité pivot. | `project_item` |
 | Quantité totale | Total quantity | Σ `qty_milli × location.multiplier` sur les implantations ; calculée. | `money.py` |
 | Code FF&E | Item code / tag | `<LOC>-<TYPE>-NN` (`CHA-LUD-01`), `FR-NN` pour les frais ; unique par projet, sur plans et fiches. | `project_item.item_code` ; `item_code_sequence` |
-| Fournisseur | Supplier / vendor | Qui vend ; porte le représentant, la devise et la remise par défaut. | `supplier` |
-| Fabricant | Manufacturer | Artisan ou atelier particulier, tenu en annuaire, **jamais rattaché** à un produit ni à un article (2026-10-12). La marque lue sur une page produit est un fournisseur. | `manufacturer` |
+| Fournisseur | Supplier / vendor | Qui vend (marques comprises) ; porte le savoir-faire, le représentant (imprimé sur les fiches), un second contact, la devise et la remise par défaut. | `supplier` |
+| Professionnel | Professional | Entrée de l'annuaire : fabricant (atelier, artisan particulier), distributeur, éditeur de tissu ou artisan d'art, avec savoir-faire et deux contacts. **Jamais rattaché** à un produit ni à un article (ADR-0015) ; la marque lue sur une page produit est un fournisseur. | `professional`, `professional.kind` |
+| Savoir-faire | Specialty | Ce que fait un fournisseur ou un professionnel (Confection, Tapis, Luminaire…), texte libre issu de l'annuaire. | `supplier.specialty`, `professional.specialty` |
 | Client / donneur d'ordre | Client | Particulier ou société pour qui le projet est mené. | `client` |
 | Référence | Reference | Numéro de modèle ou code de l'article. | `product.reference`, `project_item.reference` |
 | Dimensions | Dimensions | Texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm ». | `product.dimensions`, `project_item.dimensions` |

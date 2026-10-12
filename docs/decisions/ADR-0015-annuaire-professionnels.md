@@ -1,0 +1,12 @@
+# ADR-0015 — Annuaire : professionnels détachés des produits, contacts, import CSV
+
+- **Statut** : acceptée (2026-10-12)
+- **Contexte** : dans le métier de l'utilisateur, les « fabricants » sont des ateliers et artisans particuliers qu'on consulte, pas des marques qu'on rattache à un produit : les marques (Flos, Tikamoon…) sont des fournisseurs. Son annuaire (`ANNUAIRE CONTACTS.csv`, 118 entrées) porte une prestation (Fournisseur, Fabricant, Distributeur, Éditeur, Artisan), un savoir-faire et deux contacts (nom, téléphone, portable, e-mail).
+- **Décision** :
+  - `manufacturer_id` retiré de `product` et `project_item` ; la table `manufacturer` devient **`professional`** : `kind` (`manufacturer` · `distributor` · `publisher` · `artisan`, CHECK), `specialty`, contact 1 (`contact_name`, `phone`, `mobile`, `email`), contact 2 (`contact2_name`, `contact2_phone`, `contact2_email`), `website`, `notes`, `archived_at`. Page « Professionnels », prestation en pastille. Jamais de FK vers un produit ou un article.
+  - `supplier` gagne `specialty`, `mobile` et le même contact 2 ; le représentant (contact 1) reste celui imprimé sur les fiches.
+  - Doublon d'un produit et jumeau d'un article libre : **fournisseur + référence normalisée**. La marque lue par « Coller une adresse » devient un fournisseur (existant ou créé).
+  - **`ffe db import-contacts <csv>`** : CSV `;` (UTF-8 ou cp1252), colonnes `NOM;PRESTATION;SAVOIR-FAIRE;Contact 1;TELEPHONE;PORTABLE;MAIL;Contact 2;Telephone 2;Mail 2` ; « Fournisseur » → fournisseur (devise EUR), autre prestation → professionnel ; `NC` et vides → NULL ; e-mail invalide → NULL + note « E-mail à vérifier » ; lignes identiques lues une fois ; même nom sous deux prestations → suffixe « (Prestation) » ; nom déjà présent → ignoré (idempotent) ; prestation inconnue → refus avec le numéro de ligne. Tout passe par `services/supplier` et `services/professional`.
+  - Le fichier de l'utilisateur reste hors dépôt (`references/` ignoré) : données personnelles de tiers.
+- **Conséquences** : schéma régénéré (`0001_initial.py`, ADR-0012), base de dev recréée ; pas de table `contact` séparée tant que deux contacts suffisent (une table viendrait par `CREATE TABLE`, additive) ; aucune dépendance ajoutée (`csv` standard).
+- **Alternatives écartées** : garder `manufacturer` sur le produit en le renommant (l'utilisateur ne veut aucun rattachement) ; table `contact` générique (plus d'écrans pour deux contacts fixes) ; import via l'interface (un fichier, une fois : la CLI suffit).
