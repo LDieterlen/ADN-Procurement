@@ -12,7 +12,6 @@ beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
     suppliers: [{ name: 'Tom Dixon', currency: 'GBP', defaultDiscountBp: 1500, contactName: 'Djamel Sabeur', phone: '06 00 00 00 00' }],
-    manufacturers: [{ name: 'Flos' }],
     categories: [{ code: 'LUD', name: 'Luminaire décoratif' }],
     projects: [{ name: 'Rénovation', clientId: 1, status: 'active' }],
     locations: [
@@ -43,8 +42,6 @@ describe('page article', () => {
     expect(await screen.findByRole('heading', { name: 'Beat Light Fat' })).toBeTruthy()
     expect(screen.getByText(/14 917,56 € HT/)).toBeTruthy()
     expect(screen.getByText(/Djamel Sabeur · 06 00 00 00 00/)).toBeTruthy()
-    await screen.findByRole('option', { name: 'Flos' })
-    await user.selectOptions(screen.getByLabelText('Fabricant'), '1')
     await user.type(screen.getByLabelText('Référence'), 'BLS01')
     await user.type(screen.getByLabelText('Dimensions'), 'Ø 36 × H 30 cm')
     await user.selectOptions(screen.getByLabelText('Famille'), 'edition')
@@ -55,7 +52,6 @@ describe('page article', () => {
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
     await screen.findByText('Article enregistré.')
     expect(api.items[0]).toMatchObject({
-      manufacturerId: 1,
       reference: 'BLS01',
       dimensions: 'Ø 36 × H 30 cm',
       family: 'edition',

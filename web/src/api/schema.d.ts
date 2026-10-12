@@ -1461,8 +1461,6 @@ export interface components {
             finish?: string | null;
             /** Listpricecents */
             listPriceCents?: number | null;
-            /** Manufacturerid */
-            manufacturerId?: number | null;
             /** Name */
             name: string;
             /** Notes */
@@ -1558,8 +1556,6 @@ export interface components {
             id: number;
             /** Listpricecents */
             listPriceCents: number | null;
-            /** Manufacturerid */
-            manufacturerId: number | null;
             /** Name */
             name: string;
             /** Notes */
@@ -1585,8 +1581,6 @@ export interface components {
             finish?: string | null;
             /** Listpricecents */
             listPriceCents?: number | null;
-            /** Manufacturerid */
-            manufacturerId?: number | null;
             /** Name */
             name?: string | null;
             /** Notes */
@@ -1672,8 +1666,6 @@ export interface components {
              * @enum {string}
              */
             kind: "product" | "fee";
-            /** Manufacturerid */
-            manufacturerId?: number | null;
             /** Name */
             name?: string | null;
             /** Placements */
@@ -1737,8 +1729,6 @@ export interface components {
              * @enum {string}
              */
             kind: "product" | "fee";
-            /** Manufacturerid */
-            manufacturerId: number | null;
             /** Name */
             name: string;
             /** Placements */
@@ -1796,8 +1786,6 @@ export interface components {
             fxRateMicro?: number | null;
             /** Itemcode */
             itemCode?: string | null;
-            /** Manufacturerid */
-            manufacturerId?: number | null;
             /** Name */
             name?: string | null;
             /** Productid */
@@ -3082,7 +3070,6 @@ export interface operations {
                 q?: string | null;
                 includeArchived?: boolean;
                 categoryId?: number | null;
-                manufacturerId?: number | null;
                 supplierId?: number | null;
                 limit?: number;
                 offset?: number;

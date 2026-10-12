@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useCategories } from '../../api/queries/category'
-import { useManufacturers } from '../../api/queries/manufacturer'
 import { fileContentUrl, useProducts, type ProductRead } from '../../api/queries/product'
 import { useSuppliers } from '../../api/queries/supplier'
 import { centsToText } from '../../components/forms/MoneyField'
@@ -24,12 +23,10 @@ export function ProductsPage() {
   const [q, setQ] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
-  const [manufacturerId, setManufacturerId] = useState<number | null>(null)
   const [supplierId, setSupplierId] = useState<number | null>(null)
   const [offset, setOffset] = useState(0)
-  const products = useProducts({ q, includeArchived, categoryId, manufacturerId, supplierId, limit: LIMIT, offset })
+  const products = useProducts({ q, includeArchived, categoryId, supplierId, limit: LIMIT, offset })
   const categories = useCategories(false)
-  const manufacturers = useManufacturers(ALL)
   const suppliers = useSuppliers(ALL)
   const navigate = useNavigate()
   const toast = useToast()
@@ -114,7 +111,6 @@ export function ProductsPage() {
           className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
         />
         {filterSelect('Type', categoryId, setCategoryId, categories.data ?? [])}
-        {filterSelect('Fabricant', manufacturerId, setManufacturerId, manufacturers.data?.items ?? [])}
         {filterSelect('Fournisseur', supplierId, setSupplierId, suppliers.data?.items ?? [])}
         <label className="flex items-center gap-1.5 text-sm text-neutral-700">
           <input
@@ -145,7 +141,7 @@ export function ProductsPage() {
             rows={products.data.items}
             rowKey={(p) => p.id}
             onRowClick={(p) => navigate(`/products/${p.id}`)}
-            empty={<EmptyState title={q || categoryId || manufacturerId || supplierId ? 'Aucun produit ne correspond.' : 'Aucun produit pour l’instant.'} />}
+            empty={<EmptyState title={q || categoryId || supplierId ? 'Aucun produit ne correspond.' : 'Aucun produit pour l’instant.'} />}
           />
           <Pagination offset={offset} limit={LIMIT} total={products.data.total} onChange={setOffset} />
         </>

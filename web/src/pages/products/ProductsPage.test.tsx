@@ -68,6 +68,6 @@ describe('produits', () => {
     expect(await screen.findByRole('heading', { name: 'Santino - Chaise en chêne massif et cuir' })).toBeTruthy()
     expect(api.products.at(-1)).toMatchObject({ reference: '7718', listPriceCents: 39900, sourceUrl: 'https://www.tikamoon.com/art-chaise-7718.htm' })
     expect(api.products.at(-1)?.files[0]).toMatchObject({ fileId: 1, isPrimary: true })
-    expect(api.manufacturers.at(-1)?.name).toBe('Tikamoon')
+    expect(api.suppliers.at(-1)?.name).toBe('Tikamoon')
   })
 })

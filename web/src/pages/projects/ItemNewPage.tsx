@@ -5,11 +5,10 @@ import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
-import { useCreateManufacturer, useManufacturers } from '../../api/queries/manufacturer'
 import { useProducts, type FileRead } from '../../api/queries/product'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
 import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
-import { useSuppliers } from '../../api/queries/supplier'
+import { useCreateSupplier, useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
@@ -18,7 +17,7 @@ import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
-import { NewManufacturerModal, NewSupplierModal } from './InlineCreate'
+import { NewSupplierModal } from './InlineCreate'
 import { EMPTY_ITEM, fromCapture, fromProduct, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
@@ -30,17 +29,16 @@ export function ItemNewPage() {
   const project = useProject(projectId)
   const locations = useLocations(projectId, false)
   const categories = useCategories(false)
-  const manufacturers = useManufacturers(ALL)
   const suppliers = useSuppliers(ALL)
   const [search, setSearch] = useState('')
-  const products = useProducts({ ...ALL, q: search, categoryId: null, manufacturerId: null, supplierId: null, limit: 50 })
+  const products = useProducts({ ...ALL, q: search, categoryId: null, supplierId: null, limit: 50 })
   const create = useCreateItem()
   const attach = useAttachItemFile()
-  const createManufacturer = useCreateManufacturer()
+  const createSupplier = useCreateSupplier()
   const toast = useToast()
   const [captured, setCaptured] = useState<Captured | null>(null)
   const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
-  const [modal, setModal] = useState<'manufacturer' | 'supplier' | null>(null)
+  const [modal, setModal] = useState<'supplier' | null>(null)
   const [productId, setProductId] = useState<number | null>(null)
   const [addToCatalogue, setAddToCatalogue] = useState(true)
   const [locationId, setLocationId] = useState<string>('')
@@ -72,13 +70,13 @@ export function ItemNewPage() {
     setFormKey((k) => k + 1) // MoneyField and BpField keep their own text: remount them
   }
 
-  /** The brand read on the page becomes a manufacturer: the existing one, or a new one. */
-  async function manufacturerFor(brand: string | null): Promise<number | null> {
+  /** The brand read on the page is a supplier here: the existing one, or a new one. */
+  async function supplierFor(brand: string | null): Promise<number | null> {
     if (!brand) return null
-    const known = (manufacturers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
+    const known = (suppliers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
     if (known) return known.id
     try {
-      return (await createManufacturer.mutateAsync({ data: { name: brand, website: null, notes: null }, force: false })).id
+      return (await createSupplier.mutateAsync({ data: { name: brand, currency: 'EUR', defaultDiscountBp: 0 }, force: false })).id
     } catch (error) {
       if (isApiError(error) && error.existingId !== undefined) return error.existingId
       return null
@@ -89,8 +87,8 @@ export function ItemNewPage() {
     setCaptured(result)
     setProductId(null)
     if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
-    const manufacturerId = await manufacturerFor(result.preview.brand)
-    form.reset(fromCapture(result.preview, form.getValues(), manufacturerId))
+    const supplierId = await supplierFor(result.preview.brand)
+    form.reset(fromCapture(result.preview, form.getValues(), supplierId))
     setFormKey((k) => k + 1)
     toast.show({ kind: 'success', message: 'Fiche pré-remplie depuis la page ; vérifier le prix (souvent TTC) et choisir le type.' })
   }
@@ -226,9 +224,7 @@ export function ItemNewPage() {
                 form={form}
                 kind="product"
                 categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
-                manufacturers={options(manufacturers.data?.items)}
                 suppliers={options(suppliers.data?.items)}
-                onCreateManufacturer={() => setModal('manufacturer')}
                 onCreateSupplier={() => setModal('supplier')}
               />
               {productId === null && (
@@ -278,15 +274,6 @@ export function ItemNewPage() {
           </div>
         </Form>
       </div>
-      <NewManufacturerModal
-        open={modal === 'manufacturer'}
-        onClose={() => setModal(null)}
-        onCreated={(id) => {
-          setModal(null)
-          form.setValue('manufacturerId', id, { shouldDirty: true })
-          toast.show({ kind: 'success', message: 'Fabricant créé.' })
-        }}
-      />
       <NewSupplierModal
         open={modal === 'supplier'}
         onClose={() => setModal(null)}

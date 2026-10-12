@@ -126,7 +126,6 @@ export function productRow(p: Partial<ProductRead>, id: number): ProductRead {
     id,
     name: 'Produit',
     categoryId: 1,
-    manufacturerId: null,
     reference: null,
     supplierId: null,
     listPriceCents: null,
@@ -169,7 +168,6 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     kind: 'product',
     categoryId: 1,
     productId: null,
-    manufacturerId: null,
     supplierId: null,
     name: 'Article',
     reference: null,
@@ -425,18 +423,12 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
     (kind === 'fee' ? nextCode(state, project.id, '', 'FR') : nextCode(state, project.id, locationCode, typeCode(state, categoryId)))
   if (p.itemCode && state.items.some((i) => i.projectId === project.id && i.itemCode === p.itemCode))
     return validation('itemCode', 'Ce code FF&E est déjà utilisé dans le projet.')
-  const manufacturerId = (p.manufacturerId as number | null) ?? product?.manufacturerId ?? null
   const reference = (p.reference as string | null) ?? product?.reference ?? null
   let productId = product?.id ?? null
   let note: string | null = null
   if (kind === 'product' && !product && (p.addToCatalogue as boolean | undefined) !== false) {
     const twin = state.products.find(
-      (x) =>
-        x.archivedAt === null &&
-        x.manufacturerId === manufacturerId &&
-        manufacturerId !== null &&
-        reference &&
-        normalize(x.reference ?? '') === normalize(reference),
+      (x) => x.archivedAt === null && x.supplierId === supplierId && supplierId !== null && reference && normalize(x.reference ?? '') === normalize(reference),
     )
     const linked =
       twin ??
@@ -445,7 +437,6 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
           {
             name,
             categoryId: categoryId ?? 1,
-            manufacturerId,
             reference,
             supplierId,
             listPriceCents: (p.unitCostCents as number | null) || null,
@@ -469,7 +460,6 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       kind: kind as ProjectItemRead['kind'],
       categoryId: kind === 'fee' ? null : categoryId,
       productId,
-      manufacturerId,
       supplierId,
       name,
       reference,

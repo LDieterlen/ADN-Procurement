@@ -23,7 +23,6 @@ import { CURRENCIES } from '../suppliers/SupplierForm'
 export type ItemFormValues = {
   name: string
   categoryId: number | null
-  manufacturerId: number | null
   reference: string
   supplierId: number | null
   finish: string
@@ -44,7 +43,6 @@ export type ItemFormValues = {
 export const EMPTY_ITEM: ItemFormValues = {
   name: '',
   categoryId: null,
-  manufacturerId: null,
   reference: '',
   supplierId: null,
   finish: '',
@@ -72,7 +70,6 @@ export function fromItem(item: ProjectItemRead): ItemFormValues {
   return {
     name: item.name,
     categoryId: item.categoryId,
-    manufacturerId: item.manufacturerId,
     reference: item.reference ?? '',
     supplierId: item.supplierId,
     finish: item.finish ?? '',
@@ -97,7 +94,6 @@ export function fromProduct(product: ProductRead, current: ItemFormValues): Item
     ...current,
     name: product.name,
     categoryId: product.categoryId,
-    manufacturerId: product.manufacturerId,
     reference: product.reference ?? '',
     supplierId: product.supplierId,
     finish: product.finish ?? '',
@@ -109,11 +105,11 @@ export function fromProduct(product: ProductRead, current: ItemFormValues): Item
 }
 
 /** A product page read by the server (ADR-0014): the generic fields, the rest stays as typed. */
-export function fromCapture(found: CapturePreviewRead, current: ItemFormValues, manufacturerId: number | null): ItemFormValues {
+export function fromCapture(found: CapturePreviewRead, current: ItemFormValues, supplierId: number | null): ItemFormValues {
   return {
     ...current,
     name: found.name ?? current.name,
-    manufacturerId: manufacturerId ?? current.manufacturerId,
+    supplierId: supplierId ?? current.supplierId,
     reference: found.reference ?? current.reference,
     sourceUrl: found.url,
     unitCostCents: found.priceCents ?? current.unitCostCents,
@@ -130,7 +126,6 @@ const fxMicro = (text: string): number | null => {
 export function toUpdatePayload(v: ItemFormValues, item: ProjectItemRead): ProjectItemUpdate {
   const payload: ProjectItemUpdate = {
     name: v.name,
-    manufacturerId: v.manufacturerId,
     reference: orNull(v.reference),
     supplierId: v.supplierId,
     finish: orNull(v.finish),
@@ -164,7 +159,6 @@ export function toCreatePayload(
     productId: extra.productId,
     name: orNull(v.name),
     categoryId: v.categoryId,
-    manufacturerId: v.manufacturerId,
     reference: orNull(v.reference),
     supplierId: v.supplierId,
     finish: orNull(v.finish),
@@ -188,18 +182,14 @@ export function ItemFields({
   form,
   kind,
   categories,
-  manufacturers,
   suppliers,
-  onCreateManufacturer,
   onCreateSupplier,
   contact,
 }: {
   form: UseFormReturn<ItemFormValues>
   kind: ProjectItemRead['kind']
   categories: PickerOption[]
-  manufacturers: PickerOption[]
   suppliers: PickerOption[]
-  onCreateManufacturer?: () => void
   onCreateSupplier?: () => void
   contact?: string
 }) {
@@ -211,7 +201,6 @@ export function ItemFields({
           <TextInput name="name" label="Désignation" autoFocus />
         </div>
         {kind === 'product' ? <EntityPicker name="categoryId" label="Type" options={categories} required /> : <div />}
-        <EntityPicker name="manufacturerId" label="Fabricant" options={manufacturers} onCreate={onCreateManufacturer} />
         <TextInput name="reference" label="Référence" />
         <EntityPicker name="supplierId" label="Fournisseur" options={suppliers} onCreate={onCreateSupplier} />
         <TextInput name="dimensions" label="Dimensions" placeholder="L 120 × P 60 × H 75 cm" />

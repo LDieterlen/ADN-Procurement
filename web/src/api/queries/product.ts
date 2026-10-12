@@ -16,7 +16,6 @@ export type ProductListParams = {
   q: string
   includeArchived: boolean
   categoryId: number | null
-  manufacturerId: number | null
   supplierId: number | null
   limit: number
   offset: number
@@ -43,7 +42,6 @@ export function useProducts(params: ProductListParams) {
               q: params.q.trim() || undefined,
               includeArchived: params.includeArchived,
               categoryId: params.categoryId ?? undefined,
-              manufacturerId: params.manufacturerId ?? undefined,
               supplierId: params.supplierId ?? undefined,
               limit: params.limit,
               offset: params.offset,

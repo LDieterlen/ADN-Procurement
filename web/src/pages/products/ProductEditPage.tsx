@@ -3,7 +3,6 @@ import { useRef, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
-import { useCreateManufacturer, useManufacturers } from '../../api/queries/manufacturer'
 import {
   fileContentUrl,
   useArchiveProduct,
@@ -18,7 +17,7 @@ import {
   type FileRead,
   type ProductRead,
 } from '../../api/queries/product'
-import { useSuppliers } from '../../api/queries/supplier'
+import { useCreateSupplier, useSuppliers } from '../../api/queries/supplier'
 import { Button } from '../../components/ui/Button'
 import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { PendingPhoto } from '../../components/PendingPhoto'
@@ -159,14 +158,13 @@ export function ProductEditPage() {
   const navigate = useNavigate()
   const existing = useProduct(id)
   const categories = useCategories(false)
-  const manufacturers = useManufacturers(ALL)
   const suppliers = useSuppliers(ALL)
   const create = useCreateProduct()
   const update = useUpdateProduct()
   const archive = useArchiveProduct()
   const unarchive = useUnarchiveProduct()
   const attach = useAttachProductFile()
-  const createManufacturer = useCreateManufacturer()
+  const createSupplier = useCreateSupplier()
   const errors = useSubmitErrors('produit')
   const [captured, setCaptured] = useState<Captured | null>(null)
   const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
@@ -177,19 +175,19 @@ export function ProductEditPage() {
     setCaptured(result)
     if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
     const brand = result.preview.brand
-    let manufacturerId: number | null = null
+    let supplierId: number | null = null
     if (brand) {
-      const known = (manufacturers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
-      if (known) manufacturerId = known.id
+      const known = (suppliers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
+      if (known) supplierId = known.id
       else
-        manufacturerId = await createManufacturer
-          .mutateAsync({ data: { name: brand, website: null, notes: null }, force: false })
+        supplierId = await createSupplier
+          .mutateAsync({ data: { name: brand, currency: 'EUR', defaultDiscountBp: 0 }, force: false })
           .then((m) => m.id)
           .catch((error: unknown) => (isApiError(error) && error.existingId !== undefined ? error.existingId : null))
     }
     setPrefill({
       name: result.preview.name ?? '',
-      manufacturerId,
+      supplierId,
       reference: result.preview.reference ?? '',
       sourceUrl: result.preview.url,
       listPriceCents: result.preview.priceCents,
@@ -310,7 +308,6 @@ export function ProductEditPage() {
           initial={product}
           prefill={prefill}
           categories={toOptions(categories.data)}
-          manufacturers={toOptions(manufacturers.data?.items)}
           suppliers={toOptions(suppliers.data?.items)}
           onSubmit={(values) => submit(values)}
           submitting={create.isPending || update.isPending}

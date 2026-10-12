@@ -1,12 +1,11 @@
 // The article page (ADR-0013): photo and drawing, the spec sheet and budget in one form, the
-// placements by location, the journal. Manufacturer and supplier can be created in place.
+// placements by location, the journal. The supplier can be created in place.
 import { useEffect, useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useProjectSummary } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
-import { useManufacturers } from '../../api/queries/manufacturer'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject, type LocationRead } from '../../api/queries/project'
 import {
   ENGAGED_STATUSES,
@@ -31,7 +30,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
 import { useToast } from '../../components/ui/Toast'
-import { NewManufacturerModal, NewSupplierModal } from './InlineCreate'
+import { NewSupplierModal } from './InlineCreate'
 import { ItemFiles } from './ItemFiles'
 import { fromItem, ItemFields, toUpdatePayload, type ItemFormValues } from './ItemForm'
 import { StatusSelect } from './StatusSelect'
@@ -48,13 +47,12 @@ export function ItemPage() {
   const locations = useLocations(projectId, true)
   const summary = useProjectSummary(projectId)
   const categories = useCategories(false)
-  const manufacturers = useManufacturers(ALL)
   const suppliers = useSuppliers(ALL)
   const events = useItemEvents(itemId)
   const update = useUpdateItem()
   const remove = useDeleteItem()
   const toast = useToast()
-  const [modal, setModal] = useState<'manufacturer' | 'supplier' | null>(null)
+  const [modal, setModal] = useState<'supplier' | null>(null)
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -172,9 +170,7 @@ export function ItemPage() {
               form={form}
               kind={it.kind}
               categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
-              manufacturers={options(manufacturers.data?.items)}
               suppliers={options(suppliers.data?.items)}
-              onCreateManufacturer={readOnly ? undefined : () => setModal('manufacturer')}
               onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
               contact={
                 supplier && (supplier.contactName || supplier.phone || supplier.email)
@@ -200,15 +196,6 @@ export function ItemPage() {
           <History events={events.data ?? []} />
         </Card>
       </div>
-      <NewManufacturerModal
-        open={modal === 'manufacturer'}
-        onClose={() => setModal(null)}
-        onCreated={(id) => {
-          setModal(null)
-          form.setValue('manufacturerId', id, { shouldDirty: true })
-          toast.show({ kind: 'success', message: 'Fabricant créé.' })
-        }}
-      />
       <NewSupplierModal
         open={modal === 'supplier'}
         onClose={() => setModal(null)}

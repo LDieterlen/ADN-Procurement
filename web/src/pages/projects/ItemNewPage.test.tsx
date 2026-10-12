@@ -11,7 +11,6 @@ beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
     suppliers: [{ name: 'Tom Dixon', currency: 'GBP', defaultDiscountBp: 1500 }],
-    manufacturers: [{ name: 'Flos' }],
     categories: [
       { code: 'LUD', name: 'Luminaire décoratif', sortOrder: 10 },
       { code: 'AS', name: 'Assise', sortOrder: 5 },
@@ -115,8 +114,8 @@ describe('page Nouvel article', () => {
     expect((screen.getByLabelText('Référence') as HTMLInputElement).value).toBe('7718')
     expect((screen.getByLabelText('Prix unitaire HT') as HTMLInputElement).value).toBe('399,00')
     expect((screen.getByLabelText('Lien internet') as HTMLInputElement).value).toBe('https://www.tikamoon.com/art-chaise-7718.htm')
-    expect(api.manufacturers.at(-1)?.name).toBe('Tikamoon')
-    expect((screen.getByLabelText('Fabricant') as HTMLSelectElement).value).toBe(String(api.manufacturers.at(-1)?.id))
+    expect(api.suppliers.at(-1)?.name).toBe('Tikamoon') // the brand is a supplier here
+    expect((screen.getByLabelText('Fournisseur') as HTMLSelectElement).value).toBe(String(api.suppliers.at(-1)?.id))
     expect(api.files).toHaveLength(1) // the image was downloaded by the server on « Utiliser »
     const photo = within(screen.getByRole('region', { name: 'Article' })).getByRole('img', { name: 'Photo' })
     expect(photo.getAttribute('src')).toBe('/api/v1/files/1/content') // visible before « Créer »
@@ -127,7 +126,7 @@ describe('page Nouvel article', () => {
     expect(api.items[0]).toMatchObject({
       reference: '7718',
       unitCostCents: 39_900,
-      manufacturerId: api.manufacturers.at(-1)?.id,
+      supplierId: api.suppliers.at(-1)?.id,
       sourceUrl: 'https://www.tikamoon.com/art-chaise-7718.htm',
     })
     expect(api.items[0]?.files[0]).toMatchObject({ fileId: 1, isPrimary: true })
