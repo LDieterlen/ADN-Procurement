@@ -4,17 +4,13 @@ RESOURCE_LABELS: dict[str, str] = {
     "client": "client",
     "supplier": "fournisseur",
     "manufacturer": "fabricant",
-    "category": "catégorie",
+    "category": "type de produit",
     "product": "produit",
     "file": "fichier",
     "project": "projet",
-    "zone": "zone",
-    "quote": "devis",
-    "quote_line": "ligne de devis",
-    "purchase_order": "bon de commande",
-    "purchase_order_line": "ligne de bon de commande",
-    "delivery": "réception",
-    "supplier_invoice": "facture fournisseur",
+    "location": "localisation",
+    "project_item": "article",
+    "placement": "implantation",
 }
 
 PROJECT_STATUS_LABELS: dict[str, str] = {
@@ -31,172 +27,63 @@ CLIENT_HAS_OPEN_PROJECTS = (
     "Le client n° {id} a {count} projet(s) non clos : les clore ou les annuler avant d'archiver."
 )
 ITEM_STATUS_LABELS: dict[str, str] = {
-    "draft": "Brouillon",
-    "specified": "Spécifié",
-    "quoted": "Chiffré",
+    "to_quote": "À chiffrer",
+    "quoted": "Devisé",
+    "to_review": "À revoir",
     "approved": "Validé",
-    "ordered": "Commandé",
-    "delivered": "Livré",
-    "installed": "Installé",
+    "deposit": "Acompte",
+    "purchased": "Acheté",
     "cancelled": "Annulé",
-    "replaced": "Remplacé",
 }
-ITEM_KIND_LABELS: dict[str, str] = {
-    "ffe": "FF&E",
+ITEM_KIND_LABELS: dict[str, str] = {"product": "Article", "fee": "Frais"}
+ITEM_FAMILY_LABELS: dict[str, str] = {
+    "custom": "Pièce sur-mesure",
+    "joinery": "Agencement",
     "ose": "OS&E",
-    "custom": "Sur mesure",
-    "existing": "Existant",
-    "fee": "Frais",
+    "edition": "Pièce d'édition",
+    "gallery": "Pièce de galerie",
+    "artwork": "Artwork",
+    "textile": "Confection",
 }
-TRANSITION_MESSAGES: dict[str, str] = {
-    "same_status": "La ligne est déjà dans ce statut.",
-    "replaced_only_by_action": "« Remplacé » ne se pose que par l'action « remplacer le produit ».",
-    "no_return_after_ordered": "Commandée ou au-delà : aucun retour en arrière, seulement « annulé » avec une note.",
-    "reopen_after_ordered": "Cette ligne a été commandée : elle ne se rouvre pas (créer une nouvelle ligne).",
-    "invalid_transition": "Transition de statut impossible.",
-}
-ITEM_LOCATION_LABELS: dict[str, str] = {
-    "floor": "Sol",
-    "wall": "Mur",
-    "ceiling": "Plafond",
-    "door": "Porte",
-    "other": "Autre",
-}
-ITEM_NOTE_REQUIRED = "Une note est obligatoire pour cette transition."
-ITEM_NEEDS_NAME = "Un libellé est nécessaire."
-ITEM_NEEDS_PRODUCT = "Un produit est nécessaire (sauf sur mesure, existant ou frais)."
-ITEM_NEEDS_ZONE = "Au moins un placement dans une zone est nécessaire (sauf frais)."
-ITEM_NEEDS_SUPPLIER = "Un fournisseur est nécessaire pour chiffrer."
-ITEM_NEEDS_PRICE = "Un prix unitaire supérieur à zéro est nécessaire pour chiffrer."
-ITEM_NEEDS_ORDER_REF = "Une référence de commande est nécessaire pour passer en « commandé »."
-ITEM_CATEGORY_REQUIRED = "Une catégorie est nécessaire sans produit."
-ITEM_NAME_REQUIRED = "Un libellé est nécessaire sans produit."
+ITEM_USAGE_LABELS: dict[str, str] = {"indoor": "Intérieur", "outdoor": "Extérieur"}
+ITEM_SAME_STATUS = "L'article est déjà dans ce statut."
+ITEM_CATEGORY_REQUIRED = "Un type de produit est nécessaire."
+ITEM_NAME_REQUIRED = "Une désignation est nécessaire."
+ITEM_FEE_NEEDS_SUPPLIER = "Une ligne de frais est rattachée à un fournisseur."
+ITEM_FEE_HAS_NO_TYPE = "Une ligne de frais n'a ni type de produit, ni implantation, ni produit."
 ITEM_FX_REQUIRED = "Un taux de change est nécessaire pour une devise autre que l'euro."
 ITEM_FX_EUR_IS_ONE = "En euros, le taux de change vaut 1 000 000 (parité)."
-ITEM_EXISTING_IS_FREE = "Une ligne « existant » a un prix nul."
-ITEM_CODE_IMMUTABLE = "Le code article ne se modifie qu'en brouillon."
-ITEM_CODE_TAKEN = "Ce code article est déjà utilisé dans le projet."
-ITEM_READ_ONLY_TERMINAL = "Ligne {status} : plus aucune modification."
-ITEM_DELETE_ONLY_DRAFT = "Seul un brouillon sans historique se supprime ; annuler la ligne sinon."
-ITEM_REPLACE_ONLY_APPROVED = (
-    "Le remplacement n'est possible que depuis « validé » (avant : changer le produit en place)."
+ITEM_CODE_IMMUTABLE = "Le code FF&E ne se modifie qu'en « à chiffrer »."
+ITEM_CODE_TAKEN = "Ce code FF&E est déjà utilisé dans le projet."
+ITEM_DELETE_ONLY_NEW = (
+    "Seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon."
 )
-ITEM_NO_PRODUCT_TO_REFRESH = "Cette ligne n'est pas liée à un produit du catalogue."
-PO_STATUS_LABELS: dict[str, str] = {
-    "draft": "Brouillon",
-    "issued": "Émis",
-    "acknowledged": "Accusé de réception",
-    "partially_delivered": "Partiellement livré",
-    "closed": "Clos",
-    "cancelled": "Annulé",
-}
-PO_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
-PO_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."
-PO_ITEM_NOT_IN_PROJECT = "La ligne n'appartient pas à ce projet."
-PO_ITEM_WRONG_SUPPLIER = "La ligne {code} n'est pas chez ce fournisseur."
-PO_ITEM_WRONG_CURRENCY = "La ligne {code} n'est pas dans la devise du bon de commande ({currency})."
-PO_ITEM_NOT_APPROVED = "La ligne {code} doit être validée (statut « validé ») pour être commandée."
-PO_ITEM_ON_HOLD = "La ligne {code} est en attente."
-PO_ITEM_ALREADY_ORDERED = "La ligne {code} est déjà sur le bon de commande {number}."
-PO_ITEM_ALREADY_ON_PO = "La ligne {code} figure déjà sur ce bon de commande."
-PO_NOT_DRAFT = (
-    "Bon de commande {number} {status} : seules les modifications du brouillon sont possibles."
-)
-PO_NO_LINES = "Un bon de commande s'émet avec au moins une ligne."
-PO_CLOSED = "Bon de commande {number} {status} : plus aucune modification."
-PO_TRANSITION = "Bon de commande {number} : passage de {from_status} à {to_status} impossible."
-PO_NOTE_REQUIRED = "Une note est obligatoire pour annuler un bon de commande émis."
-PO_CANCELLED_NOTE = "BC {number} annulé : {note}"
-PO_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au bon de commande."
-PO_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au bon de commande."
-INVOICE_KIND_LABELS: dict[str, str] = {"deposit": "Acompte", "balance": "Solde", "other": "Autre"}
-DELIVERY_PO_NOT_ISSUED = (
-    "Bon de commande {number} {status} : réception possible après émission seulement."
-)
-DELIVERY_LINE_NOT_IN_PO = "La ligne {id} n'appartient pas à ce bon de commande."
-DELIVERY_LINE_DUPLICATE = "Deux quantités pour la même ligne de bon de commande."
-DELIVERY_QTY_EXCEEDS = (
-    "Ligne {code} : {received} déjà reçu(s) sur {ordered} commandé(s), {asked} de trop."
-)
-DELIVERY_NO_LINES = "Une réception porte au moins une ligne."
-DELIVERY_NOTE = "Réception {reference} du {on}."
-DELIVERY_DELETED_NOTE = "Réception {reference} du {on} supprimée (correction de saisie)."
-DELIVERY_LINE_INSTALLED = "Ligne {code} installée : cette réception ne se supprime plus."
-INVOICE_PO_CANCELLED = "Bon de commande {number} annulé : plus de facture."
-INVOICE_REFERENCE_TAKEN = "Ce bon de commande a déjà une facture portant cette référence."
-INVOICE_PAID_FROZEN = "Facture {reference} payée le {on} : plus aucune modification."
-INVOICE_PAID_ON_REQUIRED = "La date de paiement est nécessaire."
-IMPORT_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
-IMPORT_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."
-IMPORT_FILE_EMPTY = "Le fichier est vide ou sans en-tête."
-IMPORT_FILE_TYPE = "Fichier attendu : xlsx ou CSV."
-IMPORT_MAPPING_INVALID = "Mapping illisible."
-IMPORT_COLUMN_UNKNOWN = "Colonne « {column} » absente du fichier (champ {field})."
-IMPORT_PRICE_COLUMN_REQUIRED = "La colonne du prix est obligatoire."
-IMPORT_TTC_NEEDS_VAT = "Un tarif TTC demande le taux de TVA (vatBp)."
-IMPORT_CATEGORY_NOT_FOUND = "Catégorie par défaut introuvable."
-IMPORT_NO_SAVED_MAPPING = "Aucun mapping enregistré pour ce fournisseur : en fournir un."
-QUOTE_REFERENCE_TAKEN = "Ce fournisseur a déjà un devis portant cette référence dans le projet."
-QUOTE_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
-QUOTE_SUPPLIER_ARCHIVED = "Le fournisseur est archivé."
-QUOTE_ITEM_NOT_IN_PROJECT = "La ligne n'appartient pas à ce projet."
-QUOTE_ITEM_TERMINAL = "Ligne {status} : un devis ne s'y applique plus."
-QUOTE_ITEM_ALREADY_QUOTED = "Ce devis a déjà une ligne pour cet article."
-QUOTE_LINE_RETAINED = (
-    "Cette ligne de devis est retenue : retenir une autre ligne avant de la supprimer."
-)
-QUOTE_HAS_RETAINED_LINE = "Ce devis a une ligne retenue : l'écarter plutôt que le supprimer."
-QUOTE_DECLINED = "Ce devis est écarté."
-QUOTE_RETAIN_AFTER_ORDER = "Ligne {status} : commandée ou au-delà, un devis ne se retient plus."
-QUOTE_VALID_BEFORE_QUOTED = "La date de validité doit suivre la date du devis."
-QUOTE_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au devis."
-QUOTE_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au devis."
-QUOTE_RETAINED_NOTE = "Devis {reference} ({supplier}) retenu."
-PLACEMENT_ZONE_NOT_IN_PROJECT = "La zone n'appartient pas à ce projet."
-PLACEMENT_ZONE_ARCHIVED = "La zone est archivée."
-PLACEMENT_ZONE_TAKEN = "La ligne est déjà placée dans cette zone."
-PLACEMENT_PIECE_QTY = "Quantité entière attendue pour cette unité (multiple de 1 000 millièmes)."
+ITEM_PRODUCT_LINKED_NOTE = "lié au produit n° {id} du catalogue"
+PLACEMENT_LOCATION_NOT_IN_PROJECT = "La localisation n'appartient pas à ce projet."
+PLACEMENT_LOCATION_ARCHIVED = "La localisation est archivée."
+PLACEMENT_LOCATION_TAKEN = "L'article est déjà implanté dans cette localisation."
 PLACEMENT_LAST_ONE = (
-    "Une ligne garde au moins un placement : modifier celui-ci plutôt que le supprimer."
+    "Un article garde au moins une implantation : modifier celle-ci plutôt que la supprimer."
 )
-ALERT_BUDGET = "{scope} : prescrit à {pct} % du budget ou plus."
-ALERT_ORDER = "{code} : à commander avant le {on}, date dépassée."
-BUDGET_DUPLICATE_SCOPE = "Deux budgets pour le même périmètre (projet, zone, catégorie)."
-BUDGET_ZONE_NOT_IN_PROJECT = "La zone n'appartient pas à ce projet."
-BUDGET_CATEGORY_NOT_FOUND = "Catégorie introuvable."
-BUDGET_DOUBLE_COUNT = (
-    "Une catégorie et sa sous-catégorie ne peuvent pas avoir chacune un budget pour la même zone."
-)
-ZONE_CODE_TAKEN = "Une zone de ce projet porte déjà ce code."
-ZONE_NOT_EMPTY = "La zone contient des lignes ou un budget : l'archiver plutôt que la supprimer."
-ZONE_REORDER_MISMATCH = "La liste doit contenir exactement les zones actives du projet."
+PLACEMENT_ON_FEE = "Une ligne de frais n'a pas d'implantation."
+BUDGET_DUPLICATE_SCOPE = "Deux budgets pour le même périmètre."
+BUDGET_LOCATION_NOT_IN_PROJECT = "La localisation n'appartient pas à ce projet."
+BUDGET_SUPPLIER_NOT_FOUND = "Fournisseur introuvable."
+BUDGET_REFERENCE_MISMATCH = "La référence ne correspond pas au périmètre."
+LOCATION_CODE_TAKEN = "Une localisation de ce projet porte déjà ce code."
+LOCATION_REORDER_MISMATCH = "La liste doit contenir exactement les localisations actives du projet."
 
 PAYLOAD_TOO_LARGE = "Fichier trop volumineux : {mb} Mo au plus."
 FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seulement."
 FILE_EMPTY = "Fichier vide."
-PRODUCT_TTC_NEEDS_VAT = "Un prix TTC exige le taux de TVA à déduire."
-PRODUCT_DUPLICATE_REF = (
-    "Un produit actif porte déjà cette référence fabricant (n° {id}) ; "
-    "ajouter ?force=true pour créer quand même (autre finition)."
-)
-PRODUCT_DUPLICATE_REF_ARCHIVED = (
-    "Un produit archivé porte déjà cette référence fabricant (n° {id}) : le restaurer."
-)
-PRODUCT_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint au produit."
-PRODUCT_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint au produit."
+PRODUCT_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
+PRODUCT_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
 PRODUCT_FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
-CATEGORY_MUST_BE_ACTIVE = "La catégorie est archivée."
+CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
 MANUFACTURER_MUST_BE_ACTIVE = "Le fabricant est archivé."
 SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 
-CATEGORY_CODE_REQUIRED = "Une catégorie de niveau 1 porte un code (2 à 4 lettres majuscules)."
-CATEGORY_CODE_ON_CHILD = "Une sous-catégorie n'a pas de code : elle hérite de celui de son parent."
-CATEGORY_PARENT_NOT_FOUND = "Catégorie parente introuvable."
-CATEGORY_PARENT_IS_CHILD = "Deux niveaux seulement : une sous-catégorie ne peut pas avoir d'enfant."
-CATEGORY_PARENT_ARCHIVED = "La catégorie parente est archivée."
-CATEGORY_DIV_PROTECTED = "La catégorie « Divers » (DIV) ne s'archive pas."
-CATEGORY_HAS_ACTIVE_CHILDREN = "Archiver d'abord les sous-catégories actives."
-CATEGORY_NAME_TAKEN = "Une catégorie porte déjà ce nom sous le même parent."
+CATEGORY_NAME_TAKEN = "Un type de produit porte déjà ce nom."
 CATEGORY_CODE_TAKEN = "Ce code est déjà utilisé."
 
 NOT_FOUND = "{resource} n° {id} introuvable."

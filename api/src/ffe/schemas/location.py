@@ -1,4 +1,4 @@
-"""`zone` schemas (DATA_MODEL §4.4)."""
+"""`location` schemas (DATA_MODEL §4.4, ADR-0013): code, name, zone, level, multiplier."""
 
 from typing import Annotated, Any
 
@@ -10,7 +10,6 @@ from ffe.schemas.base import BaseSchema
 Code = Annotated[str, Field(min_length=1, max_length=20)]
 Name = Annotated[str, Field(min_length=1, max_length=200)]
 Short = Annotated[str | None, Field(max_length=200)]
-Long = Annotated[str | None, Field(max_length=2000)]
 Multiplier = Annotated[int, Field(ge=1, le=100000)]
 
 
@@ -18,27 +17,40 @@ def _strip(value: Any) -> Any:
     return value.strip() if isinstance(value, str) else value
 
 
-class ZoneCreate(BaseSchema):
+def _clean(value: Any) -> Any:
+    """Optional texts: stripped, empty → None."""
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return value
+
+
+class LocationCreate(BaseSchema):
     code: Code
     name: Name
-    kind: Short = None
+    zone: Short = None
+    level: Short = None
     multiplier: Multiplier = 1
-    sort_order: int | None = None  # None = after the last zone
-    notes: Long = None
+    sort_order: int | None = None  # None = after the last location
 
-    @field_validator("code", "name", "kind", mode="before")
+    @field_validator("code", "name", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
 
+    @field_validator("zone", "level", mode="before")
+    @classmethod
+    def clean_optional(cls, value: Any) -> Any:
+        return _clean(value)
 
-class ZoneUpdate(BaseSchema):
+
+class LocationUpdate(BaseSchema):
     code: Code | None = None
     name: Name | None = None
-    kind: Short = None
+    zone: Short = None
+    level: Short = None
     multiplier: Multiplier | None = None
     sort_order: int | None = None
-    notes: Long = None
 
     @field_validator("code", "name", "multiplier", "sort_order", mode="before")
     @classmethod
@@ -47,25 +59,25 @@ class ZoneUpdate(BaseSchema):
             raise ValueError(fr.FIELD_REQUIRED)
         return _strip(value)
 
-    @field_validator("kind", mode="before")
+    @field_validator("zone", "level", mode="before")
     @classmethod
-    def strip_kind(cls, value: Any) -> Any:
-        return _strip(value)
+    def clean_optional(cls, value: Any) -> Any:
+        return _clean(value)
 
 
-class ZoneReorder(BaseSchema):
-    zone_ids: list[int]
+class LocationReorder(BaseSchema):
+    location_ids: list[int]
 
 
-class ZoneRead(BaseSchema):
+class LocationRead(BaseSchema):
     id: int
     project_id: int
     code: str
     name: str
-    kind: str | None
+    zone: str | None
+    level: str | None
     multiplier: int
     sort_order: int
-    notes: str | None
     archived_at: str | None
     created_at: str
     updated_at: str

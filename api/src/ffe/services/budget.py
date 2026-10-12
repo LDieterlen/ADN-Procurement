@@ -1,7 +1,8 @@
-"""Budget service: envelopes replaced in bulk, Budget / Prescrit / Validé / Reste by zone and by
-category through `money.py` (DATA_MODEL §5, §4.16), alerts (D8.4), multi-project dashboard."""
+"""Budget service: forecast envelopes replaced in bulk, and the project summary — budget, Prescrit,
+Devisé, Validé, by status and by axis (location, zone, family, type, supplier) — all through
+`money.py` (DATA_MODEL §5, §4.16 ; ADR-0013). Nothing summed in SQL, nothing stored."""
 
-from datetime import date
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select
@@ -11,17 +12,15 @@ from ffe import money
 from ffe.deps import Clock
 from ffe.errors import ConflictError, ErrorDetail, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import BudgetLine, Category, Client, Project, ProjectItem, Zone
-from ffe.models.project import PROJECT_CLOSED_STATUSES
+from ffe.models import BudgetLine, Category, Location, ProjectItem, Supplier
+from ffe.models.project_item import ITEM_FAMILIES, ITEM_STATUSES
 from ffe.schemas.budget import BudgetLinesPut
 from ffe.services.base import stamp
 from ffe.services.project import ensure_open, get_project
-from ffe.services.project_item import summary as lines_summary
-from ffe.services.purchase_order import engaged as engaged_by_item
-from ffe.services.supplier_invoice import invoiced_and_paid
+from ffe.services.project_item import list_items
 
-WARNING_BP = 9_000  # D8.4: orange at 90 %
-OVER_BP = 10_000  # red at 100 %
+UNASSIGNED = ""  # key of « non affecté » rows
+FEE_KEY = "fee"  # key of the « Frais » row on the family and type axes
 
 
 def list_budget_lines(session: Session, project_id: int) -> list[BudgetLine]:
@@ -33,39 +32,61 @@ def list_budget_lines(session: Session, project_id: int) -> list[BudgetLine]:
     )
 
 
+def _scope_key(line: Any) -> tuple[str, str]:
+    """`(scope, reference)` of an envelope, the same for a payload row and a stored row."""
+    if line.scope == "location":
+        return "location", str(line.location_id)
+    if line.scope == "zone":
+        return "zone", str(line.zone)
+    if line.scope == "family":
+        return "family", str(line.family)
+    if line.scope == "supplier":
+        return "supplier", str(line.supplier_id)
+    return "global", ""
+
+
 def put_budget_lines(
     session: Session, project_id: int, data: BudgetLinesPut, clock: Clock
 ) -> list[BudgetLine]:
     """Replaces every envelope of the project in one transaction (API.md « PUT /x »)."""
     with session.begin():
         ensure_open(get_project(session, project_id))
-        zones = {z.id for z in session.scalars(select(Zone).where(Zone.project_id == project_id))}
-        categories = {c.id: c for c in session.scalars(select(Category))}
-        scopes: set[tuple[int | None, int | None]] = set()
+        locations = {
+            z.id for z in session.scalars(select(Location).where(Location.project_id == project_id))
+        }
+        seen: set[tuple[str, str]] = set()
         for index, line in enumerate(data.lines):
-            scope = (line.zone_id, line.category_id)
-            if scope in scopes:
+            refs = {
+                "location": line.location_id,
+                "zone": line.zone,
+                "family": line.family,
+                "supplier": line.supplier_id,
+            }
+            for scope, value in refs.items():
+                if (value is not None) != (line.scope == scope):
+                    raise ValidationAppError(
+                        [ErrorDetail(f"lines.{index}.scope", fr.BUDGET_REFERENCE_MISMATCH)]
+                    )
+            if line.scope == "location" and line.location_id not in locations:
+                raise ValidationAppError(
+                    [ErrorDetail(f"lines.{index}.locationId", fr.BUDGET_LOCATION_NOT_IN_PROJECT)]
+                )
+            if line.scope == "family" and line.family not in ITEM_FAMILIES:
+                raise ValidationAppError(
+                    [ErrorDetail(f"lines.{index}.family", fr.BUDGET_REFERENCE_MISMATCH)]
+                )
+            if line.scope == "zone" and not str(line.zone).strip():
+                raise ValidationAppError(
+                    [ErrorDetail(f"lines.{index}.zone", fr.BUDGET_REFERENCE_MISMATCH)]
+                )
+            if line.scope == "supplier" and session.get(Supplier, line.supplier_id) is None:
+                raise ValidationAppError(
+                    [ErrorDetail(f"lines.{index}.supplierId", fr.BUDGET_SUPPLIER_NOT_FOUND)]
+                )
+            key = _scope_key(line)
+            if key in seen:
                 raise ConflictError(fr.BUDGET_DUPLICATE_SCOPE)
-            scopes.add(scope)
-            if line.zone_id is not None and line.zone_id not in zones:
-                raise ValidationAppError(
-                    [ErrorDetail(f"lines.{index}.zoneId", fr.BUDGET_ZONE_NOT_IN_PROJECT)]
-                )
-            if line.category_id is not None and line.category_id not in categories:
-                raise ValidationAppError(
-                    [ErrorDetail(f"lines.{index}.categoryId", fr.BUDGET_CATEGORY_NOT_FOUND)]
-                )
-        # Anti double counting (DATA_MODEL §4.16): never a parent and one of its children for the same zone.
-        for index, line in enumerate(data.lines):
-            category = categories.get(line.category_id) if line.category_id is not None else None
-            if (
-                category is not None
-                and category.parent_id is not None
-                and (line.zone_id, category.parent_id) in scopes
-            ):
-                raise ValidationAppError(
-                    [ErrorDetail(f"lines.{index}.categoryId", fr.BUDGET_DOUBLE_COUNT)]
-                )
+            seen.add(key)
         for existing in session.scalars(
             select(BudgetLine).where(BudgetLine.project_id == project_id)
         ):
@@ -73,232 +94,271 @@ def put_budget_lines(
         session.flush()
         now = stamp(clock)
         for line in data.lines:
-            session.add(
-                BudgetLine(
-                    project_id=project_id, **line.model_dump(), created_at=now, updated_at=now
-                )
-            )
-    return list_budget_lines(session, project_id)
+            values = line.model_dump()
+            if values["zone"] is not None:
+                values["zone"] = values["zone"].strip()
+            session.add(BudgetLine(project_id=project_id, **values, created_at=now, updated_at=now))
+    with session.begin():
+        return list_budget_lines(session, project_id)
 
 
-def _alert(budget: int | None, specified: int) -> str:
-    if budget is None or budget <= 0:
-        return "none"
-    ratio_bp = money.div_round(specified * money.BP_SCALE, budget)
-    if ratio_bp >= OVER_BP:
-        return "over"
-    if ratio_bp >= WARNING_BP:
-        return "warning"
-    return "none"
+# --- summary ----------------------------------------------------------------------------------
 
 
-def _row(
-    zone_id: int | None,
-    category_id: int | None,
-    label: str,
-    multiplier: int,
-    budget: int | None,
-    specified: int,
-    approved: int,
-    engaged: int = 0,
-) -> dict[str, Any]:
+@dataclass
+class _Bucket:
+    label: str
+    specified: int = 0
+    quoted: int = 0
+    approved: int = 0
+    order: tuple[Any, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class SummaryFilter:
+    """Optional restriction of the summary (API.md « Synthèse ») ; every field is a conjunction."""
+
+    location_id: int | None = None
+    zone: str | None = None
+    family: str | None = None
+    category_id: int | None = None
+    supplier_id: int | None = None
+
+
+def _add(bucket: _Bucket, status: str, share: int) -> None:
+    bucket.specified += share
+    if money.is_quoted_or_later(status):
+        bucket.quoted += share
+    if money.is_approved_or_later(status):
+        bucket.approved += share
+
+
+def _row(key: str, bucket: _Bucket, budget: int | None) -> dict[str, Any]:
     return {
-        "zone_id": zone_id,
-        "category_id": category_id,
-        "label": label,
-        "multiplier": multiplier,
+        "key": key,
+        "label": bucket.label,
         "budget_cents": budget,
-        "specified_cents": specified,
-        "approved_cents": approved,
-        "engaged_cents": engaged,
-        "remaining_cents": budget - specified if budget is not None else None,
-        "alert": _alert(budget, specified),
+        "specified_cents": bucket.specified,
+        "quoted_cents": bucket.quoted,
+        "approved_cents": bucket.approved,
+        "remaining_cents": budget - bucket.specified if budget is not None else None,
+        "alert": money.alert_level(budget, bucket.specified),
     }
 
 
-def summary_with_budget(session: Session, project_id: int, today: date) -> dict[str, Any]:
-    """The 7a summary plus the budget block: by zone (placements' shares) and by level-1 category."""
-    base = lines_summary(session, project_id, today)
-    project = get_project(session, project_id)
-    budgets = {
-        (b.zone_id, b.category_id): b.amount_cents for b in list_budget_lines(session, project_id)
+def summary(
+    session: Session, project_id: int, filters: SummaryFilter | None = None
+) -> dict[str, Any]:
+    filters = filters or SummaryFilter()
+    get_project(session, project_id)
+    items = list_items(session, project_id)
+    locations = {
+        z.id: z for z in session.scalars(select(Location).where(Location.project_id == project_id))
     }
-    items = {
-        i.id: i
-        for i in session.scalars(select(ProjectItem).where(ProjectItem.project_id == project_id))
-    }
-    zones = {z.id: z for z in session.scalars(select(Zone).where(Zone.project_id == project_id))}
     categories = {c.id: c for c in session.scalars(select(Category))}
+    suppliers = {s.id: s for s in session.scalars(select(Supplier))}
+    budgets = {_scope_key(b): b.amount_cents for b in list_budget_lines(session, project_id)}
 
-    def level1(cid: int) -> int:
-        return categories[cid].parent_id or cid
-
-    amounts = {line["project_item_id"]: line for line in base["lines"]}
-    engaged = engaged_by_item(session, project_id)  # ADR-0007: issued orders, per item
-
-    # Approved by zone: approximation at the current price of the placements (D2.14);
-    # engaged by zone: same approximation at the order's unit price.
-    approved_by_zone: dict[int | None, int] = {}
-    engaged_by_zone: dict[int | None, int] = {}
-    specified_by_category: dict[int, int] = {}
-    approved_by_category: dict[int, int] = {}
-    engaged_by_category: dict[int, int] = {}
-    engaged_total = 0
-    for item_id, line in amounts.items():
-        item = items[item_id]
-        in_envelope = money.is_in_ffe_envelope(item.status, item.kind)
-        if not in_envelope:
-            continue
-        cat = level1(item.category_id)
-        specified_by_category[cat] = specified_by_category.get(cat, 0) + line["total_ht_cents"]
-        if item_id in engaged:
-            unit_eur, total_eur = engaged[item_id]
-            engaged_total += total_eur
-            engaged_by_category[cat] = engaged_by_category.get(cat, 0) + total_eur
-            for placement in item.placements:
-                multiplier = (
-                    zones[placement.zone_id].multiplier if placement.zone_id in zones else 1
-                )
-                engaged_by_zone[placement.zone_id] = engaged_by_zone.get(
-                    placement.zone_id, 0
-                ) + money.placement_ht_cents(unit_eur, placement.qty_milli, multiplier)
-        if money.is_approved_or_later(item.status):
-            approved_by_category[cat] = approved_by_category.get(cat, 0) + (
-                line["approved_cents"] or 0
-            )
-            for placement in item.placements:
-                multiplier = (
-                    zones[placement.zone_id].multiplier if placement.zone_id in zones else 1
-                )
-                share = money.placement_ht_cents(
-                    line["net_unit_eur_cents"], placement.qty_milli, multiplier
-                )
-                approved_by_zone[placement.zone_id] = (
-                    approved_by_zone.get(placement.zone_id, 0) + share
-                )
-
-    by_zone = [
-        _row(
-            z["zone_id"],
-            None,
-            z["zone_name"],
-            z["multiplier"],
-            budgets.get((z["zone_id"], None)),
-            z["specified_cents"],
-            approved_by_zone.get(z["zone_id"], 0),
-            engaged_by_zone.get(z["zone_id"], 0),
-        )
-        for z in base["zones"]
-    ]
-    by_category = [
-        _row(
-            None,
-            cid,
-            f"{categories[cid].code} — {categories[cid].name}",
-            1,
-            budgets.get((None, cid)),
-            specified_by_category.get(cid, 0),
-            approved_by_category.get(cid, 0),
-            engaged_by_category.get(cid, 0),
-        )
-        for cid in sorted(
-            set(specified_by_category) | {c for z, c in budgets if z is None and c is not None},
-            key=lambda cid: (categories[cid].sort_order, cid),
-        )
-    ]
-    invoiced, paid = invoiced_and_paid(session, project_id)  # ADR-0008, EUR at the order's rate
-    global_budget = budgets.get((None, None))
-    contingency = (
-        money.div_round(global_budget * project.contingency_bp, money.BP_SCALE)
-        if global_budget is not None
-        else 0
-    )
-    base["budget"] = {
-        "global_cents": global_budget,
-        "contingency_bp": project.contingency_bp,
-        "contingency_cents": contingency,
-        "specified_cents": base["specified_cents"],
-        "approved_cents": base["approved_cents"],
-        "engaged_cents": engaged_total,
-        "invoiced_cents": invoiced,
-        "paid_cents": paid,
-        "remaining_cents": global_budget - base["specified_cents"]
-        if global_budget is not None
-        else None,
-        "alert": _alert(global_budget, base["specified_cents"]),
-        "by_zone": by_zone,
-        "by_category": by_category,
+    lines: list[dict[str, Any]] = []
+    by_status: dict[str, list[int]] = {s: [0, 0] for s in ITEM_STATUSES}
+    axes: dict[str, dict[str, _Bucket]] = {
+        "location": {},
+        "zone": {},
+        "family": {},
+        "type": {},
+        "supplier": {},
     }
-    return base
+    total = _Bucket("Projet")
 
+    def bucket(axis: str, key: str, label: str, order: tuple[Any, ...]) -> _Bucket:
+        found = axes[axis].get(key)
+        if found is None:
+            found = axes[axis][key] = _Bucket(label, order=order)
+        return found
 
-def alerts(session: Session, project_id: int, today: date) -> list[dict[str, Any]]:
-    summary = summary_with_budget(session, project_id, today)
-    found: list[dict[str, Any]] = []
-    budget = summary["budget"]
-    if budget["alert"] != "none":
-        found.append(
+    for item in items:
+        pairs = _pairs(item, locations)
+        amounts = money.line_amounts(
+            item.unit_cost_cents, item.discount_bp, item.fx_rate_micro, pairs
+        )
+        counted = money.is_counted(item.status)
+        lines.append(
             {
-                "kind": "budget_100" if budget["alert"] == "over" else "budget_90",
-                "message": fr.ALERT_BUDGET.format(
-                    scope="Projet", pct=100 if budget["alert"] == "over" else 90
-                ),
+                "project_item_id": item.id,
+                "item_code": item.item_code,
+                "status": item.status,
+                "kind": item.kind,
+                "counted": counted,
+                "total_qty_milli": amounts.total_qty_milli,
+                "net_unit_cents": amounts.net_unit_cents,
+                "net_unit_eur_cents": amounts.net_unit_eur_cents,
+                "total_ht_cents": amounts.total_ht_cents,
             }
         )
-    for row in budget["by_zone"] + budget["by_category"]:
-        if row["alert"] != "none":
-            found.append(
-                {
-                    "kind": "budget_100" if row["alert"] == "over" else "budget_90",
-                    "message": fr.ALERT_BUDGET.format(
-                        scope=row["label"], pct=100 if row["alert"] == "over" else 90
+        if not _item_matches(item, filters):
+            continue
+        # Shares per placement (location and zone axes), the line total for the other axes.
+        shares = _shares(item, locations, amounts.net_unit_eur_cents, filters)
+        kept = sum(share for _, share in shares)
+        by_status[item.status][0] += 1
+        if not counted:
+            continue
+        by_status[item.status][1] += kept
+        _add(total, item.status, kept)
+        for location, share in shares:
+            if location is None:
+                _add(bucket("location", UNASSIGNED, "Non affecté", (1, 0)), item.status, share)
+                _add(bucket("zone", UNASSIGNED, "Sans zone", (1, "")), item.status, share)
+            else:
+                _add(
+                    bucket(
+                        "location",
+                        str(location.id),
+                        f"{location.code} — {location.name}",
+                        (0, location.sort_order, location.id),
                     ),
-                    "zone_id": row["zone_id"],
-                    "category_id": row["category_id"],
-                }
+                    item.status,
+                    share,
+                )
+                zone = location.zone or ""
+                _add(
+                    bucket("zone", zone, zone or "Sans zone", (0 if zone else 1, zone)),
+                    item.status,
+                    share,
+                )
+        if item.kind == "fee":
+            _add(bucket("family", FEE_KEY, "Frais", (2, "")), item.status, kept)
+            _add(bucket("type", FEE_KEY, "Frais", (2, "")), item.status, kept)
+        else:
+            family = item.family or ""
+            _add(
+                bucket(
+                    "family",
+                    family,
+                    fr.ITEM_FAMILY_LABELS.get(family, "Sans famille"),
+                    (0 if family else 1, family),
+                ),
+                item.status,
+                kept,
             )
-    for line in summary["lines"]:
-        if line["order_overdue"]:
-            found.append(
-                {
-                    "kind": "order_overdue",
-                    "message": fr.ALERT_ORDER.format(code=line["item_code"], on=line["order_by"]),
-                    "project_item_id": line["project_item_id"],
-                }
+            category = categories.get(item.category_id) if item.category_id else None
+            _add(
+                bucket(
+                    "type",
+                    str(item.category_id),
+                    f"{category.code} — {category.name}" if category else "",
+                    (0, category.sort_order if category else 0, item.category_id),
+                ),
+                item.status,
+                kept,
             )
-    return found
-
-
-def dashboard(session: Session, today: date) -> list[dict[str, Any]]:
-    """Open projects with their budget figures and counters (DATA_MODEL §8 R10, without SQL sums)."""
-    rows: list[dict[str, Any]] = []
-    projects = session.scalars(
-        select(Project)
-        .where(Project.status.not_in(PROJECT_CLOSED_STATUSES))
-        .order_by(Project.due_on.is_(None), Project.due_on, Project.code)
-    )
-    for project in projects:
-        client = session.get(Client, project.client_id)
-        summary = summary_with_budget(session, project.id, today)
-        items = list(
-            session.scalars(select(ProjectItem).where(ProjectItem.project_id == project.id))
+        supplier = suppliers.get(item.supplier_id) if item.supplier_id else None
+        _add(
+            bucket(
+                "supplier",
+                str(item.supplier_id) if supplier else UNASSIGNED,
+                supplier.name if supplier else "Sans fournisseur",
+                (0, supplier.name) if supplier else (1, ""),
+            ),
+            item.status,
+            kept,
         )
-        rows.append(
+
+    global_budget = budgets.get(("global", ""))
+    scope_of = {"location": "location", "zone": "zone", "family": "family", "supplier": "supplier"}
+
+    def rows(axis: str) -> list[dict[str, Any]]:
+        found = axes[axis]
+        if axis in scope_of:
+            for (scope, ref), _amount in budgets.items():
+                if scope == scope_of[axis] and ref not in found:
+                    found[ref] = _Bucket(
+                        _budget_label(axis, ref, locations, suppliers), order=(0, ref)
+                    )
+        return [
+            _row(key, b, budgets.get((scope_of[axis], key)) if axis in scope_of else None)
+            for key, b in sorted(found.items(), key=lambda kv: kv[1].order)
+        ]
+
+    return {
+        "project_id": project_id,
+        "lines": lines,
+        "budget_cents": global_budget,
+        "specified_cents": total.specified,
+        "quoted_cents": total.quoted,
+        "approved_cents": total.approved,
+        "remaining_cents": global_budget - total.specified if global_budget is not None else None,
+        "alert": money.alert_level(global_budget, total.specified),
+        "by_status": [
             {
-                "project_id": project.id,
-                "code": project.code,
-                "name": project.name,
-                "status": project.status,
-                "client_name": client.name if client else "",
-                "due_on": project.due_on,
-                "budget_cents": summary["budget"]["global_cents"],
-                "specified_cents": summary["specified_cents"],
-                "approved_cents": summary["approved_cents"],
-                "remaining_cents": summary["budget"]["remaining_cents"],
-                "alert": summary["budget"]["alert"],
-                "draft_lines": sum(1 for i in items if i.status == "draft"),
-                "on_hold_lines": sum(1 for i in items if i.on_hold),
-                "overdue_lines": sum(1 for line in summary["lines"] if line["order_overdue"]),
+                "status": status,
+                "count": count,
+                "amount_cents": amount,
+                "share_bp": money.share_bp(amount, total.specified) if status != "cancelled" else 0,
             }
+            for status, (count, amount) in by_status.items()
+        ],
+        "by_location": rows("location"),
+        "by_zone": rows("zone"),
+        "by_family": rows("family"),
+        "by_type": rows("type"),
+        "by_supplier": rows("supplier"),
+    }
+
+
+def _pairs(item: ProjectItem, locations: dict[int, Location]) -> list[tuple[int, int]]:
+    if item.kind == "fee":
+        return [(money.MILLI_SCALE, 1)]
+    return [
+        (p.qty_milli, locations[p.location_id].multiplier if p.location_id in locations else 1)
+        for p in item.placements
+    ]
+
+
+def _item_matches(item: ProjectItem, filters: SummaryFilter) -> bool:
+    if filters.family is not None and (item.family or "") != filters.family:
+        return False
+    if filters.category_id is not None and item.category_id != filters.category_id:
+        return False
+    if filters.supplier_id is not None and item.supplier_id != filters.supplier_id:
+        return False
+    return True
+
+
+def _shares(
+    item: ProjectItem,
+    locations: dict[int, Location],
+    unit_eur_cents: int,
+    filters: SummaryFilter,
+) -> list[tuple[Location | None, int]]:
+    """`(location, EUR share)` per placement, restricted by the location / zone filters."""
+    if item.kind == "fee":
+        if filters.location_id is not None or filters.zone is not None:
+            return []
+        return [(None, money.total_ht_cents(unit_eur_cents, money.MILLI_SCALE))]
+    shares: list[tuple[Location | None, int]] = []
+    for placement in item.placements:
+        location = locations.get(placement.location_id) if placement.location_id else None
+        if filters.location_id is not None and placement.location_id != filters.location_id:
+            continue
+        if filters.zone is not None and ((location.zone if location else "") or "") != filters.zone:
+            continue
+        multiplier = location.multiplier if location else 1
+        shares.append(
+            (location, money.placement_ht_cents(unit_eur_cents, placement.qty_milli, multiplier))
         )
-    return rows
+    return shares
+
+
+def _budget_label(
+    axis: str, ref: str, locations: dict[int, Location], suppliers: dict[int, Supplier]
+) -> str:
+    if axis == "location":
+        location = locations.get(int(ref)) if ref.isdigit() else None
+        return f"{location.code} — {location.name}" if location else ref
+    if axis == "supplier":
+        supplier = suppliers.get(int(ref)) if ref.isdigit() else None
+        return supplier.name if supplier else ref
+    if axis == "family":
+        return fr.ITEM_FAMILY_LABELS.get(ref, ref)
+    return ref

@@ -1,32 +1,31 @@
 """Every amount computation of FFE (DATA_MODEL §6). Integers only, rounded to the cent at each step.
 
 Stdlib only; imported by services and tests, never by models. Nothing computed here is stored.
-Order of a line: discount → exchange → quantity → VAT (D7.3: round per line, then sum).
+Order of a line: discount → exchange → quantity (D7.3: round per line, then sum).
 """
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, timedelta
 
 BP_SCALE = 10_000  # basis points: 10 000 = 100 %
 MILLI_SCALE = 1_000  # quantities: 1 000 = one unit
 MICRO_SCALE = 1_000_000  # exchange rate: 1 unit of currency = fx_rate_micro / 1 000 000 EUR
 EUR_RATE_MICRO = MICRO_SCALE
 
-NOT_COUNTED_STATUSES = frozenset({"cancelled", "replaced"})
+# Single status ladder (ADR-0013); `cancelled` is out of every total.
 STATUS_RANK: dict[str, int] = {
-    "draft": 0,
-    "specified": 1,
-    "quoted": 2,
-    "approved": 3,
-    "ordered": 4,
-    "delivered": 5,
-    "installed": 6,
+    "to_quote": 0,
+    "quoted": 1,
+    "to_review": 1,
+    "approved": 2,
+    "deposit": 3,
+    "purchased": 4,
     "cancelled": -1,
-    "replaced": -1,
 }
+QUOTED_RANK = STATUS_RANK["quoted"]
 APPROVED_RANK = STATUS_RANK["approved"]
-ORDER_ALERT_MARGIN_DAYS = 14  # D7.5
+WARNING_BP = 9_000  # budget alert: orange at 90 %
+OVER_BP = 10_000  # red at 100 %
 
 
 def div_round(n: int, d: int) -> int:
@@ -49,7 +48,7 @@ def net_unit_eur_cents(net_cents: int, fx_rate_micro: int) -> int:
 
 
 def total_qty_milli(placements: Iterable[tuple[int, int]]) -> int:
-    """Σ qty_milli × zone multiplier (multiplier 1 for an unassigned placement)."""
+    """Σ qty_milli × location multiplier (multiplier 1 for an unassigned placement)."""
     total = 0
     for qty_milli, multiplier in placements:
         if qty_milli < 0 or multiplier < 1:
@@ -62,36 +61,40 @@ def total_ht_cents(unit_eur_cents: int, qty_milli: int) -> int:
     return div_round(unit_eur_cents * qty_milli, MILLI_SCALE)
 
 
-def vat_cents(ht_cents: int, vat_rate_bp: int) -> int:
-    _check_bp(vat_rate_bp)
-    return div_round(ht_cents * vat_rate_bp, BP_SCALE)
-
-
-def list_price_ht_cents(list_price_cents: int, tax_mode: str, vat_bp: int | None) -> int:
-    """Catalogue price brought back to HT when it was observed TTC (DATA_MODEL §6, line creation)."""
-    if tax_mode == "ht":
-        return list_price_cents
-    if vat_bp is None:
-        raise ValueError("un prix TTC exige le taux de TVA")
-    _check_bp(vat_bp)
-    return div_round(list_price_cents * BP_SCALE, BP_SCALE + vat_bp)
+def placement_ht_cents(unit_eur_cents: int, qty_milli: int, multiplier: int) -> int:
+    """Share of one placement (location totals sum these; may differ by a cent from the line)."""
+    return div_round(unit_eur_cents * qty_milli * multiplier, MILLI_SCALE)
 
 
 def is_counted(status: str) -> bool:
-    return status not in NOT_COUNTED_STATUSES
+    return status != "cancelled"
 
 
-def is_amount_counted(status: str, kind: str) -> bool:
-    return is_counted(status) and kind != "existing"
-
-
-def is_in_ffe_envelope(status: str, kind: str) -> bool:
-    """Budget and « Prescrit » scope (DATA_MODEL §5): counted amounts, OS&E aside."""
-    return is_amount_counted(status, kind) and kind != "ose"
+def is_quoted_or_later(status: str) -> bool:
+    return STATUS_RANK[status] >= QUOTED_RANK
 
 
 def is_approved_or_later(status: str) -> bool:
     return STATUS_RANK[status] >= APPROVED_RANK
+
+
+def share_bp(part: int, whole: int) -> int:
+    """Share of `part` in `whole` in basis points (0 when the whole is 0)."""
+    if whole <= 0 or part <= 0:
+        return 0
+    return div_round(part * BP_SCALE, whole)
+
+
+def alert_level(budget: int | None, specified: int) -> str:
+    """`none` / `warning` (≥ 90 %) / `over` (≥ 100 %) of the budget; `none` without a budget."""
+    if budget is None or budget <= 0:
+        return "none"
+    ratio = share_bp(specified, budget)
+    if ratio >= OVER_BP:
+        return "over"
+    if ratio >= WARNING_BP:
+        return "warning"
+    return "none"
 
 
 @dataclass(frozen=True)
@@ -107,95 +110,12 @@ def line_amounts(
     discount_bp: int,
     fx_rate_micro: int,
     placements: Iterable[tuple[int, int]],
-    kind: str = "ffe",
 ) -> LineAmounts:
-    """All the amounts of one line; `existing` keeps its quantity but every amount is 0."""
+    """All the amounts of one line; a fee line passes one placement `(1000, 1)`."""
     qty = total_qty_milli(placements)
-    if kind == "existing":
-        return LineAmounts(qty, 0, 0, 0)
     net = net_unit_cents(unit_cost_cents, discount_bp)
     eur = net_unit_eur_cents(net, fx_rate_micro)
     return LineAmounts(qty, net, eur, total_ht_cents(eur, qty))
-
-
-def placement_ht_cents(unit_eur_cents: int, qty_milli: int, multiplier: int) -> int:
-    """Share of one placement (zone totals sum these; may differ by a cent from the line total)."""
-    return div_round(unit_eur_cents * qty_milli * multiplier, MILLI_SCALE)
-
-
-def approved_cents(approved_unit_net_cents: int, approved_total_qty_milli: int) -> int:
-    return div_round(approved_unit_net_cents * approved_total_qty_milli, MILLI_SCALE)
-
-
-@dataclass(frozen=True)
-class VatTotals:
-    ht_cents: int
-    vat_by_rate_bp: dict[int, int]
-    vat_cents: int
-    ttc_cents: int
-
-
-def vat_totals(lines: Iterable[tuple[int, int]]) -> VatTotals:
-    """VAT per rate on the HT sum of each rate (DATA_MODEL §6), then TTC."""
-    ht_by_rate: dict[int, int] = {}
-    for ht, rate_bp in lines:
-        ht_by_rate[rate_bp] = ht_by_rate.get(rate_bp, 0) + ht
-    vat_by_rate = {rate: vat_cents(ht, rate) for rate, ht in sorted(ht_by_rate.items())}
-    ht_total = sum(ht_by_rate.values())
-    vat_total = sum(vat_by_rate.values())
-    return VatTotals(ht_total, vat_by_rate, vat_total, ht_total + vat_total)
-
-
-@dataclass(frozen=True)
-class PoLineAmounts:
-    net_unit_cents: int  # currency of the order
-    total_cents: int  # currency of the order
-    net_unit_eur_cents: int
-    total_eur_cents: int
-
-
-def po_line_amounts(
-    unit_cost_cents: int, discount_bp: int, qty_milli: int, fx_rate_micro: int
-) -> PoLineAmounts:
-    """A purchase-order line (DATA_MODEL §4.21): same chain as a project line, in the order's currency
-    and in EUR, rounded to the cent at each step."""
-    net = net_unit_cents(unit_cost_cents, discount_bp)
-    net_eur = net_unit_eur_cents(net, fx_rate_micro)
-    return PoLineAmounts(
-        net, total_ht_cents(net, qty_milli), net_eur, total_ht_cents(net_eur, qty_milli)
-    )
-
-
-@dataclass(frozen=True)
-class PoTotals:
-    total_cents: int  # currency of the order, HT
-    total_eur_cents: int  # HT
-    vat_by_rate_bp: dict[int, int]  # on the EUR amounts
-    vat_cents: int
-    ttc_eur_cents: int
-
-
-def po_totals(lines: Iterable[tuple[PoLineAmounts, int]]) -> PoTotals:
-    """Totals of a purchase order from its lines `(amounts, vat_rate_bp)`; VAT per rate on EUR."""
-    total = 0
-    eur_lines: list[tuple[int, int]] = []
-    for amounts, vat_rate_bp in lines:
-        total += amounts.total_cents
-        eur_lines.append((amounts.total_eur_cents, vat_rate_bp))
-    vat = vat_totals(eur_lines)
-    return PoTotals(total, vat.ht_cents, vat.vat_by_rate_bp, vat.vat_cents, vat.ttc_cents)
-
-
-def invoice_ttc_cents(amount_ht_cents: int, vat_cents: int) -> int:
-    """A supplier invoice is a document: TTC = HT + VAT as printed (DATA_MODEL §4.26)."""
-    return amount_ht_cents + vat_cents
-
-
-def order_by(required_on_site: date | None, lead_time_weeks: int | None) -> date | None:
-    """Latest order date: on-site date − lead time − 14-day margin (D7.5); None when unknown."""
-    if required_on_site is None or lead_time_weeks is None:
-        return None
-    return required_on_site - timedelta(days=lead_time_weeks * 7 + ORDER_ALERT_MARGIN_DAYS)
 
 
 def _check_bp(bp: int) -> None:

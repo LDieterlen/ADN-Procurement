@@ -27,17 +27,12 @@ def test_all_tables_are_strict(engine: Engine) -> None:
 
 def test_strict_rejects_text_in_integer_column(engine: Engine) -> None:
     with pytest.raises(IntegrityError), engine.begin() as conn:
-        conn.execute(text("UPDATE setting SET default_vat_bp = 'vingt' WHERE id = 1"))
+        conn.execute(text("UPDATE setting SET seed_category_version = 'deux' WHERE id = 1"))
 
 
 def test_setting_is_single_row(engine: Engine) -> None:
     with pytest.raises(IntegrityError), engine.begin() as conn:
         conn.execute(insert(Setting).values(id=2, created_at=NOW, updated_at=NOW))
-
-
-def test_setting_vat_bp_range(engine: Engine) -> None:
-    with pytest.raises(IntegrityError), engine.begin() as conn:
-        conn.execute(text("UPDATE setting SET default_vat_bp = 10001 WHERE id = 1"))
 
 
 def test_setting_base_currency_is_eur_only(engine: Engine) -> None:

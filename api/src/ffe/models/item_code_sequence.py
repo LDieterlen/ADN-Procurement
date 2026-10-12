@@ -1,5 +1,5 @@
-"""`item_code_sequence`: next item number per project, zone code and typology prefix; never
-decremented (DATA_MODEL §4.14, ADR-0012). `zone_code = ''` for lines placed in no zone."""
+"""`item_code_sequence`: next item number per project, location code and type prefix; never
+decremented (DATA_MODEL §4.14, ADR-0013). `location_code = ''` for lines placed in no location."""
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -19,6 +19,6 @@ class ItemCodeSequence(Base):
     project_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("project.id", ondelete="CASCADE"), primary_key=True
     )
-    zone_code: Mapped[str] = mapped_column(Text, primary_key=True)
+    location_code: Mapped[str] = mapped_column(Text, primary_key=True)
     prefix: Mapped[str] = mapped_column(Text, primary_key=True)
     next_value: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))

@@ -1,4 +1,4 @@
-"""Migration 0003 schema: CHECKs, unique sha256, one primary per product, FK CASCADE/RESTRICT."""
+"""Schema v0, product side: CHECKs, unique sha256, one primary per product, FK CASCADE/RESTRICT."""
 
 from typing import Any
 
@@ -49,12 +49,8 @@ def seeded(engine: Engine) -> Engine:
     ("values", "constraint"),
     [
         ({"name": "", "category_id": 1}, "name_not_empty"),
-        ({"name": "A", "category_id": 1, "unit": "box"}, "unit_enum"),
         ({"name": "A", "category_id": 1, "list_price_cents": -1}, "list_price_min"),
-        ({"name": "A", "category_id": 1, "list_price_tax_mode": "ttc"}, "list_price_ttc_needs_vat"),
-        ({"name": "A", "category_id": 1, "list_price_on": "10/10/2026"}, "list_price_on_date"),
-        ({"name": "A", "category_id": 1, "gtin": "12A"}, "gtin_digits"),
-        ({"name": "A", "category_id": 1, "height_mm": -1}, "height_min"),
+        ({"name": "A", "category_id": 1, "currency": "EURO"}, "currency_length"),
         ({"name": "A", "category_id": 99}, "FOREIGN KEY"),
     ],
 )

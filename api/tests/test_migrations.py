@@ -30,13 +30,13 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
 
 
 def test_revision_chain_is_a_single_initial_migration_until_v1() -> None:
-    assert revision_chain() == ["0001"]  # ADR-0012: regenerated from the models until v1
+    assert revision_chain() == ["0001"]  # ADR-0012/0013: regenerated from the models until v1
 
 
 def test_initial_migration_seeds_the_single_setting_row(engine: Engine) -> None:
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT id, default_vat_bp, base_currency FROM setting")).one()
-    assert tuple(row) == (1, 2000, "EUR")
+        row = conn.execute(text("SELECT id, base_currency, agency_name FROM setting")).one()
+    assert tuple(row) == (1, "EUR", "")
 
 
 def test_every_table_stays_strict_after_upgrade(engine: Engine) -> None:

@@ -21,12 +21,12 @@ from ffe.schemas.base import BaseSchema
 from ffe.schemas.category import CategoryRead
 from ffe.schemas.client import ClientRead
 from ffe.schemas.file import FileRead
+from ffe.schemas.location import LocationRead
 from ffe.schemas.manufacturer import ManufacturerRead
 from ffe.schemas.project import ProjectRead
 from ffe.schemas.project_item import EventRead, PlacementRead
 from ffe.schemas.setting import SettingRead
 from ffe.schemas.supplier import SupplierRead
-from ffe.schemas.zone import ZoneRead
 
 FORMAT = "ffe-export"
 VERSION = 1
@@ -41,26 +41,14 @@ TABLE_ORDER: tuple[str, ...] = (
     "product",
     "product_file",
     "project",
-    "zone",
+    "location",
     "project_item",
     "project_item_placement",
     "project_item_event",
     "item_code_sequence",
     "project_item_file",
     "budget_line",
-    "quote",
-    "quote_line",
-    "quote_file",
-    "po_sequence",
-    "purchase_order",
-    "purchase_order_line",
-    "purchase_order_file",
-    "delivery",
-    "delivery_line",
-    "supplier_invoice",
     "project_file",
-    "import_batch",
-    "price_observation",
 )
 # Row validation before insert (D4.11); `product` and `product_file` rows are validated by the
 # database (STRICT, CHECK, FK) only.
@@ -72,7 +60,7 @@ ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
     "supplier": SupplierRead,
     "file": FileRead,
     "project": ProjectRead,
-    "zone": ZoneRead,
+    "location": LocationRead,
     "project_item_placement": PlacementRead,
     "project_item_event": EventRead,
 }

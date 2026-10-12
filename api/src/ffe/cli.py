@@ -32,6 +32,7 @@ from ffe.db.lock import InstanceLock
 from ffe.db.migrate import current_revision, has_pending, head_revision, upgrade_head
 from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
+from ffe.demo import seed_demo
 from ffe.deps import Deps, utcnow
 from ffe.services.file import orphans as file_orphans
 from ffe.services.file import verify_hashes
@@ -256,10 +257,22 @@ def import_json_cmd(
 
 
 @db.command()
-def seed(prod: ProdFlag = False) -> None:
-    """Catégories de départ (13 codes, D6a.1), idempotent : n'ajoute que les codes absents."""
+def seed(
+    demo: Annotated[
+        bool, typer.Option("--demo", help="Ajouter aussi un projet d'exemple (une fois).")
+    ] = False,
+    prod: ProdFlag = False,
+) -> None:
+    """Types de produit de départ (19 codes, ADR-0013), idempotent : n'ajoute que les codes absents."""
     with _opened(prod) as (_settings, engine):
         if has_pending(engine):
             _fail(DbError("Base non migrée : lancer `ffe db migrate` d'abord."))
         inserted = seed_categories(engine, utcnow)
-        typer.echo(f"Catégories ajoutées : {inserted} (version du seed : {SEED_VERSION})")
+        typer.echo(f"Types ajoutés : {inserted} (version du seed : {SEED_VERSION})")
+        if demo:
+            project = seed_demo(engine, utcnow)
+            typer.echo(
+                f"Projet d'exemple : {project.code}"
+                if project
+                else "Projet d'exemple déjà présent."
+            )

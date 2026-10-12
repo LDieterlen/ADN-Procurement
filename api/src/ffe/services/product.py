@@ -44,7 +44,7 @@ def list_products(
         query = query.where(Product.manufacturer_id == manufacturer_id)
     if supplier_id is not None:
         query = query.where(Product.supplier_id == supplier_id)
-    rows = search(list(session.scalars(query)), q, ("name", "manufacturer_ref", "supplier_ref"))
+    rows = search(list(session.scalars(query)), q, ("name", "reference"))
     return page(rows, limit, offset)
 
 
@@ -52,7 +52,7 @@ def get_product(session: Session, product_id: int) -> Product:
     return get_or_404(session, Product, product_id, RESOURCE)
 
 
-def _check_references(session: Session, data: dict[str, object]) -> None:
+def check_references(session: Session, data: dict[str, object]) -> None:
     """Referenced category / manufacturer / supplier must exist and be active (422 by field)."""
     checks = (
         ("category_id", Category, "categoryId", fr.CATEGORY_MUST_BE_ACTIVE),
@@ -79,18 +79,35 @@ def _check_references(session: Session, data: dict[str, object]) -> None:
             raise ValidationAppError([ErrorDetail(field, archived_message)])
 
 
+def find_twin(
+    session: Session, manufacturer_id: int | None, reference: str | None
+) -> Product | None:
+    """The active product with the same manufacturer and reference, if any."""
+    if manufacturer_id is None or not reference:
+        return None
+    key = normalize_key(reference)
+    for other in session.scalars(
+        select(Product).where(
+            Product.manufacturer_id == manufacturer_id, Product.archived_at.is_(None)
+        )
+    ):
+        if other.reference and normalize_key(other.reference) == key:
+            return other
+    return None
+
+
 def _check_duplicate_ref(
     session: Session,
     manufacturer_id: int | None,
-    manufacturer_ref: str | None,
+    reference: str | None,
     exclude_id: int | None,
     force: bool,
 ) -> None:
-    if manufacturer_id is None or not manufacturer_ref:
+    if manufacturer_id is None or not reference:
         return
-    key = normalize_key(manufacturer_ref)
+    key = normalize_key(reference)
     rows = session.execute(
-        select(Product.id, Product.manufacturer_ref, Product.archived_at).where(
+        select(Product.id, Product.reference, Product.archived_at).where(
             Product.manufacturer_id == manufacturer_id
         )
     ).all()
@@ -108,8 +125,8 @@ def create_product(
 ) -> Product:
     with session.begin():
         values = data.model_dump()
-        _check_references(session, values)
-        _check_duplicate_ref(session, data.manufacturer_id, data.manufacturer_ref, None, force)
+        check_references(session, values)
+        _check_duplicate_ref(session, data.manufacturer_id, data.reference, None, force)
         now = stamp(clock)
         product = Product(**values, created_at=now, updated_at=now)
         session.add(product)
@@ -120,18 +137,13 @@ def update_product(session: Session, product_id: int, data: ProductUpdate, clock
     with session.begin():
         product = ensure_active(get_product(session, product_id), RESOURCE)
         changes = data.model_dump(exclude_unset=True)
-        _check_references(session, changes)
+        check_references(session, changes)
         manufacturer_id = changes.get("manufacturer_id", product.manufacturer_id)
-        manufacturer_ref = changes.get("manufacturer_ref", product.manufacturer_ref)
-        if ("manufacturer_id" in changes or "manufacturer_ref" in changes) and (
-            manufacturer_id != product.manufacturer_id
-            or manufacturer_ref != product.manufacturer_ref
+        reference = changes.get("reference", product.reference)
+        if ("manufacturer_id" in changes or "reference" in changes) and (
+            manufacturer_id != product.manufacturer_id or reference != product.reference
         ):
-            _check_duplicate_ref(session, manufacturer_id, manufacturer_ref, product_id, False)
-        tax_mode = changes.get("list_price_tax_mode", product.list_price_tax_mode)
-        vat_bp = changes.get("list_price_vat_bp", product.list_price_vat_bp)
-        if tax_mode == "ttc" and vat_bp is None:
-            raise ValidationAppError([ErrorDetail("listPriceVatBp", fr.PRODUCT_TTC_NEEDS_VAT)])
+            _check_duplicate_ref(session, manufacturer_id, reference, product_id, False)
         for field_name, value in changes.items():
             setattr(product, field_name, value)
         product.updated_at = stamp(clock)
@@ -188,7 +200,8 @@ def attach_file(
             )
         )
         product.updated_at = now
-    session.refresh(product)
+    with session.begin():
+        session.refresh(product)
     return product
 
 
@@ -211,7 +224,8 @@ def update_file(
         for field_name, value in changes.items():
             setattr(junction, field_name, int(value) if field_name == "is_primary" else value)
         junction.updated_at = product.updated_at = stamp(clock)
-    session.refresh(product)
+    with session.begin():
+        session.refresh(product)
     return product
 
 
@@ -224,5 +238,6 @@ def detach_file(
         product.files.remove(junction)
         product.updated_at = stamp(clock)
     unlink_if_orphan(session, files_dir, file_id)
-    session.refresh(product)
+    with session.begin():
+        session.refresh(product)
     return product

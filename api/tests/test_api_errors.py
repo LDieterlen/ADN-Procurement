@@ -22,7 +22,7 @@ def app_with_probes(deps: Deps) -> FastAPI:
     @app.post("/probe/integrity")
     def integrity(session: SessionDep) -> None:
         with session.begin():
-            session.execute(text("UPDATE setting SET default_vat_bp = 99999 WHERE id = 1"))
+            session.execute(text("UPDATE setting SET base_currency = 'GBP' WHERE id = 1"))
 
     return app
 
@@ -47,4 +47,4 @@ def test_database_constraint_violation_is_409_conflict(deps: Deps) -> None:
     response = client.post("/probe/integrity")
     assert response.status_code == 409
     payload = response.json()
-    assert payload["code"] == "conflict" and "ck_setting_default_vat_bp_range" in payload["message"]
+    assert payload["code"] == "conflict" and "ck_setting_base_currency_eur" in payload["message"]

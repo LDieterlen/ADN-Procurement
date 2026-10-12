@@ -25,30 +25,30 @@ from ffe.models import (
     Category,
     Client,
     File,
+    Location,
     Manufacturer,
     Product,
     Project,
     ProjectItem,
     Supplier,
-    Zone,
 )
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
+from ffe.schemas.location import LocationCreate
 from ffe.schemas.manufacturer import ManufacturerCreate
 from ffe.schemas.product import ProductCreate
 from ffe.schemas.project import ProjectCreate
 from ffe.schemas.project_item import ProjectItemCreate
 from ffe.schemas.supplier import SupplierCreate
-from ffe.schemas.zone import ZoneCreate
 from ffe.services.category import create_category
 from ffe.services.client import create_client
 from ffe.services.file import store_upload
+from ffe.services.location import create_location
 from ffe.services.manufacturer import create_manufacturer
 from ffe.services.product import create_product
 from ffe.services.project import create_project
 from ffe.services.project_item import create_item
 from ffe.services.supplier import create_supplier
-from ffe.services.zone import create_zone
 
 TESTS_ROOT = PERSIST_ROOT / ".ffe-tests"
 FIXED_NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
@@ -119,7 +119,7 @@ def make_client(session: Session, clock: Clock, **overrides: Any) -> Client:
 
 
 def make_supplier(session: Session, clock: Clock, **overrides: Any) -> Supplier:
-    data: dict[str, Any] = {"name": "Tom Dixon Ltd", "country_code": "GB", "currency": "GBP"}
+    data: dict[str, Any] = {"name": "Tom Dixon Ltd", "currency": "GBP"}
     data.update(overrides)
     return create_supplier(session, SupplierCreate(**data), clock)
 
@@ -173,18 +173,28 @@ def make_project(session: Session, clock: Clock, **overrides: Any) -> Project:
     return create_project(session, ProjectCreate(**data), clock)
 
 
-def make_zone(session: Session, clock: Clock, project_id: int, **overrides: Any) -> Zone:
-    data: dict[str, Any] = {"code": "CHA", "name": "Chambre type A", "multiplier": 12}
+def make_location(session: Session, clock: Clock, project_id: int, **overrides: Any) -> Location:
+    data: dict[str, Any] = {
+        "code": "CHA",
+        "name": "Chambre typo A",
+        "zone": "Hébergement",
+        "level": "R+1",
+        "multiplier": 12,
+    }
     data.update(overrides)
-    return create_zone(session, project_id, ZoneCreate(**data), clock)
+    return create_location(session, project_id, LocationCreate(**data), clock)
 
 
 def make_item(session: Session, clock: Clock, project_id: int, **overrides: Any) -> ProjectItem:
-    """A free line (no product) in a fresh level-1 category unless `category_id` is given."""
-    if "category_id" not in overrides and "product_id" not in overrides:
-        overrides["category_id"] = make_category(
-            session, clock, name=f"Cat {next(_counter)}", code=f"C{next(_counter) % 90 + 10}"
-        ).id
-    data: dict[str, Any] = {"name": "Ligne", "unit_cost_cents": 10000}
+    """A free article (not added to the catalogue) in a fresh type unless `category_id` is given."""
+    if (
+        "category_id" not in overrides
+        and "product_id" not in overrides
+        and overrides.get("kind") != "fee"
+    ):
+        n = next(_counter)
+        code = "T" + chr(65 + n % 26) + chr(65 + (n // 26) % 26)
+        overrides["category_id"] = make_category(session, clock, name=f"Type {n}", code=code).id
+    data: dict[str, Any] = {"name": "Article", "unit_cost_cents": 10000, "add_to_catalogue": False}
     data.update(overrides)
     return create_item(session, project_id, ProjectItemCreate(**data), clock)

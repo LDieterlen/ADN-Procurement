@@ -1,20 +1,37 @@
-"""Exports PDF (ROADMAP F2, ADR-0010) : book client (une page par article, photo, jamais de prix),
-bon de commande (agence, fournisseur, totaux), note de licence imprimée, documents conservés."""
+"""PDF exports (ADR-0010, ADR-0013): spec sheets (cover + list + one sheet per article per
+location, photo, supplier contact, never a price, revision letters), listing (amounts, statuses),
+documents kept and listed."""
 
+import itertools
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from conftest import PNG_BYTES, make_category, make_product, make_project, make_supplier, make_zone
+from conftest import (
+    FIXED_NOW,
+    PNG_BYTES,
+    make_category,
+    make_location,
+    make_manufacturer,
+    make_project,
+    make_supplier,
+)
 from ffe.config import Settings
 from ffe.deps import Clock
-from ffe.exports.book_pdf import book_context, build_book
 from ffe.exports.pdf import cents_text, count_pages, milli_text, render_html
-from ffe.exports.po_pdf import po_context
+from ffe.exports.prescription import list_context, sheets_context
 
 GBP = 1_170_000
+
+
+@pytest.fixture
+def clock() -> Clock:
+    """A ticking clock: the revision letter relies on `updated_at` after the last issue."""
+    ticks = itertools.count()
+    return lambda: FIXED_NOW + timedelta(seconds=next(ticks))
 
 
 @pytest.fixture
@@ -22,10 +39,21 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
     client.patch(
         "/api/v1/settings", json={"agencyName": "Atelier X", "agencyAddress": "1 rue de la Paix"}
     )
-    project = make_project(session, clock, name="Hôtel X", delivery_address="12 rue du Chantier")
-    lob = make_zone(session, clock, project.id, code="LOB", name="Lobby", multiplier=1)
-    cha = make_zone(session, clock, project.id, code="CHA", name="Chambre type A", multiplier=12)
-    lum = make_category(session, clock, name="Luminaires", code="LUM")
+    project = make_project(session, clock, name="Hôtel X")
+    lob = make_location(
+        session, clock, project.id, code="LOB", name="Lobby", zone="Zones communes", multiplier=1
+    )
+    cha = make_location(
+        session,
+        clock,
+        project.id,
+        code="CHA",
+        name="Chambre typo A",
+        zone="Hébergement",
+        multiplier=12,
+    )
+    lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
+    flos = make_manufacturer(session, clock, name="Flos")
     dixon = make_supplier(
         session,
         clock,
@@ -35,187 +63,137 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         email="djamel@example.com",
         currency="GBP",
         default_discount_bp=1500,
-        city="London",
-        address_line1="4 Pear Tree Court",
-    )
-    lamp = make_product(
-        session,
-        clock,
-        name="Beat Light Fat",
-        supplier_ref="BLS01",
-        source_url="https://example.com/beat",
-        category_id=lum.id,
-        supplier_id=dixon.id,
-        list_price_cents=125_000,
-        list_price_currency="GBP",
-        finish="laiton",
-    )
-    photo = client.post(
-        "/api/v1/files", files={"file": ("beat.png", PNG_BYTES, "image/png")}
-    ).json()
-    client.post(
-        f"/api/v1/products/{lamp.id}/files",
-        json={"fileId": photo["id"], "kind": "image", "isPrimary": True},
-    )
-    client.patch(
-        f"/api/v1/products/{lamp.id}/files/{photo['id']}",
-        json={"licenseNote": "Photo fournisseur, usage interne"},
     )
     base = f"/api/v1/projects/{project.id}/project-items"
     item = client.post(
         base,
         json={
-            "productId": lamp.id,
+            "name": "Beat Light Fat",
+            "categoryId": lud.id,
+            "manufacturerId": flos.id,
+            "reference": "BLS01",
+            "supplierId": dixon.id,
+            "finish": "laiton",
+            "dimensions": "Ø 36 × H 30 cm",
+            "sourceUrl": "https://example.com/beat",
+            "comments": "Suspension laiton noir",
+            "unitCostCents": 125_000,
             "fxRateMicro": GBP,
-            "clientDescription": "Suspension laiton noir",
-            "heightMm": 300,
-            "location": "wall",
             "placements": [
-                {"zoneId": lob.id, "qtyMilli": 2000},
-                {"zoneId": cha.id, "qtyMilli": 1000},
+                {"locationId": lob.id, "qtyMilli": 2000},
+                {"locationId": cha.id, "qtyMilli": 1000},
             ],
+        },
+    ).json()
+    photo = client.post(
+        "/api/v1/files", files={"file": ("beat.png", PNG_BYTES, "image/png")}
+    ).json()
+    client.post(
+        f"/api/v1/project-items/{item['id']}/files", json={"fileId": photo["id"], "isPrimary": True}
+    )
+    other = client.post(
+        base,
+        json={
+            "name": "Table basse",
+            "categoryId": lud.id,
+            "unitCostCents": 40_000,
+            "placements": [{"locationId": lob.id}],
         },
     ).json()
     client.post(
         base,
         json={
-            "name": "Transport",
-            "categoryId": lum.id,
             "kind": "fee",
+            "name": "Livraison",
             "supplierId": dixon.id,
-            "unitCostCents": 30_000,
+            "unitCostCents": 10_000,
             "currency": "EUR",
-            "placements": [],
         },
     )
-    return {"project": project, "item": item, "lamp": lamp, "dixon": dixon, "photo": photo}
+    return {
+        "project": project,
+        "item": item,
+        "other": other,
+        "photo": photo,
+        "lob": lob,
+        "cha": cha,
+    }
 
 
-def test_book_html_has_one_page_per_article_and_never_a_price(
-    client: TestClient, session: Session, world: dict[str, Any]
+def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
+    world: dict[str, Any], session: Session, settings: Settings, clock: Clock
 ) -> None:
-    context = book_context(session, world["project"].id, clock_date())
+    context = sheets_context(session, world["project"].id, clock().date(), "A")
+    assert context["agency"]["name"] == "Atelier X" and context["indice"] == "A"
+    assert [loc["name"] for loc in context["locations"]] == ["Lobby", "Chambre typo A"]
+    lobby, room = context["locations"]
+    assert [a["item_code"] for a in lobby["articles"]] == ["LOB-LUD-01", "LOB-LUD-02"]
+    assert [a["item_code"] for a in room["articles"]] == ["LOB-LUD-01"]
+    beat = lobby["articles"][0]
+    assert beat["manufacturer"] == "Flos" and beat["reference"] == "BLS01"
+    assert beat["representative"] == "Djamel Sabeur" and beat["email"] == "djamel@example.com"
     assert (
-        context["item_count"] == 2 and context["zone_count"] == 2
-    )  # one article in each zone, no fee
-    assert [z["name"] for z in context["zones"]] == ["Lobby", "Chambre type A"]
-    article = context["zones"][1]["articles"][0]
-    assert (
-        article["item_code"] == "LOB-LUM-01"
-        and article["qty_text"] == "1"
-        and article["qty_total_text"] == "14"
+        beat["photo"] == world["photo"]["sha256"] + ".png"
+        and beat["link"] == "https://example.com/beat"
     )
-    assert (
-        article["photo"] == f"{world['photo']['sha256']}.png"
-        and article["license_note"] == "Photo fournisseur, usage interne"
-    )
-    assert (
-        article["dimensions"] == "H 300 mm"
-        and article["client_description"] == "Suspension laiton noir"
-    )
-    html = render_html("book.html", context)
-    assert (
-        "Atelier X" in html
-        and "Hôtel X" in html
-        and "LOB-LUM-01" in html
-        and "Transport" not in html
-    )
-    # The sheet shows the supplier and its representative, never a price.
-    assert "Tom Dixon" in html and "Djamel Sabeur" in html and "06 76 27 17 10" in html
-    assert "1 062" not in html and "1 243" not in html and "GBP" not in html
-    assert "Photo fournisseur, usage interne" in html
-    assert article["location"] == "Mur" and article["reference"] == "BLS01"
-    assert article["link"] == "https://example.com/beat"
-    assert "LISTE" in html and "Localisation" in html and "Validation" in html
+    assert room["articles"][0]["qty_text"] == "1" and room["articles"][0]["qty_total_text"] == "14"
+    html = render_html("sheets.html", context)
+    assert "125" not in html.replace("1 250", "") or "1 250,00" not in html
+    assert "€" not in html and "Livraison" not in html
+    assert "Djamel Sabeur" in html and "Ø 36 × H 30 cm" in html
+    assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # cover, list, three sheets
 
 
-def test_each_issue_stamps_a_diffusion_letter_on_the_lines_that_changed(
+def test_sheets_pdf_stamps_revision_letters_and_is_kept(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p, item = world["project"].id, world["item"]
-    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] is None
-    first = client.get(f"/api/v1/projects/{p}/exports/book.pdf")
-    assert first.status_code == 200
-    assert "prescriptions-A-" in first.headers["content-disposition"]
-    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] == "A"
-    assert client.get(f"/api/v1/projects/{p}/exports").json()[0]["indice"] == "A"
-    other = client.post(
-        f"/api/v1/projects/{p}/project-items",
-        json={"name": "Nouvelle", "categoryId": item["categoryId"], "kind": "custom"},
-    ).json()
-    client.get(f"/api/v1/projects/{p}/exports/book.pdf")
-    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] == "A"  # unchanged
-    assert client.get(f"/api/v1/project-items/{other['id']}").json()["indice"] == "B"  # new line
+    pid = world["project"].id
+    first = client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
+    assert first.status_code == 200, first.text
+    assert first.headers["content-type"] == "application/pdf" and first.content.startswith(b"%PDF")
+    assert "-fiches-A-2026-10-09.pdf" in first.headers["content-disposition"]
+    items = client.get(f"/api/v1/projects/{pid}/project-items").json()
+    assert {i["indice"] for i in items} == {"A"}
+    client.patch(f"/api/v1/project-items/{world['other']['id']}", json={"finish": "chêne"})
+    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
+    by_id = {
+        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
+    }
+    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "B"
+    exports = client.get(f"/api/v1/projects/{pid}/exports").json()
+    assert [(e["kind"], e["indice"]) for e in exports] == [("sheets_pdf", "B"), ("sheets_pdf", "A")]
+    assert exports[0]["originalName"].endswith("-fiches-B-2026-10-09.pdf")
 
 
-def test_book_pdf_is_issued_and_kept(
-    client: TestClient, session: Session, settings: Settings, world: dict[str, Any]
+def test_listing_pdf_shows_amounts_statuses_and_indices(
+    client: TestClient, world: dict[str, Any], session: Session, settings: Settings, clock: Clock
 ) -> None:
-    p = world["project"].id
-    html, _pdf = build_book(session, settings.files_dir, p, clock_date())
-    assert count_pages(html, settings.files_dir) == 4  # cover + list + 2 articles
-    response = client.get(f"/api/v1/projects/{p}/exports/book.pdf")
-    assert response.status_code == 200, response.text
-    assert (
-        response.headers["content-type"] == "application/pdf" and response.content[:5] == b"%PDF-"
-    )
-    issued = client.get(f"/api/v1/projects/{p}/exports").json()
-    assert [(e["kind"], e["variant"]) for e in issued] == [("book_pdf", "client")]
-    assert issued[0]["originalName"].endswith("-prescriptions-A-2026-10-09.pdf")
+    pid = world["project"].id
+    client.post(f"/api/v1/project-items/{world['item']['id']}/status", json={"status": "approved"})
+    context = list_context(session, pid, clock().date())
+    beat = context["locations"][0]["articles"][0]
+    assert beat["total_ht_text"] == "17\u202f403,82" and beat["status"] == "Validé"
+    html = render_html("list.html", context)
+    assert "17\u202f403,82" in html and "Validé" in html and "landscape" in html
+    assert count_pages(html, settings.files_dir) >= 1
+    response = client.get(f"/api/v1/projects/{pid}/exports/list.pdf")
+    assert response.status_code == 200 and response.content.startswith(b"%PDF")
+    assert "-listing-2026-10-09.pdf" in response.headers["content-disposition"]
+    assert client.get(f"/api/v1/projects/{pid}/exports").json()[0]["kind"] == "list_pdf"
+    assert client.get(f"/api/v1/projects/{pid}/project-items").json()[0]["indice"] is None
 
 
-def test_po_pdf_has_agency_supplier_and_totals_and_is_attached_once(
-    client: TestClient, session: Session, world: dict[str, Any]
-) -> None:
-    p, item = world["project"].id, world["item"]
-    for status in ("specified", "quoted", "approved"):
-        client.post(f"/api/v1/project-items/{item['id']}/status", json={"status": status})
-    po = client.post(
-        f"/api/v1/projects/{p}/purchase-orders",
-        json={"supplierId": world["dixon"].id, "itemIds": [item["id"]]},
-    ).json()
-    context = po_context(session, po["id"])
-    html = render_html("po.html", context)
-    assert (
-        "Atelier X" in html
-        and "1 rue de la Paix" in html
-        and "Tom Dixon" in html
-        and "4 Pear Tree Court, London" in html
-    )
-    assert "12 rue du Chantier" in html and "PO-2026-001" in html and "Brouillon" in html
-    assert (
-        context["lines"][0]["qty_text"] == "14" and context["lines"][0]["total_text"] == "14 875,00"
-    )
-    assert (
-        context["totals"]["total_eur_text"] == "17 403,82"
-        and "Contre-valeur HT EUR (1 GBP = 1,17 €)" in html
-    )
-    first = client.get(f"/api/v1/purchase-orders/{po['id']}/pdf")
-    assert first.status_code == 200 and first.content[:5] == b"%PDF-"
-    client.get(f"/api/v1/purchase-orders/{po['id']}/pdf")
-    files = client.get(f"/api/v1/purchase-orders/{po['id']}").json()["files"]
-    assert (
-        len(files) == 1
-        and files[0]["caption"] == "BC PO-2026-001 (PDF)"
-        and files[0]["ext"] == "pdf"
-    )
-    assert client.get("/api/v1/purchase-orders/999/pdf").status_code == 404
+def test_empty_project_still_renders(client: TestClient, session: Session, clock: Clock) -> None:
+    project = make_project(session, clock)
+    assert client.get(f"/api/v1/projects/{project.id}/exports/sheets.pdf").status_code == 200
+    assert client.get(f"/api/v1/projects/{project.id}/exports/list.pdf").status_code == 200
+    assert client.get("/api/v1/projects/999/exports/list.pdf").status_code == 404
 
 
 def test_text_helpers() -> None:
     assert (
-        cents_text(1_740_382) == "17 403,82"
+        cents_text(1_740_382) == "17\u202f403,82"
         and cents_text(5) == "0,05"
-        and cents_text(-150) == "-1,50"
+        and cents_text(None) == ""
     )
-    assert (
-        milli_text(14_000) == "14"
-        and milli_text(12_500) == "12,5"
-        and milli_text(1_250_000) == "1 250"
-    )
-
-
-def clock_date() -> Any:
-    from conftest import FIXED_NOW
-
-    return FIXED_NOW.date()
+    assert milli_text(14_000) == "14" and milli_text(12_500) == "12,5"

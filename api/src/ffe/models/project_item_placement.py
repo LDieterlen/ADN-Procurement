@@ -1,11 +1,11 @@
-"""`project_item_placement`: where a line goes and how many per zone (DATA_MODEL §4.12)."""
+"""`project_item_placement`: where a line goes and how many per location (DATA_MODEL §4.12)."""
 
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, Integer, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base
-from ffe.models.zone import Zone
+from ffe.models.location import Location
 
 
 class ProjectItemPlacement(Base):
@@ -19,33 +19,32 @@ class ProjectItemPlacement(Base):
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            ["zone_id", "project_id"],
-            ["zone.id", "zone.project_id"],
-            name="fk_project_item_placement_zone_id_zone",
+            ["location_id", "project_id"],
+            ["location.id", "location.project_id"],
+            name="fk_project_item_placement_location_id_location",
             ondelete="RESTRICT",
         ),
         CheckConstraint("qty_milli >= 0", name="qty_min"),
-        Index("ix_project_item_placement_project_id", "project_id", "zone_id", "sort_order"),
+        Index("ix_project_item_placement_project_id", "project_id", "location_id", "sort_order"),
         STRICT,
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_item_id: Mapped[int] = mapped_column(Integer, nullable=False)
     project_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    zone_id: Mapped[int | None] = mapped_column(Integer)  # NULL = « non affecté »
+    location_id: Mapped[int | None] = mapped_column(Integer)  # NULL = « non affecté »
     qty_milli: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1000"))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False)
 
 
-# One placement per (line, zone), NULL zone included (expression index, written by hand in 0005).
+# One placement per (line, location), NULL location included (expression index, hand-written).
 Index(
-    "uq_project_item_placement_zone",
+    "uq_project_item_placement_location",
     ProjectItemPlacement.project_item_id,
-    func.coalesce(ProjectItemPlacement.zone_id, 0),
+    func.coalesce(ProjectItemPlacement.location_id, 0),
     unique=True,
 )
 
-__all__ = ["ProjectItemPlacement", "Zone"]
+__all__ = ["Location", "ProjectItemPlacement"]

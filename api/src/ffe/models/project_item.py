@@ -1,38 +1,22 @@
-"""`project_item`: one specification in a project, frozen price, status (DATA_MODEL §4.11, pivot)."""
+"""`project_item`: one article of a project — its own spec sheet, frozen price, single status
+(DATA_MODEL §4.11, pivot ; ADR-0013)."""
 
-from sqlalchemy import (
-    CheckConstraint,
-    ForeignKey,
-    ForeignKeyConstraint,
-    Index,
-    Integer,
-    UniqueConstraint,
-    text,
-)
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Text
 
-from ffe.models.base import DATE_GLOB, STRICT, Base, TimestampedMixin
-from ffe.models.product import UNITS_SQL
+from ffe.models.base import STRICT, Base, TimestampedMixin
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
 
-ITEM_KINDS = ("ffe", "ose", "custom", "existing", "fee")
-ITEM_KINDS_SQL = ", ".join(f"'{k}'" for k in ITEM_KINDS)
-ITEM_STATUSES_SQL = ", ".join(
-    f"'{s}'"
-    for s in (
-        "draft",
-        "specified",
-        "quoted",
-        "approved",
-        "ordered",
-        "delivered",
-        "installed",
-        "cancelled",
-        "replaced",
-    )
-)
+ITEM_KINDS = ("product", "fee")
+ITEM_STATUSES = ("to_quote", "quoted", "to_review", "approved", "deposit", "purchased", "cancelled")
+ITEM_FAMILIES = ("custom", "joinery", "ose", "edition", "gallery", "artwork", "textile")
+ITEM_USAGES = ("indoor", "outdoor")
+
+
+def _sql_list(values: tuple[str, ...]) -> str:
+    return ", ".join(f"'{v}'" for v in values)
 
 
 class ProjectItem(TimestampedMixin, Base):
@@ -40,77 +24,27 @@ class ProjectItem(TimestampedMixin, Base):
     __table_args__ = (
         UniqueConstraint("project_id", "item_code", name="uq_project_item_project_id"),
         UniqueConstraint("id", "project_id", name="uq_project_item_id"),
-        ForeignKeyConstraint(
-            ["replaced_by_id", "project_id"],
-            ["project_item.id", "project_item.project_id"],
-            name="fk_project_item_replaced_by_id_project_item",
-            ondelete="RESTRICT",
-        ),
         CheckConstraint("length(item_code) > 0", name="item_code_not_empty"),
-        CheckConstraint(
-            "location IS NULL OR location IN ('floor', 'wall', 'ceiling', 'door', 'other')",
-            name="location_enum",
-        ),
         CheckConstraint("length(name) > 0", name="name_not_empty"),
-        CheckConstraint(f"kind IN ({ITEM_KINDS_SQL})", name="kind_enum"),
-        CheckConstraint(f"unit IN ({UNITS_SQL})", name="unit_enum"),
-        CheckConstraint("width_mm IS NULL OR width_mm >= 0", name="width_min"),
-        CheckConstraint("depth_mm IS NULL OR depth_mm >= 0", name="depth_min"),
-        CheckConstraint("height_mm IS NULL OR height_mm >= 0", name="height_min"),
-        CheckConstraint("diameter_mm IS NULL OR diameter_mm >= 0", name="diameter_min"),
+        CheckConstraint(f"kind IN ({_sql_list(ITEM_KINDS)})", name="kind_enum"),
+        # A fee line has no product type; an article always has one.
+        CheckConstraint("(kind = 'fee') = (category_id IS NULL)", name="fee_has_no_type"),
+        CheckConstraint(
+            f"family IS NULL OR family IN ({_sql_list(ITEM_FAMILIES)})", name="family_enum"
+        ),
+        CheckConstraint(f"usage IS NULL OR usage IN ({_sql_list(ITEM_USAGES)})", name="usage_enum"),
         CheckConstraint("unit_cost_cents >= 0", name="unit_cost_min"),
-        CheckConstraint("kind <> 'existing' OR unit_cost_cents = 0", name="existing_is_free"),
         CheckConstraint("length(currency) = 3", name="currency_length"),
         CheckConstraint("fx_rate_micro > 0", name="fx_rate_positive"),
         CheckConstraint("currency <> 'EUR' OR fx_rate_micro = 1000000", name="eur_rate_is_one"),
         CheckConstraint("discount_bp BETWEEN 0 AND 10000", name="discount_bp_range"),
-        CheckConstraint("vat_rate_bp BETWEEN 0 AND 10000", name="vat_rate_bp_range"),
-        CheckConstraint("lead_time_weeks IS NULL OR lead_time_weeks >= 0", name="lead_time_min"),
-        CheckConstraint(
-            f"required_on_site IS NULL OR required_on_site {DATE_GLOB}",
-            name="required_on_site_date",
-        ),
-        CheckConstraint(f"quoted_on IS NULL OR quoted_on {DATE_GLOB}", name="quoted_on_date"),
-        CheckConstraint(
-            f"quote_valid_until IS NULL OR quote_valid_until {DATE_GLOB}",
-            name="quote_valid_until_date",
-        ),
-        CheckConstraint(
-            "quote_valid_until IS NULL OR quoted_on IS NULL OR quote_valid_until >= quoted_on",
-            name="quote_dates_ordered",
-        ),
-        CheckConstraint(
-            f"expected_delivery_on IS NULL OR expected_delivery_on {DATE_GLOB}",
-            name="expected_delivery_on_date",
-        ),
-        CheckConstraint(f"status IN ({ITEM_STATUSES_SQL})", name="status_enum"),
-        CheckConstraint("on_hold IN (0, 1)", name="on_hold_bool"),
-        CheckConstraint(
-            "(status = 'replaced') = (replaced_by_id IS NOT NULL)", name="replaced_has_successor"
-        ),
-        CheckConstraint("replaced_by_id IS NULL OR replaced_by_id <> id", name="replaced_not_self"),
-        CheckConstraint(
-            "(approved_at IS NULL) = (approved_unit_net_cents IS NULL)",
-            name="approved_snapshot_price",
-        ),
-        CheckConstraint(
-            "(approved_at IS NULL) = (approved_total_qty_milli IS NULL)",
-            name="approved_snapshot_qty",
-        ),
-        CheckConstraint(
-            "approved_unit_net_cents IS NULL OR approved_unit_net_cents >= 0",
-            name="approved_unit_net_min",
-        ),
-        CheckConstraint(
-            "approved_total_qty_milli IS NULL OR approved_total_qty_milli >= 0",
-            name="approved_total_qty_min",
-        ),
+        CheckConstraint(f"status IN ({_sql_list(ITEM_STATUSES)})", name="status_enum"),
         Index("ix_project_item_project_id", "project_id", "sort_order"),
         Index("ix_project_item_status", "project_id", "status"),
         Index("ix_project_item_product_id", "product_id"),
         Index("ix_project_item_supplier_id", "supplier_id"),
         Index("ix_project_item_category_id", "category_id"),
-        Index("ix_project_item_replaced_by_id", "replaced_by_id"),
+        Index("ix_project_item_manufacturer_id", "manufacturer_id"),
         STRICT,
     )
 
@@ -119,52 +53,43 @@ class ProjectItem(TimestampedMixin, Base):
         Integer, ForeignKey("project.id", ondelete="RESTRICT"), nullable=False
     )
     item_code: Mapped[str] = mapped_column(Text, nullable=False)
-    category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("category.id", ondelete="RESTRICT"), nullable=False
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="product")
+    category_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("category.id", ondelete="RESTRICT")
     )
     product_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("product.id", ondelete="RESTRICT")
     )
+    manufacturer_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("manufacturer.id", ondelete="RESTRICT")
+    )
     supplier_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("supplier.id", ondelete="RESTRICT")
     )
+    # --- the spec sheet (copied from the catalogue product, then free) ---
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    client_description: Mapped[str | None] = mapped_column(Text)
-    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="ffe")
-    unit: Mapped[str] = mapped_column(Text, nullable=False, server_default="piece")
+    reference: Mapped[str | None] = mapped_column(Text)
+    family: Mapped[str | None] = mapped_column(Text)
+    usage: Mapped[str | None] = mapped_column(Text)
     finish: Mapped[str | None] = mapped_column(Text)
-    color: Mapped[str | None] = mapped_column(Text)
-    materials: Mapped[str | None] = mapped_column(Text)
-    width_mm: Mapped[int | None] = mapped_column(Integer)
-    depth_mm: Mapped[int | None] = mapped_column(Integer)
-    height_mm: Mapped[int | None] = mapped_column(Integer)
-    diameter_mm: Mapped[int | None] = mapped_column(Integer)
+    dimensions: Mapped[str | None] = mapped_column(Text)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    comments: Mapped[str | None] = mapped_column(Text)
+    # --- budget ---
     unit_cost_cents: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="EUR")
     fx_rate_micro: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("1000000")
     )
     discount_bp: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    vat_rate_bp: Mapped[int] = mapped_column(Integer, nullable=False)
-    lead_time_weeks: Mapped[int | None] = mapped_column(Integer)
-    required_on_site: Mapped[str | None] = mapped_column(Text)
-    quoted_on: Mapped[str | None] = mapped_column(Text)
-    quote_valid_until: Mapped[str | None] = mapped_column(Text)
-    expected_delivery_on: Mapped[str | None] = mapped_column(Text)
     quote_ref: Mapped[str | None] = mapped_column(Text)
-    order_ref: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="draft")
-    on_hold: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    replaced_by_id: Mapped[int | None] = mapped_column(Integer)
-    approved_at: Mapped[str | None] = mapped_column(Text)
-    approved_unit_net_cents: Mapped[int | None] = mapped_column(Integer)
-    approved_total_qty_milli: Mapped[int | None] = mapped_column(Integer)
-    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    internal_notes: Mapped[str | None] = mapped_column(Text)
-    # Step 11 (ADR-0012): where the article goes (floor, wall, ceiling, door, other) and the
-    # revision letter of the prescription PDF in which the line last changed.
-    location: Mapped[str | None] = mapped_column(Text)
+    quote_indice: Mapped[str | None] = mapped_column(Text)
+    quote_url: Mapped[str | None] = mapped_column(Text)
+    # --- state ---
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="to_quote")
+    # Revision letter of the spec-sheet PDF in which the line last changed (ADR-0012).
     indice: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
 
     placements: Mapped[list[ProjectItemPlacement]] = relationship(
         ProjectItemPlacement,

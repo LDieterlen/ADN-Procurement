@@ -1,11 +1,11 @@
-"""Budgets: `GET/PUT /projects/{id}/budget-lines`, `GET /projects/{id}/alerts`, `GET /dashboard`."""
+"""Budgets: `GET/PUT /projects/{id}/budget-lines` and the summary `GET /projects/{id}/summary`."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Query
 
 from ffe.deps import DepsDep, SessionDep
-from ffe.schemas.budget import AlertRead, BudgetLineRead, BudgetLinesPut, DashboardProjectRead
+from ffe.schemas.budget import BudgetLineRead, BudgetLinesPut, ProjectSummaryRead
 from ffe.services import budget as service
 
 router = APIRouter(tags=["budgets"])
@@ -28,17 +28,21 @@ def put_budget_lines(
     return [BudgetLineRead.model_validate(b) for b in rows]
 
 
-@router.get("/projects/{project_id}/alerts", operation_id="listProjectAlerts")
-def list_alerts(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> list[AlertRead]:
-    return [
-        AlertRead.model_validate(a)
-        for a in service.alerts(session, project_id, deps.clock().date())
-    ]
-
-
-@router.get("/dashboard", operation_id="getDashboard")
-def get_dashboard(session: SessionDep, deps: DepsDep) -> list[DashboardProjectRead]:
-    return [
-        DashboardProjectRead.model_validate(r)
-        for r in service.dashboard(session, deps.clock().date())
-    ]
+@router.get("/projects/{project_id}/summary", operation_id="getProjectSummary")
+def get_summary(
+    project_id: ProjectId,
+    session: SessionDep,
+    location_id: Annotated[int | None, Query(alias="locationId", ge=1)] = None,
+    zone: Annotated[str | None, Query(max_length=200)] = None,
+    family: Annotated[str | None, Query(max_length=40)] = None,
+    category_id: Annotated[int | None, Query(alias="categoryId", ge=1)] = None,
+    supplier_id: Annotated[int | None, Query(alias="supplierId", ge=1)] = None,
+) -> ProjectSummaryRead:
+    filters = service.SummaryFilter(
+        location_id=location_id,
+        zone=zone,
+        family=family,
+        category_id=category_id,
+        supplier_id=supplier_id,
+    )
+    return ProjectSummaryRead.model_validate(service.summary(session, project_id, filters))

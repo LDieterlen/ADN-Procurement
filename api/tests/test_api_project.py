@@ -23,21 +23,15 @@ def post(client: TestClient, body: dict[str, Any]) -> Any:
     return client.post(URL, json=body)
 
 
-def test_create_generates_a_yearly_code_and_copies_the_vat_default(
-    client: TestClient, client_id: int
-) -> None:
+def test_create_generates_a_yearly_code(client: TestClient, client_id: int) -> None:
     first = post(client, {"name": "Rénovation étages", "clientId": client_id})
     assert first.status_code == 201, first.text
     body = first.json()
-    assert (
-        body["code"] == "2026-001" and body["status"] == "prospect" and body["defaultVatBp"] == 2000
-    )
+    assert body["code"] == "2026-001" and body["status"] == "prospect"
     second = post(client, {"name": "Spa", "clientId": client_id}).json()
     assert second["code"] == "2026-002"
-    custom = post(
-        client, {"name": "Villa", "clientId": client_id, "code": "VILLA-1", "defaultVatBp": 1000}
-    ).json()
-    assert custom["code"] == "VILLA-1" and custom["defaultVatBp"] == 1000
+    custom = post(client, {"name": "Villa", "clientId": client_id, "code": "VILLA-1"}).json()
+    assert custom["code"] == "VILLA-1"
     third = post(client, {"name": "Suite", "clientId": client_id}).json()
     assert third["code"] == "2026-003"  # custom codes do not disturb the sequence
 
@@ -59,9 +53,8 @@ def test_code_must_be_unique(client: TestClient, client_id: int) -> None:
     [
         ({"clientId": 1}, "name"),
         ({"name": "A"}, "clientId"),
-        ({"name": "A", "clientId": 1, "defaultVatBp": 10001}, "defaultVatBp"),
-        ({"name": "A", "clientId": 1, "startOn": "2026-13-01"}, "startOn"),
-        ({"name": "A", "clientId": 1, "startOn": "2026-12-01", "dueOn": "2026-01-01"}, "body"),
+        ({"name": "A", "clientId": 1, "dueOn": "2026-13-01"}, "dueOn"),
+        ({"name": "A", "clientId": 1, "globalBudgetCents": -1}, "globalBudgetCents"),
         ({"name": "A", "clientId": 999}, "clientId"),
     ],
 )
@@ -126,9 +119,7 @@ def test_global_budget_can_be_created_with_the_project(
     )
     assert created.status_code == 201, created.text
     lines = client.get(f"/api/v1/projects/{created.json()['id']}/budget-lines").json()
-    assert [(b["zoneId"], b["categoryId"], b["amountCents"]) for b in lines] == [
-        (None, None, 5_000_000)
-    ]
+    assert [(b["scope"], b["amountCents"]) for b in lines] == [("global", 5_000_000)]
     without = client.post(
         "/api/v1/projects", json={"name": "Sans budget", "clientId": owner.id}
     ).json()

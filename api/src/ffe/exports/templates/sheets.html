@@ -7,40 +7,40 @@
   </div>
   <h1>{{ project.name }}</h1>
   <p class="muted">Projet {{ project.code }} · {{ client_name }}</p>
-  <p>Prescriptions — {{ item_count }} article(s) dans {{ zone_count }} zone(s)</p>
+  <p>Fiches de prescription — {{ item_count }} article(s) dans {{ location_count }} localisation(s)</p>
   <p class="muted small">Diffusion {{ indice }} du {{ issued_on }}</p>
 </section>
 
 <section class="page">
-  <table class="totals"><tr>
+  <table class="head"><tr>
     <td><strong>{{ agency.name or "FFE" }}</strong></td>
     <td style="text-align:center"><strong>{{ project.name }}</strong></td>
     <td class="num"><span class="muted small">PRESCRIPTIONS</span><br><strong>LISTE</strong></td>
   </tr></table>
   <table class="list">
-    <thead><tr><th>Typologie</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Indice</th></tr></thead>
+    <thead><tr><th>Type</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Qté</th><th>Indice</th></tr></thead>
     <tbody>
-    {% for zone in zones %}
-      <tr class="zone"><td colspan="5">{{ zone["code"] or "—" }} — {{ zone["name"] }}{% if zone["multiplier"] > 1 %} (× {{ zone["multiplier"] }}){% endif %}</td></tr>
-      {% for a in zone["articles"] %}
-      <tr><td>{{ a["typology"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ a["location"] }}</td><td>{{ a["indice"] }}</td></tr>
+    {% for loc in locations %}
+      <tr class="location"><td colspan="6">{{ loc["code"] or "—" }} — {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} (× {{ loc["multiplier"] }}){% endif %}</td></tr>
+      {% for a in loc["articles"] %}
+      <tr><td>{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
       {% endfor %}
     {% endfor %}
     </tbody>
   </table>
 </section>
 
-{% for zone in zones %}
-  {% for a in zone["articles"] %}
+{% for loc in locations %}
+  {% for a in loc["articles"] %}
   <section class="page">
-    <table class="totals"><tr>
+    <table class="head"><tr>
       <td><strong>{{ agency.name or "FFE" }}</strong></td>
-      <td style="text-align:center"><strong>{{ project.name }}</strong><br><span class="muted">{{ zone["name"] }}</span></td>
+      <td style="text-align:center"><strong>{{ project.name }}</strong><br><span class="muted">{{ loc["name"] }}</span></td>
       <td class="num"><span class="muted small">PRESCRIPTION</span><br><strong>{{ a["item_code"] }}</strong></td>
     </tr></table>
-    <table class="list" style="margin: 4mm 0 6mm">
-      <thead><tr><th>Typologie</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Indice</th></tr></thead>
-      <tbody><tr><td>{{ a["typology"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ a["location"] }}</td><td>{{ a["indice"] }}</td></tr></tbody>
+    <table class="list" style="margin: 2mm 0 6mm">
+      <thead><tr><th>Type</th><th>Code FF&amp;E</th><th>Désignation</th><th>Zone</th><th>Localisation</th><th>Indice</th></tr></thead>
+      <tbody><tr><td>{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ loc["zone"] or "" }}</td><td>{{ loc["name"] }}</td><td class="center">{{ a["indice"] }}</td></tr></tbody>
     </table>
     <div class="sheet">
       <div class="visuals">
@@ -50,14 +50,14 @@
       </div>
       <table class="facts">
         <tr><th>Fabricant</th></tr><tr><td>{{ a["manufacturer"] or "" }}</td></tr>
-        <tr><th>Nom produit</th></tr><tr><td>{{ a["product_name"] }}</td></tr>
+        <tr><th>Nom produit</th></tr><tr><td>{{ a["name"] }}</td></tr>
         <tr><th>Référence</th></tr><tr><td>{{ a["reference"] or "" }}</td></tr>
-        <tr><th>Finition</th></tr><tr><td>{{ [a["finish"], a["color"], a["materials"]] | select | join(" · ") }}</td></tr>
-        <tr><th>Dimensions</th></tr><tr><td>{{ a["dimensions"] }}</td></tr>
-        <tr><th>Quantité</th></tr><tr><td>{{ a["qty_text"] }}{% if zone["multiplier"] > 1 %} par clé, {{ a["qty_total_text"] }} au total{% endif %}</td></tr>
-        <tr><th>Commentaires</th></tr><tr><td class="tall">{{ a["client_description"] or "" }}</td></tr>
-        <tr><th>Lien internet</th></tr><tr><td>{% if a["link"] %}<a href="{{ a["link"] }}">{{ a["link"] }}</a>{% endif %}</td></tr>
         <tr><th>Fournisseur</th></tr><tr><td>{{ a["supplier_name"] or "" }}</td></tr>
+        <tr><th>Dimensions</th></tr><tr><td>{{ a["dimensions"] or "" }}</td></tr>
+        <tr><th>Finitions</th></tr><tr><td>{{ a["finish"] or "" }}</td></tr>
+        <tr><th>Quantité</th></tr><tr><td>{{ a["qty_text"] }}{% if loc["multiplier"] > 1 %} par unité, {{ a["qty_total_text"] }} au total{% endif %}</td></tr>
+        <tr><th>Commentaires</th></tr><tr><td class="tall">{{ a["comments"] or "" }}</td></tr>
+        <tr><th>Lien internet</th></tr><tr><td>{% if a["link"] %}<a href="{{ a["link"] }}">{{ a["link"] }}</a>{% endif %}</td></tr>
         <tr><th>Représentant</th></tr><tr><td>{{ a["representative"] or "" }}</td></tr>
         <tr><th>Téléphone</th></tr><tr><td>{{ a["phone"] or "" }}</td></tr>
         <tr><th>Email</th></tr><tr><td>{{ a["email"] or "" }}</td></tr>

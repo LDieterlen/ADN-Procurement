@@ -2,28 +2,21 @@
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema, IsoDate
+from ffe.schemas.base import BaseSchema
 
-Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
-TaxMode = Literal["ht", "ttc"]
-SourceKind = Literal["manual", "url", "import"]
 FileKind = Literal["image", "datasheet", "drawing", "other"]
 
 Name = Annotated[str, Field(min_length=1, max_length=200)]
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]
 Currency = Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
-Gtin = Annotated[str | None, Field(pattern=r"^[0-9]{8,14}$")]
 Cents = Annotated[int | None, Field(ge=0)]
-Bp = Annotated[int | None, Field(ge=0, le=10000)]
-Mm = Annotated[int | None, Field(ge=0)]
-Weeks = Annotated[int | None, Field(ge=0)]
 Url = Annotated[str | None, Field(max_length=2000, pattern=r"^https?://")]
 
-STRIPPED = ("name", "manufacturer_ref", "supplier_ref", "gtin", "finish", "color", "materials")
+STRIPPED = ("name", "reference", "finish", "dimensions")
 
 
 def _strip(value: Any) -> Any:
@@ -32,30 +25,15 @@ def _strip(value: Any) -> Any:
 
 class ProductCreate(BaseSchema):
     name: Name
-    description: Long = None
     category_id: int
     manufacturer_id: int | None = None
-    manufacturer_ref: Short = None
-    gtin: Gtin = None
+    reference: Short = None
     supplier_id: int | None = None
-    supplier_ref: Short = None
-    unit: Unit = "piece"
     list_price_cents: Cents = None
-    list_price_currency: Currency = "EUR"
-    list_price_tax_mode: TaxMode = "ht"
-    list_price_vat_bp: Bp = None
-    list_price_on: IsoDate = None
-    lead_time_weeks: Weeks = None
-    width_mm: Mm = None
-    depth_mm: Mm = None
-    height_mm: Mm = None
-    diameter_mm: Mm = None
-    materials: Short = None
+    currency: Currency = "EUR"
+    dimensions: Short = None
     finish: Short = None
-    color: Short = None
     source_url: Url = None
-    source_kind: SourceKind = "manual"
-    discontinued_on: IsoDate = None
     notes: Long = None
 
     @field_validator(*STRIPPED, mode="before")
@@ -63,59 +41,28 @@ class ProductCreate(BaseSchema):
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
 
-    @model_validator(mode="after")
-    def ttc_needs_vat(self) -> ProductCreate:
-        if self.list_price_tax_mode == "ttc" and self.list_price_vat_bp is None:
-            raise ValueError(fr.PRODUCT_TTC_NEEDS_VAT)
-        return self
-
 
 class ProductUpdate(BaseSchema):
     name: Name | None = None
-    description: Long = None
     category_id: int | None = None
     manufacturer_id: int | None = None
-    manufacturer_ref: Short = None
-    gtin: Gtin = None
+    reference: Short = None
     supplier_id: int | None = None
-    supplier_ref: Short = None
-    unit: Unit | None = None
     list_price_cents: Cents = None
-    list_price_currency: Currency | None = None
-    list_price_tax_mode: TaxMode | None = None
-    list_price_vat_bp: Bp = None
-    list_price_on: IsoDate = None
-    lead_time_weeks: Weeks = None
-    width_mm: Mm = None
-    depth_mm: Mm = None
-    height_mm: Mm = None
-    diameter_mm: Mm = None
-    materials: Short = None
+    currency: Currency | None = None
+    dimensions: Short = None
     finish: Short = None
-    color: Short = None
     source_url: Url = None
-    source_kind: SourceKind | None = None
-    discontinued_on: IsoDate = None
     notes: Long = None
 
-    @field_validator(
-        "name",
-        "category_id",
-        "unit",
-        "list_price_currency",
-        "list_price_tax_mode",
-        "source_kind",
-        mode="before",
-    )
+    @field_validator("name", "category_id", "currency", mode="before")
     @classmethod
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
         return _strip(value)
 
-    @field_validator(
-        "manufacturer_ref", "supplier_ref", "gtin", "finish", "color", "materials", mode="before"
-    )
+    @field_validator("reference", "finish", "dimensions", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
@@ -154,30 +101,15 @@ class ProductFileRead(BaseSchema):
 class ProductRead(BaseSchema):
     id: int
     name: str
-    description: str | None
     category_id: int
     manufacturer_id: int | None
-    manufacturer_ref: str | None
-    gtin: str | None
+    reference: str | None
     supplier_id: int | None
-    supplier_ref: str | None
-    unit: Unit
     list_price_cents: int | None
-    list_price_currency: str
-    list_price_tax_mode: TaxMode
-    list_price_vat_bp: int | None
-    list_price_on: str | None
-    lead_time_weeks: int | None
-    width_mm: int | None
-    depth_mm: int | None
-    height_mm: int | None
-    diameter_mm: int | None
-    materials: str | None
+    currency: str
+    dimensions: str | None
     finish: str | None
-    color: str | None
     source_url: str | None
-    source_kind: SourceKind
-    discontinued_on: str | None
     notes: str | None
     archived_at: str | None
     created_at: str
@@ -203,4 +135,4 @@ class ProductFileUpdate(BaseSchema):
     is_primary: bool | None = None
     caption: Short = None
     sort_order: int | None = None
-    license_note: Short = None  # étape F2 : porté par le fichier, pas la jointure
+    license_note: Short = None  # carried by the file, not the junction

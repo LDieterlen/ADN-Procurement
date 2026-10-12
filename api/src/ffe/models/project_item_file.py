@@ -1,4 +1,4 @@
-"""`project_item_file`: quotes, signed proofs, photos of a line (DATA_MODEL §4.15), same shape as product_file."""
+"""`project_item_file`: photos and drawings of a line (DATA_MODEL §4.15), same shape as product_file."""
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -7,7 +7,7 @@ from sqlalchemy.types import Text
 from ffe.models.base import STRICT, Base, TimestampedMixin
 from ffe.models.file import File
 
-ITEM_FILE_KINDS = ("image", "quote", "approval", "drawing", "other")
+ITEM_FILE_KINDS = ("image", "drawing", "other")
 ITEM_FILE_KINDS_SQL = ", ".join(f"'{k}'" for k in ITEM_FILE_KINDS)
 
 
@@ -29,7 +29,7 @@ class ProjectItemFile(TimestampedMixin, Base):
     file_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("file.id", ondelete="RESTRICT"), nullable=False
     )
-    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="other")
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="image")
     is_primary: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     caption: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))

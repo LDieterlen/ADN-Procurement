@@ -18,7 +18,7 @@ NOW = "2026-10-09T12:00:00Z"
 
 def seed(engine: Engine) -> None:
     with engine.begin() as conn:
-        conn.execute(text("UPDATE setting SET default_vat_bp = 1000 WHERE id = 1"))
+        conn.execute(text("UPDATE setting SET project_code_prefix = 'P' WHERE id = 1"))
         conn.execute(
             insert(Client).values(
                 name="Famille Martin",
@@ -49,26 +49,14 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
         "product",
         "product_file",
         "project",
-        "zone",
+        "location",
         "project_item",
         "project_item_placement",
         "project_item_event",
         "item_code_sequence",
         "project_item_file",
         "budget_line",
-        "quote",
-        "quote_line",
-        "quote_file",
-        "po_sequence",
-        "purchase_order",
-        "purchase_order_line",
-        "purchase_order_file",
-        "delivery",
-        "delivery_line",
-        "supplier_invoice",
         "project_file",
-        "import_batch",
-        "price_observation",
     ]
     first = document["tables"]["client"][0]
     assert first["name"] == "Famille Martin" and first["countryCode"] == "FR"
@@ -92,26 +80,14 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
             "product": 0,
             "product_file": 0,
             "project": 0,
-            "zone": 0,
+            "location": 0,
             "project_item": 0,
             "project_item_placement": 0,
             "project_item_event": 0,
             "item_code_sequence": 0,
             "project_item_file": 0,
             "budget_line": 0,
-            "quote": 0,
-            "quote_line": 0,
-            "quote_file": 0,
-            "po_sequence": 0,
-            "purchase_order": 0,
-            "purchase_order_line": 0,
-            "purchase_order_file": 0,
-            "delivery": 0,
-            "delivery_line": 0,
-            "supplier_invoice": 0,
             "project_file": 0,
-            "import_batch": 0,
-            "price_observation": 0,
         }
         assert export_json(fresh, clock) == document
     finally:

@@ -91,28 +91,16 @@ def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Proje
         values = data.model_dump()
         code = values.pop("code") or next_code(session, clock)
         _check_code_free(session, code, None)
-        vat = values.pop("default_vat_bp")
-        if vat is None:
-            vat = _settings_row(session).default_vat_bp
-        contingency = values.pop("contingency_bp")
-        if contingency is None:
-            contingency = _settings_row(session).default_contingency_bp
         global_budget = values.pop("global_budget_cents")
         now = stamp(clock)
-        project = Project(
-            **values,
-            code=code,
-            default_vat_bp=vat,
-            contingency_bp=contingency,
-            created_at=now,
-            updated_at=now,
-        )
+        project = Project(**values, code=code, created_at=now, updated_at=now)
         session.add(project)
         if global_budget is not None:
             session.flush()
             session.add(
                 BudgetLine(
                     project_id=project.id,
+                    scope="global",
                     amount_cents=global_budget,
                     created_at=now,
                     updated_at=now,
@@ -129,12 +117,6 @@ def update_project(session: Session, project_id: int, data: ProjectUpdate, clock
             _check_client(session, changes["client_id"])
         if "code" in changes and changes["code"] != project.code:
             _check_code_free(session, changes["code"], project_id)
-        start = changes.get("start_on", project.start_on)
-        due = changes.get("due_on", project.due_on)
-        if start and due and due < start:
-            raise ValidationAppError(
-                [ErrorDetail("dueOn", "La date de fin doit suivre la date de début.")]
-            )
         for field_name, value in changes.items():
             setattr(project, field_name, value)
         project.updated_at = stamp(clock)

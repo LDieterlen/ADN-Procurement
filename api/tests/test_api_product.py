@@ -34,12 +34,8 @@ def test_create_with_name_and_category_only(client: TestClient, lum: int) -> Non
     response = post(client, {"name": "Beat Light Fat", "categoryId": lum})
     assert response.status_code == 201, response.text
     body = response.json()
-    assert (
-        body["unit"] == "piece"
-        and body["listPriceCurrency"] == "EUR"
-        and body["listPriceTaxMode"] == "ht"
-    )
-    assert body["listPriceCents"] is None and body["files"] == [] and body["sourceKind"] == "manual"
+    assert body["currency"] == "EUR" and body["listPriceCents"] is None and body["files"] == []
+    assert body["reference"] is None and body["dimensions"] is None
     assert client.get(f"{URL}/{body['id']}").json() == body
 
 
@@ -48,12 +44,8 @@ def test_create_with_name_and_category_only(client: TestClient, lum: int) -> Non
     [
         ({"categoryId": 1}, "name"),
         ({"name": "A"}, "categoryId"),
-        ({"name": "A", "categoryId": 1, "unit": "box"}, "unit"),
         ({"name": "A", "categoryId": 1, "listPriceCents": -1}, "listPriceCents"),
-        ({"name": "A", "categoryId": 1, "listPriceCurrency": "eur"}, "listPriceCurrency"),
-        ({"name": "A", "categoryId": 1, "listPriceOn": "2026/10/10"}, "listPriceOn"),
-        ({"name": "A", "categoryId": 1, "gtin": "12AB"}, "gtin"),
-        ({"name": "A", "categoryId": 1, "widthMm": -5}, "widthMm"),
+        ({"name": "A", "categoryId": 1, "currency": "eur"}, "currency"),
         ({"name": "A", "categoryId": 1, "sourceUrl": "ftp://x"}, "sourceUrl"),
     ],
 )
@@ -63,27 +55,6 @@ def test_create_rejects_each_invalid_field(
     response = post(client, body)
     assert response.status_code == 422
     assert [d["field"] for d in response.json()["details"]] == [field]
-
-
-def test_ttc_price_requires_the_vat_rate(client: TestClient, lum: int) -> None:
-    response = post(
-        client, {"name": "A", "categoryId": lum, "listPriceCents": 12000, "listPriceTaxMode": "ttc"}
-    )
-    assert response.status_code == 422
-    assert response.json()["details"][0]["message"] == "Un prix TTC exige le taux de TVA à déduire."
-    ok = post(
-        client,
-        {
-            "name": "A",
-            "categoryId": lum,
-            "listPriceCents": 12000,
-            "listPriceTaxMode": "ttc",
-            "listPriceVatBp": 2000,
-        },
-    )
-    assert ok.status_code == 201
-    patched = client.patch(f"{URL}/{ok.json()['id']}", json={"listPriceVatBp": None})
-    assert patched.status_code == 422 and patched.json()["details"][0]["field"] == "listPriceVatBp"
 
 
 def test_references_must_exist_and_be_active(
@@ -106,7 +77,7 @@ def test_duplicate_manufacturer_reference(
     flos = make_manufacturer(session, clock, name="Flos")
     first = post(
         client,
-        {"name": "Arco", "categoryId": lum, "manufacturerId": flos.id, "manufacturerRef": "F0300"},
+        {"name": "Arco", "categoryId": lum, "manufacturerId": flos.id, "reference": "F0300"},
     ).json()
     dup = post(
         client,
@@ -114,7 +85,7 @@ def test_duplicate_manufacturer_reference(
             "name": "Arco noir",
             "categoryId": lum,
             "manufacturerId": flos.id,
-            "manufacturerRef": " f0300 ",
+            "reference": " f0300 ",
         },
     )
     assert (
@@ -128,7 +99,7 @@ def test_duplicate_manufacturer_reference(
             "name": "Arco noir",
             "categoryId": lum,
             "manufacturerId": flos.id,
-            "manufacturerRef": "F0300",
+            "reference": "F0300",
         },
         force="true",
     )
@@ -151,7 +122,7 @@ def test_list_filters_and_search(
         name="Arco",
         category_id=lum,
         manufacturer_id=flos.id,
-        manufacturer_ref="F0300",
+        reference="F0300",
     )
     make_product(
         session,
@@ -159,7 +130,7 @@ def test_list_filters_and_search(
         name="Beat Light",
         category_id=lum,
         supplier_id=dixon.id,
-        supplier_ref="BLS03",
+        reference="BLS03",
     )
     make_product(session, clock, name="Table Tulip", category_id=tab)
     names = lambda params: [p["name"] for p in client.get(URL, params=params).json()["items"]]  # noqa: E731
@@ -176,12 +147,12 @@ def test_patch_and_archive_cycle(client: TestClient, lum: int) -> None:
     created = post(client, {"name": "A", "categoryId": lum}).json()
     url = f"{URL}/{created['id']}"
     body = client.patch(
-        url, json={"finish": "laiton", "widthMm": 360, "discontinuedOn": "2026-12-31"}
+        url, json={"finish": "laiton", "dimensions": "Ø 36 cm", "listPriceCents": 125000}
     ).json()
     assert (
         body["finish"] == "laiton"
-        and body["widthMm"] == 360
-        and body["discontinuedOn"] == "2026-12-31"
+        and body["dimensions"] == "Ø 36 cm"
+        and body["listPriceCents"] == 125000
     )
     assert client.patch(url, json={"categoryId": None}).status_code == 422
     assert client.post(f"{url}/archive").status_code == 200

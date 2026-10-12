@@ -4,37 +4,34 @@
 <meta charset="utf-8">
 <title>{{ title }}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; @bottom-center { content: "{{ footer }} — page " counter(page) " / " counter(pages); font-size: 8pt; color: #666; } }
-  body { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-size: 10pt; color: #111; }
+  @page { size: A4{% if landscape %} landscape{% endif %}; margin: 16mm 14mm; @bottom-center { content: "{{ footer }} — page " counter(page) " / " counter(pages); font-size: 8pt; color: #666; } }
+  body { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #111; }
   h1 { font-size: 20pt; margin: 0 0 4mm; }
-  h2 { font-size: 13pt; margin: 0 0 3mm; }
   .muted { color: #666; }
   .small { font-size: 8pt; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 1.5mm 2mm; vertical-align: top; }
-  th { text-align: left; border-bottom: 0.4mm solid #333; font-size: 8pt; text-transform: uppercase; color: #444; }
-  td { border-bottom: 0.2mm solid #ccc; }
-  .num { text-align: right; white-space: nowrap; }
   .page { page-break-after: always; }
   .page:last-child { page-break-after: auto; }
   .cover { display: flex; flex-direction: column; justify-content: center; height: 240mm; }
   .cover .agency { position: absolute; top: 0; left: 0; }
-  .article { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
-  .photo { width: 100%; max-height: 150mm; object-fit: contain; border: 0.2mm solid #ddd; }
-  .code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; color: #444; }
-  dl { margin: 0; } dt { font-weight: bold; margin-top: 2mm; } dd { margin: 0; }
-  .totals td { border: none; }
-  .list th, .list td { border: 0.2mm solid #999; text-align: center; }
-  .list th { background: #c9a58e; color: #222; text-transform: uppercase; font-size: 8pt; }
-  .list tr.zone td { text-align: left; background: #f1ebe6; font-weight: bold; }
+  .head td { border: none; padding: 0 0 4mm; }
+  .num { text-align: right; white-space: nowrap; }
+  .code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.5pt; color: #333; white-space: nowrap; }
+  .list th, .list td { border: 0.2mm solid #999; }
+  .list th { background: #eee; text-transform: uppercase; font-size: 7.5pt; text-align: left; }
+  .list tr.location td { background: #f6f6f6; font-weight: bold; }
+  .list td.center { text-align: center; }
+  .thumb { width: 14mm; height: 14mm; object-fit: contain; }
   .sheet { display: grid; grid-template-columns: 2fr 1fr; gap: 6mm; }
   .visuals { border: 0.2mm solid #999; padding: 4mm; min-height: 150mm; }
-  .drawing { margin-top: 6mm; max-height: 90mm; }
+  .photo { width: 100%; max-height: 120mm; object-fit: contain; }
+  .drawing { margin-top: 6mm; max-height: 80mm; }
   .facts { border-collapse: collapse; }
-  .facts th { background: #e9d9cf; text-align: center; border: 0.2mm solid #999; font-size: 8pt; padding: 1mm; }
-  .facts td { text-align: center; border: 0.2mm solid #999; padding: 1.5mm 2mm; min-height: 6mm; }
+  .facts th { background: #eee; text-align: left; border: 0.2mm solid #999; font-size: 7.5pt; padding: 1mm 2mm; text-transform: uppercase; }
+  .facts td { border: 0.2mm solid #999; padding: 1.5mm 2mm; }
   .facts td.tall { height: 14mm; }
-  .totals .label { text-align: right; color: #444; }
+  .pill { display: inline-block; border: 0.2mm solid #111; border-radius: 3mm; padding: 0 2mm; font-size: 7.5pt; }
 </style>
 </head>
 <body>

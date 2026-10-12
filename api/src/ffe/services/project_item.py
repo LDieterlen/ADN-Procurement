@@ -1,11 +1,10 @@
-"""`project_item` service: the business core (DATA_MODEL §4.11–4.15, §5, §7 ; ADR-0005).
+"""`project_item` service: the business core (DATA_MODEL §4.11–4.15, §5, §7 ; ADR-0013).
 
-Every write is one transaction and writes its journal row in the same transaction. Prices, rates,
-quantities, product and placements are journaled once the line has been approved (D2.9 policy).
+Every write is one transaction and writes its journal row in the same transaction. Status, price
+(cost, discount, currency, rate), product and placement changes are always journaled.
 """
 
 import json
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -18,13 +17,14 @@ from ffe.errors import ConflictError, ErrorDetail, NotFoundError, ValidationAppE
 from ffe.i18n import fr
 from ffe.models import (
     Category,
+    Location,
+    Manufacturer,
     Product,
     ProjectItem,
     ProjectItemEvent,
     ProjectItemFile,
     ProjectItemPlacement,
     Supplier,
-    Zone,
 )
 from ffe.schemas.project_item import (
     ItemFileAttach,
@@ -33,29 +33,39 @@ from ffe.schemas.project_item import (
     PlacementUpdate,
     ProjectItemCreate,
     ProjectItemUpdate,
-    ReplaceProduct,
     StatusChange,
 )
-from ffe.services.base import stamp
+from ffe.services.base import normalize_key, stamp
 from ffe.services.file import get_file, unlink_if_orphan
+from ffe.services.product import find_twin
 from ffe.services.project import ensure_open, get_project
-from ffe.transitions import (
-    NO_PRICE_KINDS,
-    NO_PRODUCT_KINDS,
-    NO_ZONE_KINDS,
-    TERMINAL,
-    check_transition,
-    required_for,
-)
 
 RESOURCE = "project_item"
-PIECE_UNITS = frozenset({"piece", "pair", "set", "lot", "roll"})
-PRICE_FIELDS = ("unit_cost_cents", "currency", "discount_bp", "vat_rate_bp")
-JOURNALED_FIELDS = PRICE_FIELDS + ("fx_rate_micro", "product_id")
+FEE_PREFIX = "FR"
+PRICE_FIELDS = ("unit_cost_cents", "currency", "fx_rate_micro", "discount_bp")
+# Fields of the spec sheet copied from a catalogue product when the line does not give them.
+COPIED_FROM_PRODUCT = (
+    "name",
+    "category_id",
+    "manufacturer_id",
+    "reference",
+    "supplier_id",
+    "finish",
+    "dimensions",
+    "source_url",
+)
 
 
 def _err(field: str, message: str) -> ValidationAppError:
     return ValidationAppError([ErrorDetail(field, message)])
+
+
+def _reloaded(session: Session, item: ProjectItem) -> ProjectItem:
+    """Reloads collections after the commit, in a closed read transaction (so that the next
+    service call on the same session can open its own)."""
+    with session.begin():
+        session.refresh(item)
+    return item
 
 
 def price_json(item: ProjectItem) -> str:
@@ -65,7 +75,6 @@ def price_json(item: ProjectItem) -> str:
             "currency": item.currency,
             "fx": item.fx_rate_micro,
             "discount": item.discount_bp,
-            "vat": item.vat_rate_bp,
         },
         separators=(",", ":"),
     )
@@ -111,7 +120,7 @@ def list_items(
     session: Session,
     project_id: int,
     *,
-    zone_id: int | None = None,
+    location_id: int | None = None,
     status: str | None = None,
     category_id: int | None = None,
     supplier_id: int | None = None,
@@ -128,15 +137,13 @@ def list_items(
         query = query.where(ProjectItem.supplier_id == supplier_id)
     if kind is not None:
         query = query.where(ProjectItem.kind == kind)
-    if zone_id is not None:
+    if location_id is not None:
         placed = select(ProjectItemPlacement.project_item_id).where(
-            ProjectItemPlacement.zone_id == zone_id
+            ProjectItemPlacement.location_id == location_id
         )
         query = query.where(ProjectItem.id.in_(placed))
     rows = list(session.scalars(query.order_by(ProjectItem.sort_order, ProjectItem.item_code)))
     if q and q.strip():
-        from ffe.services.base import normalize_key
-
         needle = normalize_key(q)
         rows = [
             r
@@ -160,39 +167,37 @@ def list_events(session: Session, item_id: int) -> list[ProjectItemEvent]:
 # --- codes (DATA_MODEL §7) --------------------------------------------------------------------
 
 
-def level1_code(session: Session, category_id: int) -> str:
+def type_code(session: Session, category_id: int) -> str:
     category = session.get(Category, category_id)
     if category is None:
-        raise _err("categoryId", fr.NOT_FOUND.format(resource="Catégorie", id=category_id))
-    if category.parent_id is not None:
-        parent = session.get(Category, category.parent_id)
-        assert parent is not None and parent.code is not None
-        return parent.code
-    assert category.code is not None
+        raise _err("categoryId", fr.NOT_FOUND.format(resource="Type de produit", id=category_id))
+    if category.archived_at is not None:
+        raise _err("categoryId", fr.CATEGORY_MUST_BE_ACTIVE)
     return category.code
 
 
-def zone_code_of(session: Session, zone_id: int | None) -> str:
-    """Zone code used as the first segment of an item code; '' when the line has no zone."""
-    if zone_id is None:
+def location_code_of(session: Session, location_id: int | None) -> str:
+    """Location code used as the first segment of an item code; '' without a location."""
+    if location_id is None:
         return ""
-    zone = session.get(Zone, zone_id)
-    return zone.code.upper() if zone is not None else ""
+    location = session.get(Location, location_id)
+    return location.code.upper() if location is not None else ""
 
 
-def next_item_code(session: Session, project_id: int, zone_code: str, prefix: str) -> str:
-    """`<ZONE>-<TYPO>-NN` (or `<TYPO>-NN` without a zone) from `item_code_sequence`, never
-    decremented (upsert + RETURNING), ADR-0012."""
+def next_item_code(session: Session, project_id: int, location_code: str, prefix: str) -> str:
+    """`<LOC>-<TYPE>-NN` (or `<TYPE>-NN` without a location) from `item_code_sequence`, never
+    decremented (upsert + RETURNING), ADR-0012/0013."""
     value = session.execute(
         text(
-            "INSERT INTO item_code_sequence (project_id, zone_code, prefix, next_value) "
+            "INSERT INTO item_code_sequence (project_id, location_code, prefix, next_value) "
             "VALUES (:p, :z, :x, 2) "
-            "ON CONFLICT (project_id, zone_code, prefix) DO UPDATE SET next_value = next_value + 1 "
+            "ON CONFLICT (project_id, location_code, prefix) "
+            "DO UPDATE SET next_value = next_value + 1 "
             "RETURNING next_value - 1"
         ),
-        {"p": project_id, "z": zone_code, "x": prefix},
+        {"p": project_id, "z": location_code, "x": prefix},
     ).scalar_one()
-    head = f"{zone_code}-" if zone_code else ""
+    head = f"{location_code}-" if location_code else ""
     return f"{head}{prefix}-{int(value):02d}"
 
 
@@ -206,60 +211,20 @@ def _check_code_free(session: Session, project_id: int, code: str, exclude_id: i
         raise _err("itemCode", fr.ITEM_CODE_TAKEN)
 
 
-# --- defaults precedence (DATA_MODEL §6, création depuis un produit) ----------------------------
+# --- references and defaults (création depuis le catalogue ou libre) --------------------------
 
 
-def _resolve_defaults(session: Session, project_id: int, data: ProjectItemCreate) -> dict[str, Any]:
-    project = get_project(session, project_id)
-    values = data.model_dump(exclude={"placements", "item_code"})
-    product = None
-    if data.product_id is not None:
-        product = session.get(Product, data.product_id)
-        if product is None:
-            raise _err("productId", fr.NOT_FOUND.format(resource="Produit", id=data.product_id))
-        values["category_id"] = values["category_id"] or product.category_id
-        values["name"] = values["name"] or product.name
-        values["unit"] = values["unit"] or product.unit
-        for field in ("finish", "color", "materials"):
-            values[field] = values[field] or getattr(product, field)
-        values["supplier_id"] = values["supplier_id"] or product.supplier_id
-        if values["lead_time_weeks"] is None:
-            values["lead_time_weeks"] = product.lead_time_weeks
-    if values["category_id"] is None:
-        raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
-    if not values["name"]:
-        raise _err("name", fr.ITEM_NAME_REQUIRED)
-    values["unit"] = values["unit"] or "piece"
-    supplier = session.get(Supplier, values["supplier_id"]) if values["supplier_id"] else None
-    if values["supplier_id"] and supplier is None:
-        raise _err(
-            "supplierId", fr.NOT_FOUND.format(resource="Fournisseur", id=values["supplier_id"])
-        )
-    if values["currency"] is None:
-        if supplier is not None:
-            values["currency"] = supplier.currency
-        elif product is not None:
-            values["currency"] = product.list_price_currency
-        else:
-            values["currency"] = "EUR"
-    if values["unit_cost_cents"] is None:
-        if product is not None and product.list_price_cents is not None:
-            values["unit_cost_cents"] = money.list_price_ht_cents(
-                product.list_price_cents, product.list_price_tax_mode, product.list_price_vat_bp
-            )
-        else:
-            values["unit_cost_cents"] = 0
-    if values["discount_bp"] is None:
-        values["discount_bp"] = supplier.default_discount_bp if supplier is not None else 0
-    if values["vat_rate_bp"] is None:
-        values["vat_rate_bp"] = project.default_vat_bp
-    values["fx_rate_micro"] = resolve_fx(
-        session, project_id, values["currency"], values["fx_rate_micro"]
-    )
-    if data.kind == "existing":
-        if values["unit_cost_cents"]:
-            raise _err("unitCostCents", fr.ITEM_EXISTING_IS_FREE)
-    return values
+def _check_reference(
+    session: Session, model: Any, field: str, value: int | None, label: str
+) -> Any:
+    if value is None:
+        return None
+    entity = session.get(model, value)
+    if entity is None:
+        raise _err(field, fr.NOT_FOUND.format(resource=label, id=value))
+    if getattr(entity, "archived_at", None) is not None:
+        raise _err(field, fr.ARCHIVED_READ_ONLY.format(resource=label, id=value))
+    return entity
 
 
 def resolve_fx(session: Session, project_id: int, currency: str, given: int | None) -> int:
@@ -279,52 +244,120 @@ def resolve_fx(session: Session, project_id: int, currency: str, given: int | No
     return int(last)
 
 
+def _resolve_defaults(
+    session: Session, project_id: int, data: ProjectItemCreate, now: str
+) -> dict[str, Any]:
+    values = data.model_dump(exclude={"placements", "item_code", "add_to_catalogue"})
+    if data.kind == "fee":
+        if data.category_id is not None or data.product_id is not None or data.placements:
+            raise _err("kind", fr.ITEM_FEE_HAS_NO_TYPE)
+        if data.supplier_id is None:
+            raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
+    product = _check_reference(session, Product, "productId", data.product_id, "Produit")
+    if product is not None:
+        for field in COPIED_FROM_PRODUCT:
+            if values[field] in (None, ""):
+                values[field] = getattr(product, field)
+        if values["unit_cost_cents"] is None and product.list_price_cents is not None:
+            values["unit_cost_cents"] = product.list_price_cents
+            values["currency"] = values["currency"] or product.currency
+    if data.kind == "product" and values["category_id"] is None:
+        raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
+    _check_reference(session, Category, "categoryId", values["category_id"], "Type de produit")
+    if not values["name"]:
+        raise _err("name", fr.ITEM_NAME_REQUIRED)
+    _check_reference(
+        session, Manufacturer, "manufacturerId", values["manufacturer_id"], "Fabricant"
+    )
+    supplier = _check_reference(
+        session, Supplier, "supplierId", values["supplier_id"], "Fournisseur"
+    )
+    if values["currency"] is None:
+        values["currency"] = supplier.currency if supplier is not None else "EUR"
+    if values["unit_cost_cents"] is None:
+        values["unit_cost_cents"] = 0
+    if values["discount_bp"] is None:
+        values["discount_bp"] = supplier.default_discount_bp if supplier is not None else 0
+    values["fx_rate_micro"] = resolve_fx(
+        session, project_id, values["currency"], values["fx_rate_micro"]
+    )
+    if data.kind == "product" and product is None and data.add_to_catalogue:
+        values["product_id"] = _catalogue_product(session, values, now).id
+    return values
+
+
+def _catalogue_product(session: Session, values: dict[str, Any], now: str) -> Product:
+    """ADR-0013: a free article joins the catalogue — the active twin (manufacturer + reference)
+    if there is one, else a new product built from the sheet."""
+    twin = find_twin(session, values["manufacturer_id"], values["reference"])
+    if twin is not None:
+        return twin
+    product = Product(
+        name=values["name"],
+        category_id=values["category_id"],
+        manufacturer_id=values["manufacturer_id"],
+        reference=values["reference"],
+        supplier_id=values["supplier_id"],
+        list_price_cents=values["unit_cost_cents"] or None,
+        currency=values["currency"],
+        dimensions=values["dimensions"],
+        finish=values["finish"],
+        source_url=values["source_url"],
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(product)
+    session.flush()
+    return product
+
+
 # --- placements -------------------------------------------------------------------------------
 
 
-def _check_zone(session: Session, project_id: int, zone_id: int | None) -> Zone | None:
-    if zone_id is None:
+def _check_location(session: Session, project_id: int, location_id: int | None) -> Location | None:
+    if location_id is None:
         return None
-    zone = session.get(Zone, zone_id)
-    if zone is None or zone.project_id != project_id:
-        raise _err("zoneId", fr.PLACEMENT_ZONE_NOT_IN_PROJECT)
-    if zone.archived_at is not None:
-        raise _err("zoneId", fr.PLACEMENT_ZONE_ARCHIVED)
-    return zone
+    location = session.get(Location, location_id)
+    if location is None or location.project_id != project_id:
+        raise _err("locationId", fr.PLACEMENT_LOCATION_NOT_IN_PROJECT)
+    if location.archived_at is not None:
+        raise _err("locationId", fr.PLACEMENT_LOCATION_ARCHIVED)
+    return location
 
 
-def _check_qty(unit: str, qty_milli: int) -> None:
-    if unit in PIECE_UNITS and qty_milli % money.MILLI_SCALE:
-        raise _err("qtyMilli", fr.PLACEMENT_PIECE_QTY)
-
-
-def _placement_pairs(session: Session, item: ProjectItem) -> list[tuple[int, int]]:
+def placement_pairs(session: Session, item: ProjectItem) -> list[tuple[int, int]]:
+    """`(qty_milli, multiplier)` per placement; a fee line counts once."""
+    if item.kind == "fee":
+        return [(money.MILLI_SCALE, 1)]
     pairs: list[tuple[int, int]] = []
     for placement in item.placements:
         multiplier = 1
-        if placement.zone_id is not None:
-            zone = session.get(Zone, placement.zone_id)
-            multiplier = zone.multiplier if zone is not None else 1
+        if placement.location_id is not None:
+            location = session.get(Location, placement.location_id)
+            multiplier = location.multiplier if location is not None else 1
         pairs.append((placement.qty_milli, multiplier))
     return pairs
 
 
-def _placements_json(session: Session, item: ProjectItem) -> str:
+def _placements_json(item: ProjectItem) -> str:
     return json.dumps(
-        [{"zone": p.zone_id, "qty": p.qty_milli} for p in item.placements], separators=(",", ":")
+        [{"location": p.location_id, "qty": p.qty_milli} for p in item.placements],
+        separators=(",", ":"),
     )
 
 
-def _journal_qty_if_approved(
-    session: Session, item: ProjectItem, before: str, clock: Clock, note: str | None = None
-) -> None:
-    if item.approved_at is None:
-        return
+def _journal_placements(session: Session, item: ProjectItem, before: str, clock: Clock) -> None:
     session.flush()
     session.refresh(item)
-    after = _placements_json(session, item)
+    after = _placements_json(item)
     if after != before:
-        write_event(session, item, "placement", clock, old_value=before, new_value=after, note=note)
+        write_event(session, item, "placement", clock, old_value=before, new_value=after)
+
+
+def _editable(session: Session, item_id: int) -> ProjectItem:
+    item = get_item(session, item_id)
+    ensure_open(get_project(session, item.project_id))
+    return item
 
 
 def add_placement(
@@ -332,27 +365,26 @@ def add_placement(
 ) -> ProjectItem:
     with session.begin():
         item = _editable(session, item_id)
-        _check_zone(session, item.project_id, data.zone_id)
-        _check_qty(item.unit, data.qty_milli)
-        if any(p.zone_id == data.zone_id for p in item.placements):
-            raise _err("zoneId", fr.PLACEMENT_ZONE_TAKEN)
-        before = _placements_json(session, item)
+        if item.kind == "fee":
+            raise ConflictError(fr.PLACEMENT_ON_FEE)
+        _check_location(session, item.project_id, data.location_id)
+        if any(p.location_id == data.location_id for p in item.placements):
+            raise _err("locationId", fr.PLACEMENT_LOCATION_TAKEN)
+        before = _placements_json(item)
         now = stamp(clock)
         item.placements.append(
             ProjectItemPlacement(
                 project_id=item.project_id,
-                zone_id=data.zone_id,
+                location_id=data.location_id,
                 qty_milli=data.qty_milli,
                 sort_order=data.sort_order,
-                notes=data.notes,
                 created_at=now,
                 updated_at=now,
             )
         )
         item.updated_at = now
-        _journal_qty_if_approved(session, item, before, clock)
-    session.refresh(item)
-    return item
+        _journal_placements(session, item, before, clock)
+    return _reloaded(session, item)
 
 
 def _placement(session: Session, placement_id: int) -> tuple[ProjectItem, ProjectItemPlacement]:
@@ -369,21 +401,19 @@ def update_placement(
     with session.begin():
         item, placement = _placement(session, placement_id)
         changes = data.model_dump(exclude_unset=True)
-        if "zone_id" in changes and changes["zone_id"] != placement.zone_id:
-            _check_zone(session, item.project_id, changes["zone_id"])
+        if "location_id" in changes and changes["location_id"] != placement.location_id:
+            _check_location(session, item.project_id, changes["location_id"])
             if any(
-                p.id != placement.id and p.zone_id == changes["zone_id"] for p in item.placements
+                p.id != placement.id and p.location_id == changes["location_id"]
+                for p in item.placements
             ):
-                raise _err("zoneId", fr.PLACEMENT_ZONE_TAKEN)
-        if "qty_milli" in changes:
-            _check_qty(item.unit, changes["qty_milli"])
-        before = _placements_json(session, item)
+                raise _err("locationId", fr.PLACEMENT_LOCATION_TAKEN)
+        before = _placements_json(item)
         for field_name, value in changes.items():
             setattr(placement, field_name, value)
         placement.updated_at = item.updated_at = stamp(clock)
-        _journal_qty_if_approved(session, item, before, clock)
-    session.refresh(item)
-    return item
+        _journal_placements(session, item, before, clock)
+    return _reloaded(session, item)
 
 
 def delete_placement(session: Session, placement_id: int, clock: Clock) -> ProjectItem:
@@ -391,25 +421,14 @@ def delete_placement(session: Session, placement_id: int, clock: Clock) -> Proje
         item, placement = _placement(session, placement_id)
         if len(item.placements) <= 1:
             raise ConflictError(fr.PLACEMENT_LAST_ONE)
-        before = _placements_json(session, item)
+        before = _placements_json(item)
         item.placements.remove(placement)
         item.updated_at = stamp(clock)
-        _journal_qty_if_approved(session, item, before, clock)
-    session.refresh(item)
-    return item
+        _journal_placements(session, item, before, clock)
+    return _reloaded(session, item)
 
 
 # --- create / update / delete -----------------------------------------------------------------
-
-
-def _editable(session: Session, item_id: int) -> ProjectItem:
-    item = get_item(session, item_id)
-    ensure_open(get_project(session, item.project_id))
-    if item.status in TERMINAL:
-        raise ConflictError(
-            fr.ITEM_READ_ONLY_TERMINAL.format(status=fr.ITEM_STATUS_LABELS[item.status].lower())
-        )
-    return item
 
 
 def create_item(
@@ -417,26 +436,26 @@ def create_item(
 ) -> ProjectItem:
     with session.begin():
         ensure_open(get_project(session, project_id))
-        values = _resolve_defaults(session, project_id, data)
-        prefix = level1_code(session, values["category_id"])
-        code = data.item_code or ""
-        if data.item_code:
-            _check_code_free(session, project_id, data.item_code, None)
-        placements = data.placements if data.placements is not None else [PlacementCreate()]
-        if not placements:
-            placements = [PlacementCreate()]
-        if not data.item_code:
-            code = next_item_code(
-                session, project_id, zone_code_of(session, placements[0].zone_id), prefix
-            )
+        now = stamp(clock)
+        values = _resolve_defaults(session, project_id, data, now)
+        placements: list[PlacementCreate] = []
+        if data.kind == "product":
+            placements = data.placements or [PlacementCreate()]
         seen: set[int | None] = set()
         for placement in placements:
-            _check_zone(session, project_id, placement.zone_id)
-            _check_qty(values["unit"], placement.qty_milli)
-            if placement.zone_id in seen:
-                raise _err("placements", fr.PLACEMENT_ZONE_TAKEN)
-            seen.add(placement.zone_id)
-        now = stamp(clock)
+            _check_location(session, project_id, placement.location_id)
+            if placement.location_id in seen:
+                raise _err("placements", fr.PLACEMENT_LOCATION_TAKEN)
+            seen.add(placement.location_id)
+        if data.item_code:
+            _check_code_free(session, project_id, data.item_code, None)
+            code = data.item_code
+        elif data.kind == "fee":
+            code = next_item_code(session, project_id, "", FEE_PREFIX)
+        else:
+            prefix = type_code(session, values["category_id"])
+            first = placements[0].location_id if placements else None
+            code = next_item_code(session, project_id, location_code_of(session, first), prefix)
         item = ProjectItem(
             **values, project_id=project_id, item_code=code, created_at=now, updated_at=now
         )
@@ -444,19 +463,30 @@ def create_item(
             item.placements.append(
                 ProjectItemPlacement(
                     project_id=project_id,
-                    zone_id=placement.zone_id,
+                    location_id=placement.location_id,
                     qty_milli=placement.qty_milli,
                     sort_order=placement.sort_order,
-                    notes=placement.notes,
                     created_at=now,
                     updated_at=now,
                 )
             )
         session.add(item)
         session.flush()
-        write_event(session, item, "created", clock, to_status="draft", new_value=price_json(item))
-    session.refresh(item)
-    return item
+        note = (
+            fr.ITEM_PRODUCT_LINKED_NOTE.format(id=item.product_id)
+            if item.product_id is not None and data.product_id is None
+            else None
+        )
+        write_event(
+            session,
+            item,
+            "created",
+            clock,
+            to_status="to_quote",
+            new_value=price_json(item),
+            note=note,
+        )
+    return _reloaded(session, item)
 
 
 def update_item(
@@ -465,36 +495,33 @@ def update_item(
     with session.begin():
         item = _editable(session, item_id)
         changes = data.model_dump(exclude_unset=True)
-        if "on_hold" in changes:
-            changes["on_hold"] = int(changes["on_hold"])
         if "item_code" in changes and changes["item_code"] != item.item_code:
-            if item.status != "draft":
+            if item.status != "to_quote":
                 raise _err("itemCode", fr.ITEM_CODE_IMMUTABLE)
             _check_code_free(session, item.project_id, changes["item_code"], item_id)
-        if "product_id" in changes and changes["product_id"] is not None:
-            if session.get(Product, changes["product_id"]) is None:
-                raise _err(
-                    "productId", fr.NOT_FOUND.format(resource="Produit", id=changes["product_id"])
-                )
-        if "supplier_id" in changes and changes["supplier_id"] is not None:
-            if session.get(Supplier, changes["supplier_id"]) is None:
-                raise _err(
-                    "supplierId",
-                    fr.NOT_FOUND.format(resource="Fournisseur", id=changes["supplier_id"]),
-                )
-        if "category_id" in changes and changes["category_id"] != item.category_id:
-            prefix = level1_code(session, changes["category_id"])
-            if item.status == "draft" and "item_code" not in changes:
-                first = item.placements[0].zone_id if item.placements else None
+        if item.kind == "fee":
+            if changes.get("category_id") is not None or changes.get("product_id") is not None:
+                raise _err("kind", fr.ITEM_FEE_HAS_NO_TYPE)
+            if "supplier_id" in changes and changes["supplier_id"] is None:
+                raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
+        elif "category_id" in changes and changes["category_id"] is None:
+            raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
+        _check_reference(session, Product, "productId", changes.get("product_id"), "Produit")
+        _check_reference(
+            session, Manufacturer, "manufacturerId", changes.get("manufacturer_id"), "Fabricant"
+        )
+        _check_reference(session, Supplier, "supplierId", changes.get("supplier_id"), "Fournisseur")
+        if (
+            "category_id" in changes
+            and changes["category_id"] is not None
+            and changes["category_id"] != item.category_id
+        ):
+            prefix = type_code(session, changes["category_id"])
+            if item.status == "to_quote" and "item_code" not in changes:
+                first = item.placements[0].location_id if item.placements else None
                 changes["item_code"] = next_item_code(
-                    session, item.project_id, zone_code_of(session, first), prefix
+                    session, item.project_id, location_code_of(session, first), prefix
                 )
-        kind = changes.get("kind", item.kind)
-        cost = changes.get("unit_cost_cents", item.unit_cost_cents)
-        if kind == "existing" and cost:
-            if "unit_cost_cents" in changes:
-                raise _err("unitCostCents", fr.ITEM_EXISTING_IS_FREE)
-            changes["unit_cost_cents"] = 0
         currency = changes.get("currency", item.currency)
         fx_given = changes.get("fx_rate_micro")
         if "currency" in changes or "fx_rate_micro" in changes:
@@ -504,50 +531,30 @@ def update_item(
                 changes["fx_rate_micro"] = money.EUR_RATE_MICRO
             elif fx_given is None and "currency" in changes:
                 changes["fx_rate_micro"] = resolve_fx(session, item.project_id, currency, None)
-        unit = changes.get("unit", item.unit)
-        if unit in PIECE_UNITS and unit != item.unit:
-            for placement in item.placements:
-                _check_qty(unit, placement.qty_milli)
         before_price = price_json(item)
-        before_fx = item.fx_rate_micro
         before_product = item.product_id
         for field_name, value in changes.items():
             setattr(item, field_name, value)
         item.updated_at = stamp(clock)
-        if item.approved_at is not None:
-            after_price = price_json(item)
-            price_changed = any(
-                f in changes and changes[f] != json.loads(before_price)[k]
-                for f, k in zip(PRICE_FIELDS, ("cost", "currency", "discount", "vat"), strict=True)
+        after_price = price_json(item)
+        if after_price != before_price:
+            write_event(
+                session, item, "price", clock, old_value=before_price, new_value=after_price
             )
-            if price_changed:
-                write_event(
-                    session, item, "price", clock, old_value=before_price, new_value=after_price
-                )
-            if item.fx_rate_micro != before_fx:
-                write_event(
-                    session,
-                    item,
-                    "fx",
-                    clock,
-                    old_value=str(before_fx),
-                    new_value=str(item.fx_rate_micro),
-                )
-            if item.product_id != before_product:
-                write_event(
-                    session,
-                    item,
-                    "product",
-                    clock,
-                    old_value=str(before_product),
-                    new_value=str(item.product_id),
-                )
-    session.refresh(item)
-    return item
+        if item.product_id != before_product:
+            write_event(
+                session,
+                item,
+                "product",
+                clock,
+                old_value=str(before_product),
+                new_value=str(item.product_id),
+            )
+    return _reloaded(session, item)
 
 
 def delete_item(session: Session, item_id: int) -> None:
-    """Physical deletion: draft with no event other than `created` (DATA_MODEL §5)."""
+    """Physical deletion: « à chiffrer » with no event other than `created` (DATA_MODEL §5)."""
     with session.begin():
         item = get_item(session, item_id)
         ensure_open(get_project(session, item.project_id))
@@ -556,60 +563,20 @@ def delete_item(session: Session, item_id: int) -> None:
             .select_from(ProjectItemEvent)
             .where(ProjectItemEvent.project_item_id == item_id, ProjectItemEvent.kind != "created")
         )
-        if item.status != "draft" or others:
-            raise ConflictError(fr.ITEM_DELETE_ONLY_DRAFT)
+        if item.status != "to_quote" or others:
+            raise ConflictError(fr.ITEM_DELETE_ONLY_NEW)
         session.delete(item)
 
 
 # --- status (DATA_MODEL §5) -------------------------------------------------------------------
 
 
-def _was_ordered(session: Session, item_id: int) -> bool:
-    row = session.scalar(
-        select(ProjectItemEvent.id).where(
-            ProjectItemEvent.project_item_id == item_id,
-            ProjectItemEvent.kind == "status",
-            ProjectItemEvent.to_status == "ordered",
-        )
-    )
-    return row is not None
-
-
-def check_preconditions(session: Session, item: ProjectItem, target: str) -> None:
-    needs = required_for(target)
-    details: list[ErrorDetail] = []
-    if "name" in needs and not item.name:
-        details.append(ErrorDetail("name", fr.ITEM_NEEDS_NAME))
-    if "product" in needs and item.product_id is None and item.kind not in NO_PRODUCT_KINDS:
-        details.append(ErrorDetail("productId", fr.ITEM_NEEDS_PRODUCT))
-    if "zone" in needs and item.kind not in NO_ZONE_KINDS:
-        if not any(p.zone_id is not None for p in item.placements):
-            details.append(ErrorDetail("placements", fr.ITEM_NEEDS_ZONE))
-    if "supplier" in needs and item.supplier_id is None and item.kind not in NO_PRICE_KINDS:
-        details.append(ErrorDetail("supplierId", fr.ITEM_NEEDS_SUPPLIER))
-    if "price" in needs and item.unit_cost_cents <= 0 and item.kind not in NO_PRICE_KINDS:
-        details.append(ErrorDetail("unitCostCents", fr.ITEM_NEEDS_PRICE))
-    if "order_ref" in needs and not item.order_ref:
-        details.append(ErrorDetail("orderRef", fr.ITEM_NEEDS_ORDER_REF))
-    if details:
-        raise ValidationAppError(details)
-
-
 def change_status(session: Session, item_id: int, data: StatusChange, clock: Clock) -> ProjectItem:
+    """Free among the seven statuses (ADR-0013), journaled; the note is optional."""
     with session.begin():
-        item = get_item(session, item_id)
-        ensure_open(get_project(session, item.project_id))
-        verdict = check_transition(item.status, data.status, _was_ordered(session, item_id))
-        if verdict is not None:
-            raise ConflictError(fr.TRANSITION_MESSAGES[verdict])
-        note_required = (
-            data.status == "cancelled"
-            or item.status == "cancelled"
-            or (item.status == "approved" and money.STATUS_RANK[data.status] < money.APPROVED_RANK)
-        )
-        if note_required and not (data.note and data.note.strip()):
-            raise _err("note", fr.ITEM_NOTE_REQUIRED)
-        check_preconditions(session, item, data.status)
+        item = _editable(session, item_id)
+        if item.status == data.status:
+            raise ConflictError(fr.ITEM_SAME_STATUS)
         previous = item.status
         item.status = data.status
         item.updated_at = stamp(clock)
@@ -620,177 +587,9 @@ def change_status(session: Session, item_id: int, data: StatusChange, clock: Clo
             clock,
             from_status=previous,
             to_status=data.status,
-            note=data.note,
+            note=data.note.strip() if data.note and data.note.strip() else None,
         )
-        if data.status == "approved":
-            amounts = money.line_amounts(
-                item.unit_cost_cents,
-                item.discount_bp,
-                item.fx_rate_micro,
-                _placement_pairs(session, item),
-                item.kind,
-            )
-            item.approved_at = item.updated_at
-            item.approved_unit_net_cents = amounts.net_unit_eur_cents
-            item.approved_total_qty_milli = amounts.total_qty_milli
-            write_event(
-                session,
-                item,
-                "approval",
-                clock,
-                from_status=previous,
-                to_status="approved",
-                new_value=json.dumps(
-                    {"unitNetEur": amounts.net_unit_eur_cents, "qty": amounts.total_qty_milli},
-                    separators=(",", ":"),
-                ),
-            )
-    session.refresh(item)
-    return item
-
-
-def replace_product(
-    session: Session, item_id: int, data: ReplaceProduct, clock: Clock
-) -> ProjectItem:
-    """New line takes the code and the placements; the old one becomes `<code>.R1` / `replaced`."""
-    with session.begin():
-        old = get_item(session, item_id)
-        ensure_open(get_project(session, old.project_id))
-        if old.status != "approved":
-            raise ConflictError(fr.ITEM_REPLACE_ONLY_APPROVED)
-        product = session.get(Product, data.product_id)
-        if product is None:
-            raise _err("productId", fr.NOT_FOUND.format(resource="Produit", id=data.product_id))
-        supplier_id = data.supplier_id or product.supplier_id or old.supplier_id
-        supplier = session.get(Supplier, supplier_id) if supplier_id else None
-        currency = data.currency or (supplier.currency if supplier else product.list_price_currency)
-        cost = data.unit_cost_cents
-        if cost is None:
-            cost = (
-                money.list_price_ht_cents(
-                    product.list_price_cents, product.list_price_tax_mode, product.list_price_vat_bp
-                )
-                if product.list_price_cents is not None
-                else 0
-            )
-        discount = (
-            data.discount_bp
-            if data.discount_bp is not None
-            else (supplier.default_discount_bp if supplier else 0)
-        )
-        fx = resolve_fx(session, old.project_id, currency, data.fx_rate_micro)
-        now = stamp(clock)
-        code = old.item_code
-        suffix = 1
-        while session.scalar(
-            select(ProjectItem.id).where(
-                ProjectItem.project_id == old.project_id,
-                ProjectItem.item_code == f"{code}.R{suffix}",
-            )
-        ):
-            suffix += 1
-        old.item_code = f"{code}.R{suffix}"
-        session.flush()
-        new = ProjectItem(
-            project_id=old.project_id,
-            item_code=code,
-            category_id=product.category_id,
-            product_id=product.id,
-            supplier_id=supplier_id,
-            name=product.name,
-            client_description=old.client_description,
-            kind=old.kind,
-            unit=product.unit,
-            finish=product.finish,
-            color=product.color,
-            materials=product.materials,
-            unit_cost_cents=cost,
-            currency=currency,
-            fx_rate_micro=fx,
-            discount_bp=discount,
-            vat_rate_bp=old.vat_rate_bp,
-            lead_time_weeks=product.lead_time_weeks,
-            required_on_site=old.required_on_site,
-            status="specified",
-            sort_order=old.sort_order,
-            internal_notes=old.internal_notes,
-            created_at=now,
-            updated_at=now,
-        )
-        for placement in list(old.placements):
-            new.placements.append(
-                ProjectItemPlacement(
-                    project_id=old.project_id,
-                    zone_id=placement.zone_id,
-                    qty_milli=placement.qty_milli,
-                    sort_order=placement.sort_order,
-                    notes=placement.notes,
-                    created_at=now,
-                    updated_at=now,
-                )
-            )
-            old.placements.remove(placement)
-        session.add(new)
-        session.flush()
-        previous = old.status
-        old.status = "replaced"
-        old.replaced_by_id = new.id
-        old.updated_at = now
-        write_event(
-            session,
-            old,
-            "status",
-            clock,
-            from_status=previous,
-            to_status="replaced",
-            new_value=str(new.id),
-            note=data.note,
-        )
-        write_event(
-            session,
-            new,
-            "created",
-            clock,
-            to_status="specified",
-            new_value=price_json(new),
-            note=f"remplace {old.item_code}",
-        )
-    session.refresh(new)
-    return new
-
-
-def refresh_from_catalogue(session: Session, item_id: int, clock: Clock) -> ProjectItem:
-    """D7.4: explicit re-copy of the catalogue price (never automatic), journaled when approved."""
-    with session.begin():
-        item = _editable(session, item_id)
-        if item.product_id is None:
-            raise ConflictError(fr.ITEM_NO_PRODUCT_TO_REFRESH)
-        product = session.get(Product, item.product_id)
-        assert product is not None
-        before = price_json(item)
-        if product.list_price_cents is not None:
-            item.unit_cost_cents = money.list_price_ht_cents(
-                product.list_price_cents, product.list_price_tax_mode, product.list_price_vat_bp
-            )
-            if product.list_price_currency != item.currency:
-                item.currency = product.list_price_currency
-                item.fx_rate_micro = resolve_fx(session, item.project_id, item.currency, None)
-        item.lead_time_weeks = (
-            product.lead_time_weeks if product.lead_time_weeks is not None else item.lead_time_weeks
-        )
-        item.updated_at = stamp(clock)
-        if item.approved_at is not None and price_json(item) != before:
-            write_event(
-                session,
-                item,
-                "price",
-                clock,
-                old_value=before,
-                new_value=price_json(item),
-                note="catalogue",
-            )
-    session.refresh(item)
-    return item
+    return _reloaded(session, item)
 
 
 # --- files (same shape as product_file) --------------------------------------------------------
@@ -828,8 +627,7 @@ def attach_file(session: Session, item_id: int, data: ItemFileAttach, clock: Clo
             )
         )
         item.updated_at = now
-    session.refresh(item)
-    return item
+    return _reloaded(session, item)
 
 
 def update_file(
@@ -851,8 +649,7 @@ def update_file(
         for field_name, value in changes.items():
             setattr(junction, field_name, int(value) if field_name == "is_primary" else value)
         junction.updated_at = item.updated_at = stamp(clock)
-    session.refresh(item)
-    return item
+    return _reloaded(session, item)
 
 
 def detach_file(
@@ -863,110 +660,4 @@ def detach_file(
         item.files.remove(_junction(item, file_id))
         item.updated_at = stamp(clock)
     unlink_if_orphan(session, files_dir, file_id)
-    session.refresh(item)
-    return item
-
-
-# --- summary (money.py only; budgets join at step 8) -----------------------------------------
-
-
-def summary(session: Session, project_id: int, today: date) -> dict[str, Any]:
-    get_project(session, project_id)
-    items = list_items(session, project_id)
-    zones = {z.id: z for z in session.scalars(select(Zone).where(Zone.project_id == project_id))}
-    lines: list[dict[str, Any]] = []
-    zone_totals: dict[int | None, int] = {}
-    vat_lines: list[tuple[int, int]] = []
-    specified = approved = ose = 0
-    for item in items:
-        pairs = [
-            (p.qty_milli, zones[p.zone_id].multiplier if p.zone_id in zones else 1)
-            for p in item.placements
-        ]
-        amounts = money.line_amounts(
-            item.unit_cost_cents, item.discount_bp, item.fx_rate_micro, pairs, item.kind
-        )
-        counted = money.is_counted(item.status)
-        amount_counted = money.is_amount_counted(item.status, item.kind)
-        approved_line = (
-            money.approved_cents(item.approved_unit_net_cents, item.approved_total_qty_milli)
-            if item.approved_unit_net_cents is not None
-            and item.approved_total_qty_milli is not None
-            else None
-        )
-        if amount_counted:
-            if item.kind == "ose":
-                ose += amounts.total_ht_cents
-            else:
-                specified += amounts.total_ht_cents
-                vat_lines.append((amounts.total_ht_cents, item.vat_rate_bp))
-                if approved_line is not None and money.is_approved_or_later(item.status):
-                    approved += approved_line
-            if item.kind != "ose":
-                for placement in item.placements:
-                    multiplier = (
-                        zones[placement.zone_id].multiplier if placement.zone_id in zones else 1
-                    )
-                    share = money.placement_ht_cents(
-                        amounts.net_unit_eur_cents, placement.qty_milli, multiplier
-                    )
-                    zone_totals[placement.zone_id] = zone_totals.get(placement.zone_id, 0) + share
-        order_by = (
-            money.order_by(date.fromisoformat(item.required_on_site), item.lead_time_weeks)
-            if item.required_on_site
-            and item.kind != "fee"
-            and money.STATUS_RANK[item.status] < money.STATUS_RANK["ordered"]
-            and counted
-            else None
-        )
-        order_overdue = order_by is not None and order_by <= today and not item.on_hold
-        lines.append(
-            {
-                "project_item_id": item.id,
-                "item_code": item.item_code,
-                "status": item.status,
-                "kind": item.kind,
-                "counted": counted,
-                "amount_counted": amount_counted,
-                "total_qty_milli": amounts.total_qty_milli,
-                "net_unit_cents": amounts.net_unit_cents,
-                "net_unit_eur_cents": amounts.net_unit_eur_cents,
-                "total_ht_cents": amounts.total_ht_cents,
-                "approved_cents": approved_line,
-                "order_by": order_by.isoformat() if order_by else None,
-                "order_overdue": order_overdue,
-            }
-        )
-    vat = money.vat_totals(vat_lines)
-    zone_rows: list[dict[str, Any]] = [
-        {
-            "zone_id": z.id,
-            "zone_code": z.code,
-            "zone_name": z.name,
-            "multiplier": z.multiplier,
-            "specified_cents": zone_totals.get(z.id, 0),
-        }
-        for z in sorted(zones.values(), key=lambda z: (z.sort_order, z.id))
-        if z.archived_at is None or zone_totals.get(z.id)
-    ]
-    if zone_totals.get(None):
-        zone_rows.append(
-            {
-                "zone_id": None,
-                "zone_code": None,
-                "zone_name": "Non affecté",
-                "multiplier": 1,
-                "specified_cents": zone_totals[None],
-            }
-        )
-    return {
-        "project_id": project_id,
-        "lines": lines,
-        "zones": zone_rows,
-        "specified_cents": specified,
-        "approved_cents": approved,
-        "ose_cents": ose,
-        "vat_by_rate_bp": vat.vat_by_rate_bp,
-        "vat_cents": vat.vat_cents,
-        "ttc_cents": vat.ttc_cents,
-    }
+    return _reloaded(session, item)

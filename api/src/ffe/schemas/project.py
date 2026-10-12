@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 
 from ffe.i18n import fr
 from ffe.schemas.base import BaseSchema, IsoDate
@@ -13,9 +13,6 @@ Name = Annotated[str, Field(min_length=1, max_length=200)]
 Code = Annotated[str, Field(min_length=1, max_length=40)]
 Short = Annotated[str | None, Field(max_length=500)]
 Long = Annotated[str | None, Field(max_length=4000)]
-Bp = Annotated[int, Field(ge=0, le=10000)]
-
-DUE_BEFORE_START = "La date de fin doit suivre la date de début."
 
 
 def _strip(value: Any) -> Any:
@@ -27,27 +24,15 @@ class ProjectCreate(BaseSchema):
     client_id: int
     code: Code | None = None  # None = generated `<prefix><YYYY>-NNN` (D6c.1)
     site_address: Short = None
-    delivery_address: Short = None
-    delivery_contact: Short = None
-    default_vat_bp: Bp | None = None  # None = copied from setting.default_vat_bp
-    contingency_bp: Bp | None = None  # None = copied from setting.default_contingency_bp (D8.2)
-    start_on: IsoDate = None
     due_on: IsoDate = None
     notes: Long = None
-    global_budget_cents: Annotated[int | None, Field(ge=0)] = (
-        None  # ADR-0012: envelope created with the project
-    )
+    # The global envelope, created with the project (ADR-0012).
+    global_budget_cents: Annotated[int | None, Field(ge=0)] = None
 
     @field_validator("name", "code", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
-
-    @model_validator(mode="after")
-    def dates_ordered(self) -> ProjectCreate:
-        if self.start_on and self.due_on and self.due_on < self.start_on:
-            raise ValueError(DUE_BEFORE_START)
-        return self
 
 
 class ProjectUpdate(BaseSchema):
@@ -55,15 +40,10 @@ class ProjectUpdate(BaseSchema):
     client_id: int | None = None
     code: Code | None = None
     site_address: Short = None
-    delivery_address: Short = None
-    delivery_contact: Short = None
-    default_vat_bp: Bp | None = None
-    contingency_bp: Bp | None = None
-    start_on: IsoDate = None
     due_on: IsoDate = None
     notes: Long = None
 
-    @field_validator("name", "client_id", "code", "default_vat_bp", "contingency_bp", mode="before")
+    @field_validator("name", "client_id", "code", mode="before")
     @classmethod
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
@@ -82,11 +62,6 @@ class ProjectRead(BaseSchema):
     client_id: int
     status: ProjectStatus
     site_address: str | None
-    delivery_address: str | None
-    delivery_contact: str | None
-    default_vat_bp: int
-    contingency_bp: int
-    start_on: str | None
     due_on: str | None
     notes: str | None
     created_at: str

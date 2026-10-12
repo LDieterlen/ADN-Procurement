@@ -1,5 +1,5 @@
-"""Lines: creation from product or free, defaults precedence, codes, placements, status machine,
-snapshot, journal, replacement, deletion, summary (ROADMAP 7a critère de fini, DATA_MODEL §10)."""
+"""Articles (ADR-0013): codes `<LOC>-<TYPE>-NN`, spec sheet copied from the catalogue or free
+(added to the catalogue by default), fee lines, single free status journaled, placements, files."""
 
 from typing import Any
 
@@ -7,7 +7,18 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from conftest import make_category, make_item, make_product, make_project, make_supplier, make_zone
+from conftest import (
+    PNG_BYTES,
+    make_category,
+    make_file,
+    make_item,
+    make_location,
+    make_manufacturer,
+    make_product,
+    make_project,
+    make_supplier,
+)
+from ffe.config import Settings
 from ffe.deps import Clock
 
 GBP = 1_170_000
@@ -15,13 +26,15 @@ GBP = 1_170_000
 
 @pytest.fixture
 def world(session: Session, clock: Clock) -> dict[str, Any]:
-    """Hôtel X : LOB ×1, CHA ×12, CHB ×8 ; LUM ; Tom Dixon (GBP, 15 %) ; Beat Light Fat 1 250,00 GBP HT."""
     project = make_project(session, clock, name="Hôtel X")
-    lob = make_zone(session, clock, project.id, code="LOB", name="Lobby", multiplier=1)
-    cha = make_zone(session, clock, project.id, code="CHA", name="Chambre type A", multiplier=12)
-    chb = make_zone(session, clock, project.id, code="CHB", name="Chambre type B", multiplier=8)
-    lum = make_category(session, clock, name="Luminaires", code="LUM")
-    applique = make_category(session, clock, name="Applique", code=None, parent_id=lum.id)
+    lob = make_location(
+        session, clock, project.id, code="LOB", name="Lobby", zone="Zones communes", multiplier=1
+    )
+    cha = make_location(
+        session, clock, project.id, code="CHA", name="Chambre typo A", multiplier=12
+    )
+    lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
+    flos = make_manufacturer(session, clock, name="Flos")
     dixon = make_supplier(
         session, clock, name="Tom Dixon", currency="GBP", default_discount_bp=1500
     )
@@ -29,563 +42,374 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
         session,
         clock,
         name="Beat Light Fat",
-        category_id=lum.id,
+        category_id=lud.id,
+        manufacturer_id=flos.id,
+        reference="BLS01",
         supplier_id=dixon.id,
         list_price_cents=125_000,
-        list_price_currency="GBP",
-        lead_time_weeks=8,
+        currency="GBP",
         finish="laiton",
+        dimensions="Ø 36 × H 30 cm",
+        source_url="https://example.com/beat",
     )
     return {
         "project": project,
         "lob": lob,
         "cha": cha,
-        "chb": chb,
-        "lum": lum,
-        "applique": applique,
+        "lud": lud,
+        "flos": flos,
         "dixon": dixon,
         "lamp": lamp,
     }
 
 
-def post_item(client: TestClient, project_id: int, body: dict[str, Any]) -> Any:
-    return client.post(f"/api/v1/projects/{project_id}/project-items", json=body)
+def base(world: dict[str, Any]) -> str:
+    return f"/api/v1/projects/{world['project'].id}/project-items"
 
 
-def set_status(client: TestClient, item_id: int, status: str, note: str | None = None) -> Any:
-    return client.post(
-        f"/api/v1/project-items/{item_id}/status", json={"status": status, "note": note}
-    )
-
-
-# --- création et précédence des défauts --------------------------------------------------------
-
-
-def test_create_from_product_copies_everything_and_needs_the_fx_rate(
+def test_create_from_catalogue_copies_the_sheet_and_the_price(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
-    missing_fx = post_item(client, p, {"productId": world["lamp"].id})
-    assert (
-        missing_fx.status_code == 422 and missing_fx.json()["details"][0]["field"] == "fxRateMicro"
-    )
-    response = post_item(
-        client,
-        p,
-        {
+    created = client.post(
+        base(world),
+        json={
             "productId": world["lamp"].id,
             "fxRateMicro": GBP,
-            "placements": [
-                {"zoneId": world["lob"].id, "qtyMilli": 2000},
-                {"zoneId": world["cha"].id, "qtyMilli": 1000},
-            ],
+            "placements": [{"locationId": world["cha"].id, "qtyMilli": 2000}],
         },
     )
-    assert response.status_code == 201, response.text
-    body = response.json()
-    assert (
-        body["itemCode"] == "LOB-LUM-01"  # zone of the first placement, typology, 2 digits
-        and body["name"] == "Beat Light Fat"
-        and body["finish"] == "laiton"
-    )
-    assert (
-        body["supplierId"] == world["dixon"].id
-        and body["currency"] == "GBP"
-        and body["discountBp"] == 1500
-    )
-    assert (
-        body["unitCostCents"] == 125_000
-        and body["vatRateBp"] == 2000
-        and body["leadTimeWeeks"] == 8
-    )
-    assert body["status"] == "draft" and body["onHold"] is False and len(body["placements"]) == 2
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["itemCode"] == "CHA-LUD-01" and body["status"] == "to_quote"
+    assert body["name"] == "Beat Light Fat" and body["reference"] == "BLS01"
+    assert body["manufacturerId"] == world["flos"].id and body["supplierId"] == world["dixon"].id
+    assert body["finish"] == "laiton" and body["dimensions"] == "Ø 36 × H 30 cm"
+    assert body["sourceUrl"] == "https://example.com/beat"
+    assert body["unitCostCents"] == 125_000 and body["currency"] == "GBP"
+    assert body["discountBp"] == 1500 and body["fxRateMicro"] == GBP
+    assert body["indice"] is None and body["kind"] == "product"
+    assert [p["locationId"] for p in body["placements"]] == [world["cha"].id]
     events = client.get(f"/api/v1/project-items/{body['id']}/events").json()
     assert [e["kind"] for e in events] == ["created"]
-    # the next GBP line reuses the last rate of the project
-    second = post_item(client, p, {"productId": world["lamp"].id}).json()
-    assert second["fxRateMicro"] == GBP and second["itemCode"] == "LUM-01"  # no zone
 
 
-def test_create_free_line_needs_category_and_name_and_gets_one_unassigned_placement(
+def test_codes_follow_location_then_type_and_never_reuse_a_number(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
-    assert post_item(client, p, {"name": "Rideau"}).json()["details"][0]["field"] == "categoryId"
-    assert (
-        post_item(client, p, {"categoryId": world["lum"].id}).json()["details"][0]["field"]
-        == "name"
+    def create(**extra: Any) -> Any:
+        body: dict[str, Any] = {"name": "Lampe", "categoryId": world["lud"].id}
+        body.update(extra)
+        response = client.post(base(world), json=body)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    first = create(placements=[{"locationId": world["cha"].id}])
+    second = create(placements=[{"locationId": world["cha"].id}])
+    lobby = create(placements=[{"locationId": world["lob"].id}])
+    nowhere = create()
+    assert (first["itemCode"], second["itemCode"]) == ("CHA-LUD-01", "CHA-LUD-02")
+    assert lobby["itemCode"] == "LOB-LUD-01" and nowhere["itemCode"] == "LUD-01"
+    assert client.delete(f"/api/v1/project-items/{second['id']}").status_code == 204
+    assert create(placements=[{"locationId": world["cha"].id}])["itemCode"] == "CHA-LUD-03"
+
+
+def test_a_hand_written_code_must_be_free(client: TestClient, world: dict[str, Any]) -> None:
+    client.post(
+        base(world),
+        json={"name": "A", "categoryId": world["lud"].id, "itemCode": "SPECIAL-1"},
     )
-    body = post_item(
-        client,
-        p,
-        {
-            "categoryId": world["applique"].id,
-            "name": "Applique sur mesure",
-            "kind": "custom",
-            "unitCostCents": 45_000,
-        },
-    ).json()
-    assert body["itemCode"] == "LUM-01"  # level-1 prefix of the child category, no zone
-    assert (
-        body["currency"] == "EUR" and body["fxRateMicro"] == 1_000_000 and body["discountBp"] == 0
+    dup = client.post(
+        base(world), json={"name": "B", "categoryId": world["lud"].id, "itemCode": "SPECIAL-1"}
     )
-    assert body["placements"] == [{**body["placements"][0], "zoneId": None, "qtyMilli": 1000}]
-
-
-def test_ttc_catalogue_price_is_brought_back_to_ht(
-    client: TestClient, session: Session, clock: Clock, world: dict[str, Any]
-) -> None:
-    ttc = make_product(
-        session,
-        clock,
-        name="Lampe TTC",
-        category_id=world["lum"].id,
-        list_price_cents=12_000,
-        list_price_tax_mode="ttc",
-        list_price_vat_bp=2000,
-    )
-    body = post_item(client, world["project"].id, {"productId": ttc.id}).json()
-    assert body["unitCostCents"] == 10_000 and body["currency"] == "EUR"
-
-
-def test_existing_lines_are_free_and_eur_rate_is_parity(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    p = world["project"].id
-    refused = post_item(
-        client,
-        p,
-        {
-            "categoryId": world["lum"].id,
-            "name": "Lustre existant",
-            "kind": "existing",
-            "unitCostCents": 100,
-        },
-    )
-    assert refused.status_code == 422 and refused.json()["details"][0]["field"] == "unitCostCents"
-    bad_fx = post_item(
-        client,
-        p,
-        {"categoryId": world["lum"].id, "name": "X", "currency": "EUR", "fxRateMicro": 999},
-    )
-    assert bad_fx.status_code == 422 and bad_fx.json()["details"][0]["field"] == "fxRateMicro"
-
-
-def test_item_code_can_be_chosen_and_sequence_never_goes_back(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    p = world["project"].id
-    cha = {"placements": [{"zoneId": world["cha"].id, "qtyMilli": 1000}]}
-    first = post_item(client, p, {"categoryId": world["lum"].id, "name": "A", **cha}).json()
-    assert first["itemCode"] == "CHA-LUM-01"
-    client.delete(f"/api/v1/project-items/{first['id']}")
-    second = post_item(client, p, {"categoryId": world["lum"].id, "name": "B", **cha}).json()
-    assert second["itemCode"] == "CHA-LUM-02"  # the hole is kept
-    lob = {"placements": [{"zoneId": world["lob"].id, "qtyMilli": 1000}]}
-    third = post_item(client, p, {"categoryId": world["lum"].id, "name": "L", **lob}).json()
-    assert third["itemCode"] == "LOB-LUM-01"  # one sequence per project, zone and typology
-    custom = post_item(
-        client, p, {"categoryId": world["lum"].id, "name": "C", "itemCode": "LUM-099"}
-    ).json()
-    assert custom["itemCode"] == "LUM-099"
-    dup = post_item(client, p, {"categoryId": world["lum"].id, "name": "D", "itemCode": "LUM-099"})
     assert dup.status_code == 422 and dup.json()["details"][0]["field"] == "itemCode"
-    renamed = client.patch(f"/api/v1/project-items/{second['id']}", json={"itemCode": "LUM-010"})
-    assert renamed.json()["itemCode"] == "LUM-010"
 
 
-# --- placements et quantités ------------------------------------------------------------------
-
-
-def test_same_lamp_in_two_zones_is_one_code_and_14_pieces(
+def test_free_article_joins_the_catalogue_unless_asked_otherwise(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
-    item = post_item(
-        client,
-        p,
-        {
+    free = client.post(
+        base(world),
+        json={
+            "name": "Chaise Gau",
+            "categoryId": world["lud"].id,
+            "manufacturerId": world["flos"].id,
+            "reference": "GAU-1",
+            "supplierId": world["dixon"].id,
+            "unitCostCents": 42_000,
+            "fxRateMicro": GBP,
+            "dimensions": "L 45 cm",
+        },
+    ).json()
+    assert free["productId"] is not None
+    product = client.get(f"/api/v1/products/{free['productId']}").json()
+    assert product["name"] == "Chaise Gau" and product["reference"] == "GAU-1"
+    assert product["listPriceCents"] == 42_000 and product["currency"] == "GBP"
+    assert product["dimensions"] == "L 45 cm" and product["supplierId"] == world["dixon"].id
+    events = client.get(f"/api/v1/project-items/{free['id']}/events").json()
+    assert "catalogue" in events[0]["note"]
+    # Same manufacturer and reference again: linked to the existing product, no duplicate.
+    again = client.post(
+        base(world),
+        json={
+            "name": "Chaise Gau (autre projet de couleur)",
+            "categoryId": world["lud"].id,
+            "manufacturerId": world["flos"].id,
+            "reference": " gau-1 ",
+            "fxRateMicro": GBP,
+            "currency": "GBP",
+        },
+    ).json()
+    assert again["productId"] == free["productId"]
+    assert client.get("/api/v1/products").json()["total"] == 2  # the fixture lamp + Chaise Gau
+    private = client.post(
+        base(world),
+        json={"name": "Tête de lit", "categoryId": world["lud"].id, "addToCatalogue": False},
+    ).json()
+    assert private["productId"] is None
+    assert client.get("/api/v1/products").json()["total"] == 2
+
+
+@pytest.mark.parametrize(
+    ("body", "field"),
+    [
+        ({"categoryId": 1}, "name"),
+        ({"name": "A"}, "categoryId"),
+        ({"name": "A", "categoryId": 999}, "categoryId"),
+        ({"name": "A", "categoryId": 1, "supplierId": 999}, "supplierId"),
+        ({"name": "A", "categoryId": 1, "family": "other"}, "family"),
+        ({"name": "A", "categoryId": 1, "usage": "garden"}, "usage"),
+        ({"name": "A", "categoryId": 1, "currency": "GBP"}, "fxRateMicro"),
+        ({"name": "A", "categoryId": 1, "currency": "EUR", "fxRateMicro": 2}, "fxRateMicro"),
+        ({"name": "A", "categoryId": 1, "discountBp": 10001}, "discountBp"),
+        ({"name": "A", "categoryId": 1, "quoteUrl": "ftp://x"}, "quoteUrl"),
+        ({"name": "A", "categoryId": 1, "placements": [{"locationId": 999}]}, "locationId"),
+        ({"kind": "fee", "name": "Livraison"}, "supplierId"),
+        ({"kind": "fee", "name": "Livraison", "supplierId": 1, "categoryId": 1}, "kind"),
+    ],
+)
+def test_create_rejects_each_invalid_field(
+    client: TestClient, world: dict[str, Any], body: dict[str, Any], field: str
+) -> None:
+    if body.get("categoryId") == 1:
+        body["categoryId"] = world["lud"].id
+    if body.get("supplierId") == 1:
+        body["supplierId"] = world["dixon"].id
+    response = client.post(base(world), json=body)
+    assert response.status_code == 422, response.text
+    assert response.json()["details"][0]["field"] == field
+
+
+def test_fx_rate_is_remembered_per_currency_in_the_project(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    first = client.post(
+        base(world), json={"productId": world["lamp"].id, "fxRateMicro": 1_200_000}
+    ).json()
+    second = client.post(base(world), json={"productId": world["lamp"].id}).json()
+    assert first["fxRateMicro"] == second["fxRateMicro"] == 1_200_000
+
+
+def test_fee_line_has_no_type_no_placement_and_a_fee_code(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    fee = client.post(
+        base(world),
+        json={
+            "kind": "fee",
+            "name": "Livraison et emballage",
+            "supplierId": world["dixon"].id,
+            "unitCostCents": 80_000,
+            "fxRateMicro": GBP,
+        },
+    )
+    assert fee.status_code == 201, fee.text
+    body = fee.json()
+    assert body["itemCode"] == "FR-01" and body["categoryId"] is None and body["placements"] == []
+    assert body["currency"] == "GBP" and body["discountBp"] == 1500
+    refused = client.post(
+        f"/api/v1/project-items/{body['id']}/placements", json={"locationId": world["lob"].id}
+    )
+    assert refused.status_code == 409
+    assert client.get(base(world), params={"kind": "fee"}).json()[0]["id"] == body["id"]
+
+
+def test_patch_sheet_price_and_type_journals_price_and_renumbers_while_new(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = client.post(
+        base(world),
+        json={
             "productId": world["lamp"].id,
             "fxRateMicro": GBP,
-            "placements": [
-                {"zoneId": world["lob"].id, "qtyMilli": 2000},
-                {"zoneId": world["cha"].id, "qtyMilli": 1000},
-            ],
+            "placements": [{"locationId": world["cha"].id}],
         },
     ).json()
-    summary = client.get(f"/api/v1/projects/{p}/summary").json()
-    line = summary["lines"][0]
-    assert line["itemCode"] == "LOB-LUM-01" and line["totalQtyMilli"] == 14_000
-    assert (
-        line["netUnitCents"] == 106_250
-        and line["netUnitEurCents"] == 124_313
-        and line["totalHtCents"] == 1_740_382
-    )
-    assert (
-        summary["specifiedCents"] == 1_740_382
-        and summary["vatCents"] == 348_076
-        and summary["ttcCents"] == 2_088_458
-    )
-    zones = {z["zoneCode"]: z["specifiedCents"] for z in summary["zones"]}
-    assert zones["LOB"] == 248_626 and zones["CHA"] == 1_491_756
-    assert (
-        client.get(
-            f"/api/v1/projects/{p}/project-items", params={"zoneId": world["cha"].id}
-        ).json()[0]["id"]
-        == item["id"]
-    )
-    assert (
-        client.get(f"/api/v1/projects/{p}/project-items", params={"zoneId": world["chb"].id}).json()
-        == []
-    )
-
-
-def test_placement_rules(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    item = post_item(client, p, {"productId": world["lamp"].id, "fxRateMicro": GBP}).json()
-    url = f"/api/v1/project-items/{item['id']}/placements"
-    fractional = client.post(url, json={"zoneId": world["cha"].id, "qtyMilli": 1500})
-    assert fractional.status_code == 422 and fractional.json()["details"][0]["field"] == "qtyMilli"
-    other_project = client.post(url, json={"zoneId": 9999, "qtyMilli": 1000})
-    assert (
-        other_project.status_code == 422 and other_project.json()["details"][0]["field"] == "zoneId"
-    )
-    added = client.post(url, json={"zoneId": world["cha"].id, "qtyMilli": 1000}).json()
-    assert [pl["zoneId"] for pl in added["placements"]] == [None, world["cha"].id]
-    assert (
-        client.post(url, json={"zoneId": world["cha"].id, "qtyMilli": 2000}).status_code == 422
-    )  # already placed there
-    unassigned_id = added["placements"][0]["id"]
-    moved = client.patch(
-        f"/api/v1/placements/{unassigned_id}", json={"zoneId": world["lob"].id, "qtyMilli": 2000}
-    ).json()
-    assert sorted(pl["zoneId"] for pl in moved["placements"]) == sorted(
-        [world["lob"].id, world["cha"].id]
-    )
-    removed = client.delete(f"/api/v1/placements/{unassigned_id}").json()
-    assert len(removed["placements"]) == 1
-    last = client.delete(f"/api/v1/placements/{removed['placements'][0]['id']}")
-    assert last.status_code == 409
-
-
-def test_carpet_in_m2_allows_fractional_quantities(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    txt = make_category_via(client, "TXT", "Textiles")
-    body = post_item(
-        client,
-        world["project"].id,
-        {
-            "categoryId": txt,
-            "name": "Moquette",
-            "unit": "m2",
-            "unitCostCents": 4500,
-            "placements": [{"zoneId": world["cha"].id, "qtyMilli": 12_500}],
+    url = f"/api/v1/project-items/{item['id']}"
+    patched = client.patch(
+        url,
+        json={
+            "finish": "laiton noir",
+            "family": "edition",
+            "usage": "indoor",
+            "comments": "Au-dessus du bureau",
+            "quoteRef": "DV-118",
+            "quoteIndice": "B",
+            "quoteUrl": "https://example.com/dv-118.pdf",
+            "unitCostCents": 118_000,
+            "discountBp": 2000,
         },
-    ).json()
-    line = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()["lines"][0]
-    assert (
-        body["itemCode"] == "CHA-TXT-01"
-        and line["totalQtyMilli"] == 150_000
-        and line["totalHtCents"] == 675_000
     )
+    assert patched.status_code == 200, patched.text
+    body = patched.json()
+    assert body["finish"] == "laiton noir" and body["family"] == "edition"
+    assert body["quoteIndice"] == "B" and body["unitCostCents"] == 118_000
+    tab = make_category_via_api(client, "TAB", "Table")
+    renumbered = client.patch(url, json={"categoryId": tab}).json()
+    assert renumbered["itemCode"] == "CHA-TAB-01"
+    events = client.get(f"{url}/events").json()
+    assert [e["kind"] for e in events] == ["created", "price"]
+    assert '"cost":118000' in events[1]["newValue"] and '"discount":2000' in events[1]["newValue"]
+    client.post(f"{url}/status", json={"status": "quoted"})
+    frozen = client.patch(url, json={"itemCode": "AUTRE"})
+    assert frozen.status_code == 422 and frozen.json()["details"][0]["field"] == "itemCode"
+    assert (
+        client.patch(url, json={"categoryId": world["lud"].id}).json()["itemCode"] == "CHA-TAB-01"
+    )
+    assert client.patch(url, json={"name": None}).status_code == 422
+    assert client.patch(url, json={"categoryId": None}).status_code == 422
 
 
-def make_category_via(client: TestClient, code: str, name: str) -> int:
+def make_category_via_api(client: TestClient, code: str, name: str) -> int:
     return client.post("/api/v1/categories", json={"code": code, "name": name}).json()["id"]
 
 
-# --- statuts, snapshot, journal ---------------------------------------------------------------
-
-
-def approved_lamp(client: TestClient, world: dict[str, Any]) -> dict[str, Any]:
-    item = post_item(
-        client,
-        world["project"].id,
-        {
-            "productId": world["lamp"].id,
-            "fxRateMicro": GBP,
-            "placements": [
-                {"zoneId": world["lob"].id, "qtyMilli": 2000},
-                {"zoneId": world["cha"].id, "qtyMilli": 1000},
-            ],
-        },
-    ).json()
-    assert set_status(client, item["id"], "specified").status_code == 200
-    assert set_status(client, item["id"], "quoted").status_code == 200
-    approved = set_status(client, item["id"], "approved")
-    assert approved.status_code == 200, approved.text
-    return approved.json()
-
-
-def test_approval_sets_the_snapshot_and_revision_keeps_it(
+def test_status_is_free_and_journaled_with_an_optional_note(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    item = approved_lamp(client, world)
-    assert item["approvedAt"] == "2026-10-09T12:00:00Z"
-    assert item["approvedUnitNetCents"] == 124_313 and item["approvedTotalQtyMilli"] == 14_000
-    revised = client.patch(
-        f"/api/v1/project-items/{item['id']}", json={"unitCostCents": 130_000}
-    ).json()
-    assert revised["approvedUnitNetCents"] == 124_313  # the client saw 17 403,82 €
-    summary = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()
-    assert summary["specifiedCents"] == 1_809_990 and summary["approvedCents"] == 1_740_382
-    kinds = [e["kind"] for e in client.get(f"/api/v1/project-items/{item['id']}/events").json()]
-    assert kinds == ["created", "status", "status", "status", "approval", "price"]
+    item = client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).json()
+    url = f"/api/v1/project-items/{item['id']}/status"
+    assert client.post(url, json={"status": "purchased"}).json()["status"] == "purchased"
+    assert client.post(url, json={"status": "purchased"}).status_code == 409
+    assert client.post(url, json={"status": "to_review", "note": " à revoir "}).status_code == 200
+    assert client.post(url, json={"status": "cancelled"}).json()["status"] == "cancelled"
+    assert client.post(url, json={"status": "approved"}).status_code == 200
+    assert client.post(url, json={"status": "nope"}).status_code == 422
+    events = client.get(f"/api/v1/project-items/{item['id']}/events").json()
+    assert [(e["fromStatus"], e["toStatus"], e["note"]) for e in events[1:]] == [
+        ("to_quote", "purchased", None),
+        ("purchased", "to_review", "à revoir"),
+        ("to_review", "cancelled", None),
+        ("cancelled", "approved", None),
+    ]
 
 
-def test_journal_only_starts_at_approval(client: TestClient, world: dict[str, Any]) -> None:
-    item = post_item(
-        client, world["project"].id, {"productId": world["lamp"].id, "fxRateMicro": GBP}
-    ).json()
-    client.patch(
-        f"/api/v1/project-items/{item['id']}",
-        json={"unitCostCents": 118_000, "fxRateMicro": 1_200_000},
-    )
-    kinds = [e["kind"] for e in client.get(f"/api/v1/project-items/{item['id']}/events").json()]
-    assert kinds == ["created"]  # a corrected draft stays deletable
-    assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 204
+def test_delete_only_a_new_article_without_history(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).json()
+    url = f"/api/v1/project-items/{item['id']}"
+    client.post(f"{url}/status", json={"status": "quoted"})
+    client.post(f"{url}/status", json={"status": "to_quote"})
+    blocked = client.delete(url)
+    assert blocked.status_code == 409 and "annuler" in blocked.json()["message"]
+    fresh = client.post(base(world), json={"name": "B", "categoryId": world["lud"].id}).json()
+    assert client.delete(f"/api/v1/project-items/{fresh['id']}").status_code == 204
+    assert client.get(f"/api/v1/project-items/{fresh['id']}").status_code == 404
 
 
-def test_preconditions_by_target_status(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    item = post_item(client, p, {"categoryId": world["lum"].id, "name": "Sans zone"}).json()
-    blocked = set_status(client, item["id"], "specified")
-    assert blocked.status_code == 422
-    assert {d["field"] for d in blocked.json()["details"]} == {"productId", "placements"}
-    custom = post_item(
-        client,
-        p,
-        {
-            "categoryId": world["lum"].id,
-            "name": "Sur mesure",
-            "kind": "custom",
-            "placements": [{"zoneId": world["lob"].id, "qtyMilli": 1000}],
+def test_placements_add_update_delete_and_journal(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = client.post(
+        base(world),
+        json={
+            "name": "A",
+            "categoryId": world["lud"].id,
+            "placements": [{"locationId": world["lob"].id}],
         },
     ).json()
-    assert set_status(client, custom["id"], "specified").status_code == 200
-    quoted = set_status(client, custom["id"], "quoted")
-    assert quoted.status_code == 422 and {d["field"] for d in quoted.json()["details"]} == {
-        "supplierId",
-        "unitCostCents",
-    }
-    fee = post_item(
-        client,
-        p,
-        {
-            "categoryId": world["lum"].id,
-            "name": "Transport",
-            "fxRateMicro": GBP,
-            "kind": "fee",
+    url = f"/api/v1/project-items/{item['id']}"
+    added = client.post(f"{url}/placements", json={"locationId": world["cha"].id, "qtyMilli": 2000})
+    assert added.status_code == 201, added.text
+    assert [p["locationId"] for p in added.json()["placements"]] == [
+        world["lob"].id,
+        world["cha"].id,
+    ]
+    assert client.post(f"{url}/placements", json={"locationId": world["cha"].id}).status_code == 422
+    placement_id = added.json()["placements"][1]["id"]
+    updated = client.patch(f"/api/v1/placements/{placement_id}", json={"qtyMilli": 3000}).json()
+    assert updated["placements"][1]["qtyMilli"] == 3000
+    assert (
+        client.patch(f"/api/v1/placements/{placement_id}", json={"qtyMilli": None}).status_code
+        == 422
+    )
+    assert client.delete(f"/api/v1/placements/{placement_id}").status_code == 200
+    only = item["placements"][0]["id"]
+    assert client.delete(f"/api/v1/placements/{only}").status_code == 409  # keeps one
+    events = client.get(f"{url}/events").json()
+    assert [e["kind"] for e in events] == ["created", "placement", "placement", "placement"]
+    assert (
+        client.get(base(world), params={"locationId": world["lob"].id}).json()[0]["id"]
+        == item["id"]
+    )
+    assert client.get(base(world), params={"locationId": world["cha"].id}).json() == []
+
+
+def test_list_filters_and_search(client: TestClient, world: dict[str, Any]) -> None:
+    a = client.post(base(world), json={"name": "Applique", "categoryId": world["lud"].id}).json()
+    b = client.post(
+        base(world),
+        json={
+            "name": "Lampe",
+            "categoryId": world["lud"].id,
             "supplierId": world["dixon"].id,
-            "unitCostCents": 45_000,
+            "fxRateMicro": GBP,
         },
     ).json()
-    assert set_status(client, fee["id"], "quoted").status_code == 200  # no zone needed for fees
+    client.post(f"/api/v1/project-items/{b['id']}/status", json={"status": "quoted"})
+    ids = lambda params: [i["id"] for i in client.get(base(world), params=params).json()]  # noqa: E731
+    assert ids({}) == [a["id"], b["id"]]
+    assert ids({"status": "quoted"}) == [b["id"]]
+    assert ids({"supplierId": world["dixon"].id}) == [b["id"]]
+    assert ids({"q": "appli"}) == [a["id"]]
+    assert ids({"q": "lud-02"}) == [b["id"]]
 
 
-def test_ordered_needs_order_ref_and_never_goes_back(
-    client: TestClient, world: dict[str, Any]
+def test_files_photo_and_drawing(
+    client: TestClient, session: Session, settings: Settings, clock: Clock, world: dict[str, Any]
 ) -> None:
-    item = approved_lamp(client, world)
-    no_ref = set_status(client, item["id"], "ordered")
-    assert no_ref.status_code == 422 and no_ref.json()["details"][0]["field"] == "orderRef"
-    client.patch(f"/api/v1/project-items/{item['id']}", json={"orderRef": "PO-2026-12"})
-    assert set_status(client, item["id"], "ordered").status_code == 200
-    back = set_status(client, item["id"], "draft")
-    assert back.status_code == 409 and "retour" in back.json()["message"]
-    assert set_status(client, item["id"], "delivered").status_code == 200
-    assert set_status(client, item["id"], "installed").status_code == 200
-    cancelled = set_status(client, item["id"], "cancelled", note="dégât à la livraison")
-    assert cancelled.status_code == 200
-    reopen = set_status(client, item["id"], "draft", note="finalement")
-    assert reopen.status_code == 409 and "ne se rouvre pas" in reopen.json()["message"]
+    item = make_item(session, clock, world["project"].id, category_id=world["lud"].id)
+    photo = make_file(session, settings, clock, PNG_BYTES, "a.png")
+    drawing = make_file(session, settings, clock, b"%PDF-1.4\n" + b"%" * 64, "plan.pdf")
+    url = f"/api/v1/project-items/{item.id}/files"
+    attached = client.post(url, json={"fileId": photo.id, "isPrimary": True})
+    assert attached.status_code == 201, attached.text
+    assert attached.json()["files"][0]["isPrimary"] is True
+    plan = client.post(url, json={"fileId": drawing.id, "kind": "drawing"}).json()["files"]
+    assert [f["kind"] for f in plan] == ["image", "drawing"]
+    bad = client.post(url, json={"fileId": photo.id, "kind": "drawing", "isPrimary": True})
+    assert bad.status_code == 409  # already attached
+    assert client.patch(f"{url}/{drawing.id}", json={"isPrimary": True}).status_code == 422
+    detached = client.delete(f"{url}/{photo.id}")
+    assert detached.status_code == 200 and len(detached.json()["files"]) == 1
+    assert not (settings.files_dir / photo.filename).exists()
 
 
-def test_cancel_requires_a_note_and_frees_the_budget(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    item = approved_lamp(client, world)
-    assert set_status(client, item["id"], "cancelled").status_code == 422
-    assert set_status(client, item["id"], "cancelled", note="client renonce").status_code == 200
-    summary = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()
-    assert summary["specifiedCents"] == 0 and summary["approvedCents"] == 0
-    assert summary["lines"][0]["counted"] is False
-    assert (
-        client.patch(f"/api/v1/project-items/{item['id']}", json={"name": "x"}).status_code == 409
-    )
-    reopened = set_status(client, item["id"], "draft", note="reprise")
-    assert reopened.status_code == 200  # never ordered: allowed
-
-
-def test_back_from_approved_needs_a_note(client: TestClient, world: dict[str, Any]) -> None:
-    item = approved_lamp(client, world)
-    assert set_status(client, item["id"], "quoted").status_code == 422
-    back = set_status(client, item["id"], "quoted", note="nouveau devis")
-    assert (
-        back.status_code == 200 and back.json()["approvedUnitNetCents"] == 124_313
-    )  # snapshot kept
-    assert (
-        client.get(f"/api/v1/projects/{world['project'].id}/summary").json()["approvedCents"] == 0
-    )
-
-
-def test_replace_product_after_approval(
+def test_closed_project_refuses_every_write(
     client: TestClient, session: Session, clock: Clock, world: dict[str, Any]
 ) -> None:
-    old = approved_lamp(client, world)
-    other = make_product(
-        session,
-        clock,
-        name="Melt",
-        category_id=world["lum"].id,
-        supplier_id=world["dixon"].id,
-        list_price_cents=90_000,
-        list_price_currency="GBP",
-    )
-    too_early = client.post(
-        f"/api/v1/project-items/{old['id'] + 100}/replace", json={"productId": other.id}
-    )
-    assert too_early.status_code == 404
-    new = client.post(
-        f"/api/v1/project-items/{old['id']}/replace",
-        json={"productId": other.id, "note": "rupture"},
-    )
-    assert new.status_code == 201, new.text
-    body = new.json()
+    item = make_item(session, clock, world["project"].id, category_id=world["lud"].id)
+    client.post(f"/api/v1/projects/{world['project'].id}/status", json={"status": "closed"})
     assert (
-        body["itemCode"] == "LOB-LUM-01"
-        and body["status"] == "specified"
-        and body["approvedAt"] is None
+        client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).status_code
+        == 409
     )
-    assert (
-        body["unitCostCents"] == 90_000 and body["currency"] == "GBP" and body["fxRateMicro"] == GBP
-    )
-    assert [pl["zoneId"] for pl in body["placements"]] == [world["lob"].id, world["cha"].id]
-    previous = client.get(f"/api/v1/project-items/{old['id']}").json()
-    assert (
-        previous["itemCode"] == "LOB-LUM-01.R1"
-        and previous["status"] == "replaced"
-        and previous["replacedById"] == body["id"]
-    )
-    assert previous["placements"] == []
-    summary = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()
-    assert (
-        summary["approvedCents"] == 0 and summary["specifiedCents"] == 1_253_070
-    )  # 900 × 0,85 × 1,17 × 14
+    assert client.patch(f"/api/v1/project-items/{item.id}", json={"name": "B"}).status_code == 409
     assert (
         client.post(
-            f"/api/v1/project-items/{body['id']}/replace", json={"productId": other.id}
+            f"/api/v1/project-items/{item.id}/status", json={"status": "quoted"}
         ).status_code
         == 409
     )
-
-
-def test_catalogue_change_never_touches_the_line_unless_refreshed(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    item = approved_lamp(client, world)
-    client.patch(f"/api/v1/products/{world['lamp'].id}", json={"listPriceCents": 200_000})
-    assert client.get(f"/api/v1/project-items/{item['id']}").json()["unitCostCents"] == 125_000
-    refreshed = client.post(f"/api/v1/project-items/{item['id']}/refresh").json()
-    assert refreshed["unitCostCents"] == 200_000
-    events = client.get(f"/api/v1/project-items/{item['id']}/events").json()
-    assert events[-1]["kind"] == "price" and events[-1]["note"] == "catalogue"
-
-
-def test_delete_is_bounded_to_pristine_drafts(client: TestClient, world: dict[str, Any]) -> None:
-    item = post_item(
-        client,
-        world["project"].id,
-        {
-            "categoryId": world["lum"].id,
-            "name": "A",
-            "kind": "custom",
-            "placements": [{"zoneId": world["lob"].id, "qtyMilli": 1000}],
-        },
-    ).json()
-    set_status(client, item["id"], "specified")
-    set_status(client, item["id"], "draft")
-    assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 409  # has history
-    assert set_status(client, item["id"], "cancelled", note="abandon").status_code == 200
-
-
-def test_closed_project_locks_its_lines(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    item = post_item(client, p, {"categoryId": world["lum"].id, "name": "A"}).json()
-    client.post(f"/api/v1/projects/{p}/status", json={"status": "closed"})
-    assert post_item(client, p, {"categoryId": world["lum"].id, "name": "B"}).status_code == 409
-    assert (
-        client.patch(f"/api/v1/project-items/{item['id']}", json={"name": "B"}).status_code == 409
-    )
-    assert set_status(client, item["id"], "specified").status_code == 409
-
-
-def test_list_filters(
-    client: TestClient, session: Session, clock: Clock, world: dict[str, Any]
-) -> None:
-    p = world["project"].id
-    lamp = post_item(
-        client,
-        p,
-        {
-            "productId": world["lamp"].id,
-            "fxRateMicro": GBP,
-            "placements": [{"zoneId": world["cha"].id, "qtyMilli": 1000}],
-        },
-    ).json()
-    make_item(session, clock, p, name="Rideau", category_id=world["lum"].id, kind="custom")
-    url = f"/api/v1/projects/{p}/project-items"
-    assert [i["name"] for i in client.get(url).json()] == ["Beat Light Fat", "Rideau"]
-    assert [i["id"] for i in client.get(url, params={"kind": "custom"}).json()] != [lamp["id"]]
-    assert [i["id"] for i in client.get(url, params={"supplierId": world["dixon"].id}).json()] == [
-        lamp["id"]
-    ]
-    assert [i["name"] for i in client.get(url, params={"q": "ride"}).json()] == ["Rideau"]
-    assert client.get(url, params={"status": "quoted"}).json() == []
-    assert client.get("/api/v1/projects/999/project-items").status_code == 404
-
-
-def test_summary_computes_the_latest_order_date_and_the_overdue_flag(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    p = world["project"].id
-    soon = post_item(
-        client,
-        p,
-        {"productId": world["lamp"].id, "fxRateMicro": GBP, "requiredOnSite": "2026-12-01"},
-    ).json()
-    late = post_item(
-        client, p, {"productId": world["lamp"].id, "requiredOnSite": "2027-06-01"}
-    ).json()
-    unknown = post_item(client, p, {"categoryId": world["lum"].id, "name": "Sans date"}).json()
-    lines = {
-        line["projectItemId"]: line
-        for line in client.get(f"/api/v1/projects/{p}/summary").json()["lines"]
-    }
-    assert (
-        lines[soon["id"]]["orderBy"] == "2026-09-22" and lines[soon["id"]]["orderOverdue"] is True
-    )  # 8 weeks + 14 days before, clock = 2026-10-09
-    assert (
-        lines[late["id"]]["orderBy"] == "2027-03-23" and lines[late["id"]]["orderOverdue"] is False
-    )
-    assert lines[unknown["id"]]["orderBy"] is None and lines[unknown["id"]]["orderOverdue"] is False
-    client.patch(f"/api/v1/project-items/{soon['id']}", json={"onHold": True})
-    assert client.get(f"/api/v1/projects/{p}/summary").json()["lines"][0]["orderOverdue"] is False
-
-
-# --- étape 11 (ADR-0012) : localisation facultative ----------------------------------------------
-
-
-def test_location_is_optional_and_checked(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    created = post_item(
-        client, p, {"categoryId": world["lum"].id, "name": "Applique", "location": "wall"}
-    ).json()
-    assert created["location"] == "wall" and created["indice"] is None
-    plain = post_item(client, p, {"categoryId": world["lum"].id, "name": "Sans"}).json()
-    assert plain["location"] is None
-    bad = client.patch(f"/api/v1/project-items/{created['id']}", json={"location": "roof"})
-    assert bad.status_code == 422
-    cleared = client.patch(f"/api/v1/project-items/{created['id']}", json={"location": None})
-    assert cleared.json()["location"] is None
+    assert client.get(f"/api/v1/project-items/{item.id}").status_code == 200
+    assert client.get("/api/v1/project-items/999").status_code == 404

@@ -4,9 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ffe.deps import Clock
-from ffe.errors import ErrorDetail, ValidationAppError
 from ffe.models import Supplier
-from ffe.schemas.supplier import SIRET_MISMATCH, SupplierCreate, SupplierUpdate
+from ffe.schemas.supplier import SupplierCreate, SupplierUpdate
 from ffe.services.base import stamp
 from ffe.services.common import archive as common_archive
 from ffe.services.common import check_duplicate_name, ensure_active, get_or_404, page, search
@@ -21,7 +20,7 @@ def list_suppliers(
     query = select(Supplier).order_by(Supplier.name, Supplier.id)
     if not include_archived:
         query = query.where(Supplier.archived_at.is_(None))
-    rows = search(list(session.scalars(query)), q, ("name", "legal_name"))
+    rows = search(list(session.scalars(query)), q, ("name", "contact_name"))
     return page(rows, limit, offset)
 
 
@@ -48,10 +47,6 @@ def update_supplier(
         changes = data.model_dump(exclude_unset=True)
         if "name" in changes and changes["name"] != supplier.name:
             check_duplicate_name(session, Supplier, RESOURCE, changes["name"], supplier_id, False)
-        siren = changes.get("siren", supplier.siren)
-        siret = changes.get("siret", supplier.siret)
-        if siren and siret and not siret.startswith(siren):
-            raise ValidationAppError([ErrorDetail("siret", SIRET_MISMATCH)])
         for field_name, value in changes.items():
             setattr(supplier, field_name, value)
         supplier.updated_at = stamp(clock)

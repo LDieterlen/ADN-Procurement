@@ -1,44 +1,34 @@
-"""`project_item` schemas: creation with default precedence, partial update, placements, status, journal."""
+"""`project_item` schemas: creation (from the catalogue or free), partial update, placements,
+status, journal (ADR-0013)."""
 
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema, IsoDate
-from ffe.schemas.budget import BudgetSummaryRead
+from ffe.schemas.base import BaseSchema
 
-ItemKind = Literal["ffe", "ose", "custom", "existing", "fee"]
+ItemKind = Literal["product", "fee"]
 ItemStatus = Literal[
-    "draft",
-    "specified",
-    "quoted",
-    "approved",
-    "ordered",
-    "delivered",
-    "installed",
-    "cancelled",
-    "replaced",
+    "to_quote", "quoted", "to_review", "approved", "deposit", "purchased", "cancelled"
 ]
-Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
-ItemFileKind = Literal["image", "quote", "approval", "drawing", "other"]
-Location = Literal["floor", "wall", "ceiling", "door", "other"]  # optional, ADR-0012
-EventKind = Literal[
-    "created", "status", "price", "fx", "qty", "product", "placement", "approval", "quote", "other"
-]
+ItemFamily = Literal["custom", "joinery", "ose", "edition", "gallery", "artwork", "textile"]
+ItemUsage = Literal["indoor", "outdoor"]
+ItemFileKind = Literal["image", "drawing", "other"]
+EventKind = Literal["created", "status", "price", "product", "placement", "other"]
 
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]
+Url = Annotated[str | None, Field(max_length=2000, pattern=r"^https?://")]
 Currency = Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
 Cents = Annotated[int, Field(ge=0)]
 Bp = Annotated[int, Field(ge=0, le=10000)]
 Micro = Annotated[int, Field(ge=1)]
 Milli = Annotated[int, Field(ge=0)]
-Mm = Annotated[int | None, Field(ge=0)]
-Weeks = Annotated[int | None, Field(ge=0)]
 ItemCode = Annotated[str, Field(min_length=1, max_length=20)]
+Indice = Annotated[str | None, Field(max_length=10)]
 
-STRIPPED = ("name", "item_code", "finish", "color", "materials", "quote_ref")
+TEXTS = ("name", "item_code", "reference", "finish", "dimensions", "quote_ref", "quote_indice")
 
 
 def _strip(value: Any) -> Any:
@@ -46,17 +36,15 @@ def _strip(value: Any) -> Any:
 
 
 class PlacementCreate(BaseSchema):
-    zone_id: int | None = None  # None = « non affecté »
+    location_id: int | None = None  # None = « non affecté »
     qty_milli: Milli = 1000
     sort_order: int = 0
-    notes: Short = None
 
 
 class PlacementUpdate(BaseSchema):
-    zone_id: int | None = None
+    location_id: int | None = None
     qty_milli: Milli | None = None
     sort_order: int | None = None
-    notes: Short = None
 
     @field_validator("qty_milli", "sort_order", mode="before")
     @classmethod
@@ -69,100 +57,79 @@ class PlacementUpdate(BaseSchema):
 class PlacementRead(BaseSchema):
     id: int
     project_item_id: int
-    zone_id: int | None
+    location_id: int | None
     qty_milli: int
     sort_order: int
-    notes: str | None
     created_at: str
     updated_at: str
 
 
 class ProjectItemCreate(BaseSchema):
-    location: Location | None = None
-    """From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free."""
+    """From a catalogue product (`productId`: every absent field is copied) or free. A free
+    article is added to the catalogue unless `addToCatalogue` is false (ADR-0013)."""
 
+    kind: ItemKind = "product"
     product_id: int | None = None
+    add_to_catalogue: bool = True
     category_id: int | None = None
-    name: Short = None
-    client_description: Long = None
-    kind: ItemKind = "ffe"
-    unit: Unit | None = None
-    finish: Short = None
-    color: Short = None
-    materials: Short = None
-    width_mm: Mm = None
-    depth_mm: Mm = None
-    height_mm: Mm = None
-    diameter_mm: Mm = None
+    manufacturer_id: int | None = None
     supplier_id: int | None = None
+    name: Short = None
+    reference: Short = None
+    family: ItemFamily | None = None
+    usage: ItemUsage | None = None
+    finish: Short = None
+    dimensions: Short = None
+    source_url: Url = None
+    comments: Long = None
     unit_cost_cents: Cents | None = None
     currency: Currency | None = None
     fx_rate_micro: Micro | None = None
     discount_bp: Bp | None = None
-    vat_rate_bp: Bp | None = None
-    lead_time_weeks: Weeks = None
-    required_on_site: IsoDate = None
-    quoted_on: IsoDate = None
-    quote_valid_until: IsoDate = None
-    expected_delivery_on: IsoDate = None
     quote_ref: Short = None
-    item_code: ItemCode | None = None  # None = generated `<CAT>-NNN`
+    quote_indice: Indice = None
+    quote_url: Url = None
+    item_code: ItemCode | None = None  # None = generated `<LOC>-<TYPE>-NN`
     sort_order: int = 0
-    internal_notes: Long = None
     placements: list[PlacementCreate] | None = None  # None = one unassigned placement of 1
 
-    @field_validator(*STRIPPED, mode="before")
+    @field_validator(*TEXTS, mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
 
 
 class ProjectItemUpdate(BaseSchema):
-    location: Location | None = None
     """Absent = unchanged. `status` never here (POST …/status), placements have their own routes."""
 
     product_id: int | None = None
     category_id: int | None = None
-    name: Annotated[str | None, Field(min_length=1, max_length=200)] = None
-    client_description: Long = None
-    kind: ItemKind | None = None
-    unit: Unit | None = None
-    finish: Short = None
-    color: Short = None
-    materials: Short = None
-    width_mm: Mm = None
-    depth_mm: Mm = None
-    height_mm: Mm = None
-    diameter_mm: Mm = None
+    manufacturer_id: int | None = None
     supplier_id: int | None = None
+    name: Annotated[str | None, Field(min_length=1, max_length=200)] = None
+    reference: Short = None
+    family: ItemFamily | None = None
+    usage: ItemUsage | None = None
+    finish: Short = None
+    dimensions: Short = None
+    source_url: Url = None
+    comments: Long = None
     unit_cost_cents: Cents | None = None
     currency: Currency | None = None
     fx_rate_micro: Micro | None = None
     discount_bp: Bp | None = None
-    vat_rate_bp: Bp | None = None
-    lead_time_weeks: Weeks = None
-    required_on_site: IsoDate = None
-    quoted_on: IsoDate = None
-    quote_valid_until: IsoDate = None
-    expected_delivery_on: IsoDate = None
     quote_ref: Short = None
-    order_ref: Short = None
-    on_hold: bool | None = None
+    quote_indice: Indice = None
+    quote_url: Url = None
     item_code: ItemCode | None = None
     sort_order: int | None = None
-    internal_notes: Long = None
 
     @field_validator(
-        "category_id",
         "name",
-        "kind",
-        "unit",
         "unit_cost_cents",
         "currency",
         "fx_rate_micro",
         "discount_bp",
-        "vat_rate_bp",
-        "on_hold",
         "item_code",
         "sort_order",
         mode="before",
@@ -173,7 +140,9 @@ class ProjectItemUpdate(BaseSchema):
             raise ValueError(fr.FIELD_REQUIRED)
         return _strip(value)
 
-    @field_validator("finish", "color", "materials", "quote_ref", "order_ref", mode="before")
+    @field_validator(
+        "reference", "finish", "dimensions", "quote_ref", "quote_indice", mode="before"
+    )
     @classmethod
     def strip_text(cls, value: Any) -> Any:
         return _strip(value)
@@ -184,21 +153,9 @@ class StatusChange(BaseSchema):
     note: Long = None
 
 
-class ReplaceProduct(BaseSchema):
-    """« Remplacer le produit » from `approved`: a new line takes the code, the old one is `replaced`."""
-
-    product_id: int
-    unit_cost_cents: Cents | None = None
-    currency: Currency | None = None
-    fx_rate_micro: Micro | None = None
-    discount_bp: Bp | None = None
-    supplier_id: int | None = None
-    note: Long = None
-
-
 class ItemFileAttach(BaseSchema):
     file_id: int
-    kind: ItemFileKind = "other"
+    kind: ItemFileKind = "image"
     is_primary: bool = False
     caption: Short = None
     sort_order: int = 0
@@ -243,42 +200,29 @@ class ProjectItemRead(BaseSchema):
     id: int
     project_id: int
     item_code: str
-    category_id: int
+    kind: ItemKind
+    category_id: int | None
     product_id: int | None
+    manufacturer_id: int | None
     supplier_id: int | None
     name: str
-    client_description: str | None
-    kind: ItemKind
-    unit: Unit
+    reference: str | None
+    family: ItemFamily | None
+    usage: ItemUsage | None
     finish: str | None
-    color: str | None
-    materials: str | None
-    width_mm: int | None
-    depth_mm: int | None
-    height_mm: int | None
-    diameter_mm: int | None
+    dimensions: str | None
+    source_url: str | None
+    comments: str | None
     unit_cost_cents: int
     currency: str
     fx_rate_micro: int
     discount_bp: int
-    vat_rate_bp: int
-    lead_time_weeks: int | None
-    required_on_site: str | None
-    quoted_on: str | None
-    quote_valid_until: str | None
-    expected_delivery_on: str | None
     quote_ref: str | None
-    order_ref: str | None
+    quote_indice: str | None
+    quote_url: str | None
     status: ItemStatus
-    on_hold: bool
-    replaced_by_id: int | None
-    approved_at: str | None
-    approved_unit_net_cents: int | None
-    approved_total_qty_milli: int | None
-    sort_order: int
-    internal_notes: str | None
-    location: Location | None
     indice: str | None
+    sort_order: int
     created_at: str
     updated_at: str
     placements: list[PlacementRead]
@@ -289,11 +233,10 @@ class ProjectItemRead(BaseSchema):
         base = {
             name: getattr(item, name)
             for name in cls.model_fields
-            if name not in ("placements", "files", "on_hold")
+            if name not in ("placements", "files")
         }
         return cls(
             **base,
-            on_hold=bool(item.on_hold),
             placements=[PlacementRead.model_validate(p) for p in item.placements],
             files=[ItemFileRead.from_junction(f) for f in item.files],
         )
@@ -309,43 +252,3 @@ class EventRead(BaseSchema):
     new_value: str | None
     changed_at: str
     note: str | None
-
-
-# --- summary (totals computed by money.py, never stored; extended with budgets at step 8) ------
-
-
-class LineAmountsRead(BaseSchema):
-    project_item_id: int
-    item_code: str
-    status: ItemStatus
-    kind: ItemKind
-    counted: bool
-    amount_counted: bool
-    total_qty_milli: int
-    net_unit_cents: int
-    net_unit_eur_cents: int
-    total_ht_cents: int
-    approved_cents: int | None
-    order_by: str | None  # latest order date (D7.5), None when unknown
-    order_overdue: bool
-
-
-class ZoneAmountsRead(BaseSchema):
-    zone_id: int | None
-    zone_code: str | None
-    zone_name: str
-    multiplier: int
-    specified_cents: int
-
-
-class ProjectSummaryRead(BaseSchema):
-    project_id: int
-    lines: list[LineAmountsRead]
-    zones: list[ZoneAmountsRead]
-    specified_cents: int
-    approved_cents: int
-    ose_cents: int
-    vat_by_rate_bp: dict[int, int]
-    vat_cents: int
-    ttc_cents: int
-    budget: BudgetSummaryRead | None = None  # step 8: filled by services/budget.summary_with_budget

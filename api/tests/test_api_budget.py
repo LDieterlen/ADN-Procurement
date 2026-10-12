@@ -1,5 +1,6 @@
-"""Budgets (ROADMAP étape 8) : global 50 000 € et « Chambres » 30 000 €, Prescrit/Reste cohérents avec
-les lignes, annuler libère, deux budgets globaux → 409, alertes 90/100 %, tableau de bord."""
+"""Budget (ADR-0013): envelopes by scope, summary — Prescrit / Devisé / Validé, by status with
+shares, by location / zone / family / type / supplier, filters, alerts. Reference amounts
+computed by hand (DATA_MODEL §6)."""
 
 from typing import Any
 
@@ -7,242 +8,222 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from conftest import make_category, make_product, make_project, make_supplier, make_zone
+from conftest import make_category, make_location, make_project, make_supplier
 from ffe.deps import Clock
 
 GBP = 1_170_000
 
 
 @pytest.fixture
-def world(session: Session, clock: Clock) -> dict[str, Any]:
-    project = make_project(session, clock, name="Hôtel X", contingency_bp=1000)
-    lob = make_zone(session, clock, project.id, code="LOB", name="Lobby", multiplier=1)
-    cha = make_zone(session, clock, project.id, code="CHA", name="Chambre type A", multiplier=12)
-    lum = make_category(session, clock, name="Luminaires", code="LUM")
-    txt = make_category(session, clock, name="Textiles", code="TXT")
+def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
+    project = make_project(session, clock, name="Hôtel X")
+    lob = make_location(
+        session, clock, project.id, code="LOB", name="Lobby", zone="Zones communes", multiplier=1
+    )
+    cha = make_location(
+        session, clock, project.id, code="CHA", name="Chambre A", zone="Hébergement", multiplier=12
+    )
+    lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
+    tab = make_category(session, clock, name="Table", code="TAB")
     dixon = make_supplier(
         session, clock, name="Tom Dixon", currency="GBP", default_discount_bp=1500
     )
-    lamp = make_product(
-        session,
-        clock,
-        name="Beat Light Fat",
-        category_id=lum.id,
-        supplier_id=dixon.id,
-        list_price_cents=125_000,
-        list_price_currency="GBP",
-    )
-    return {"project": project, "lob": lob, "cha": cha, "lum": lum, "txt": txt, "lamp": lamp}
+    wood = make_supplier(session, clock, name="Atelier Bois", currency="EUR")
+    base = f"/api/v1/projects/{project.id}/project-items"
+    # Lamp: 125 000 GBP −15 % → 106 250 → 124 313 € ; 2 + 12 = 14 → 17 403,82 €
+    lamp = client.post(
+        base,
+        json={
+            "name": "Lampe",
+            "categoryId": lud.id,
+            "supplierId": dixon.id,
+            "family": "edition",
+            "unitCostCents": 125_000,
+            "fxRateMicro": GBP,
+            "placements": [
+                {"locationId": lob.id, "qtyMilli": 2000},
+                {"locationId": cha.id, "qtyMilli": 1000},
+            ],
+        },
+    ).json()
+    # Table: 50 000 € × 1 in the lobby → 500,00 €
+    table = client.post(
+        base,
+        json={
+            "name": "Table",
+            "categoryId": tab.id,
+            "supplierId": wood.id,
+            "family": "custom",
+            "unitCostCents": 50_000,
+            "placements": [{"locationId": lob.id, "qtyMilli": 1000}],
+        },
+    ).json()
+    # Fee: 800,00 € for Tom Dixon, no placement
+    fee = client.post(
+        base,
+        json={
+            "kind": "fee",
+            "name": "Livraison",
+            "supplierId": dixon.id,
+            "unitCostCents": 80_000,
+            "currency": "EUR",
+            "discountBp": 0,
+        },
+    ).json()
+    # Cancelled: never counted
+    gone = client.post(
+        base, json={"name": "Annulée", "categoryId": tab.id, "unitCostCents": 999_999}
+    ).json()
+    client.post(f"/api/v1/project-items/{gone['id']}/status", json={"status": "cancelled"})
+    client.post(f"/api/v1/project-items/{lamp['id']}/status", json={"status": "approved"})
+    client.post(f"/api/v1/project-items/{table['id']}/status", json={"status": "quoted"})
+    return {
+        "project": project,
+        "lob": lob,
+        "cha": cha,
+        "lud": lud,
+        "tab": tab,
+        "dixon": dixon,
+        "wood": wood,
+        "lamp": lamp,
+        "table": table,
+        "fee": fee,
+    }
 
 
 def put(client: TestClient, project_id: int, lines: list[dict[str, Any]]) -> Any:
     return client.put(f"/api/v1/projects/{project_id}/budget-lines", json={"lines": lines})
 
 
-def lamp_line(
-    client: TestClient,
-    world: dict[str, Any],
-    placements: list[dict[str, Any]],
-    approve: bool = False,
-) -> dict[str, Any]:
-    item = client.post(
-        f"/api/v1/projects/{world['project'].id}/project-items",
-        json={"productId": world["lamp"].id, "fxRateMicro": GBP, "placements": placements},
-    ).json()
-    if approve:
-        for status in ("specified", "quoted", "approved"):
-            assert (
-                client.post(
-                    f"/api/v1/project-items/{item['id']}/status", json={"status": status}
-                ).status_code
-                == 200
-            )
-    return item
+def summary(client: TestClient, project_id: int, **params: Any) -> Any:
+    return client.get(f"/api/v1/projects/{project_id}/summary", params=params).json()
 
 
-def test_put_replaces_all_lines_and_rejects_two_global_budgets(
+def test_put_replaces_all_lines_and_validates_each_scope(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
+    pid = world["project"].id
     first = put(
         client,
-        p,
+        pid,
         [
-            {"amountCents": 5_000_000},
-            {"zoneId": world["cha"].id, "amountCents": 3_000_000, "notes": "15 000 € par clé × 2"},
+            {"scope": "global", "amountCents": 2_000_000},
+            {"scope": "zone", "zone": " Hébergement ", "amountCents": 1_500_000},
+            {"scope": "location", "locationId": world["lob"].id, "amountCents": 300_000},
+            {"scope": "family", "family": "edition", "amountCents": 1_800_000},
+            {"scope": "supplier", "supplierId": world["dixon"].id, "amountCents": 1_900_000},
         ],
     )
     assert first.status_code == 200, first.text
-    assert [(b["zoneId"], b["amountCents"]) for b in first.json()] == [
-        (None, 5_000_000),
-        (world["cha"].id, 3_000_000),
+    assert [b["scope"] for b in first.json()] == [
+        "global",
+        "zone",
+        "location",
+        "family",
+        "supplier",
     ]
-    again = put(client, p, [{"amountCents": 4_000_000}])
-    assert [b["amountCents"] for b in again.json()] == [4_000_000]  # replaced in bulk
-    assert client.get(f"/api/v1/projects/{p}/budget-lines").json()[0]["amountCents"] == 4_000_000
-    two_global = put(client, p, [{"amountCents": 1}, {"amountCents": 2}])
-    assert two_global.status_code == 409 and "même périmètre" in two_global.json()["message"]
-    bad_zone = put(client, p, [{"zoneId": 999, "amountCents": 1}])
-    assert (
-        bad_zone.status_code == 422 and bad_zone.json()["details"][0]["field"] == "lines.0.zoneId"
+    assert first.json()[1]["zone"] == "Hébergement"
+    second = put(client, pid, [{"scope": "global", "amountCents": 1}])
+    assert [b["amountCents"] for b in second.json()] == [1]
+    dup = put(
+        client, pid, [{"scope": "global", "amountCents": 1}, {"scope": "global", "amountCents": 2}]
     )
-    negative = put(client, p, [{"amountCents": -1}])
-    assert negative.status_code == 422
+    assert dup.status_code == 409
+    for bad, field in (
+        ({"scope": "location", "amountCents": 1}, "lines.0.scope"),
+        ({"scope": "global", "zone": "X", "amountCents": 1}, "lines.0.scope"),
+        ({"scope": "location", "locationId": 999, "amountCents": 1}, "lines.0.locationId"),
+        ({"scope": "family", "family": "other", "amountCents": 1}, "lines.0.family"),
+        ({"scope": "supplier", "supplierId": 999, "amountCents": 1}, "lines.0.supplierId"),
+        ({"scope": "zone", "zone": " ", "amountCents": 1}, "lines.0.zone"),
+    ):
+        response = put(client, pid, [bad])
+        assert response.status_code == 422, bad
+        assert response.json()["details"][0]["field"] == field
 
 
-def test_parent_and_child_category_cannot_both_have_a_budget_for_the_same_zone(
-    client: TestClient, session: Session, clock: Clock, world: dict[str, Any]
-) -> None:
-    child = make_category(session, clock, name="Applique", code=None, parent_id=world["lum"].id)
-    p = world["project"].id
-    blocked = put(
-        client,
-        p,
-        [
-            {"categoryId": world["lum"].id, "amountCents": 100},
-            {"categoryId": child.id, "amountCents": 50},
-        ],
-    )
-    assert (
-        blocked.status_code == 422 and "sous-catégorie" in blocked.json()["details"][0]["message"]
-    )
-    ok = put(
-        client,
-        p,
-        [
-            {"categoryId": world["lum"].id, "amountCents": 100},
-            {"zoneId": world["cha"].id, "categoryId": child.id, "amountCents": 50},
-        ],
-    )
-    assert ok.status_code == 200  # different zone scope
-
-
-def test_summary_budget_specified_approved_remaining_by_zone(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    p = world["project"].id
+def test_summary_totals_by_status_and_by_axis(client: TestClient, world: dict[str, Any]) -> None:
+    pid = world["project"].id
     put(
         client,
-        p,
-        [{"amountCents": 5_000_000}, {"zoneId": world["cha"].id, "amountCents": 3_000_000}],
-    )
-    lamp_line(
-        client,
-        world,
+        pid,
         [
-            {"zoneId": world["lob"].id, "qtyMilli": 2000},
-            {"zoneId": world["cha"].id, "qtyMilli": 1000},
+            {"scope": "global", "amountCents": 2_000_000},
+            {"scope": "zone", "zone": "Hébergement", "amountCents": 1_500_000},
+            {"scope": "supplier", "supplierId": world["wood"].id, "amountCents": 40_000},
         ],
-        approve=True,
     )
-    summary = client.get(f"/api/v1/projects/{p}/summary").json()
-    budget = summary["budget"]
+    body = summary(client, pid)
+    assert body["budgetCents"] == 2_000_000
+    assert body["specifiedCents"] == 1_740_382 + 50_000 + 80_000  # 18 703,82 €
+    assert body["quotedCents"] == 1_740_382 + 50_000
+    assert body["approvedCents"] == 1_740_382
+    assert body["remainingCents"] == 2_000_000 - 1_870_382 and body["alert"] == "warning"
+    by_status = {row["status"]: row for row in body["byStatus"]}
+    assert by_status["approved"]["count"] == 1 and by_status["approved"]["amountCents"] == 1_740_382
+    assert by_status["approved"]["shareBp"] == 9305  # 1 740 382 / 1 870 382
+    assert by_status["to_quote"]["amountCents"] == 80_000 and by_status["cancelled"]["count"] == 1
+    assert by_status["cancelled"]["amountCents"] == 0 and by_status["cancelled"]["shareBp"] == 0
+    assert sum(r["count"] for r in body["byStatus"]) == 4
+    # Lobby: lamp 2 × 124 313 = 248 626 + table 50 000 ; Chambre A: 12 × 124 313 = 1 491 756
+    locations = {row["key"]: row for row in body["byLocation"]}
+    assert locations[str(world["lob"].id)]["specifiedCents"] == 298_626
+    assert locations[str(world["cha"].id)]["specifiedCents"] == 1_491_756
+    assert locations[str(world["cha"].id)]["approvedCents"] == 1_491_756
+    assert locations[str(world["lob"].id)]["quotedCents"] == 298_626
+    zones = {row["key"]: row for row in body["byZone"]}
+    assert zones["Hébergement"]["budgetCents"] == 1_500_000
+    assert zones["Hébergement"]["remainingCents"] == 1_500_000 - 1_491_756
+    assert zones["Hébergement"]["alert"] == "warning"  # 99,45 %
+    assert zones["Zones communes"]["specifiedCents"] == 298_626
+    families = {row["key"]: row for row in body["byFamily"]}
+    assert families["edition"]["specifiedCents"] == 1_740_382
     assert (
-        budget["globalCents"] == 5_000_000
-        and budget["contingencyBp"] == 1000
-        and budget["contingencyCents"] == 500_000
+        families["custom"]["specifiedCents"] == 50_000
+        and families["fee"]["specifiedCents"] == 80_000
     )
-    assert budget["specifiedCents"] == 1_740_382 and budget["approvedCents"] == 1_740_382
-    assert budget["remainingCents"] == 5_000_000 - 1_740_382 and budget["alert"] == "none"
-    rows = {r["label"]: r for r in budget["byZone"]}
-    cha = rows["Chambre type A"]
+    types = {row["key"]: row for row in body["byType"]}
+    assert types[str(world["lud"].id)]["label"] == "LUD — Luminaire décoratif"
     assert (
-        cha["budgetCents"] == 3_000_000
-        and cha["specifiedCents"] == 1_491_756
-        and cha["approvedCents"] == 1_491_756
+        types[str(world["tab"].id)]["specifiedCents"] == 50_000 and types["fee"]["label"] == "Frais"
     )
-    assert cha["remainingCents"] == 3_000_000 - 1_491_756 and cha["multiplier"] == 12
-    lob = rows["Lobby"]
-    assert (
-        lob["budgetCents"] is None
-        and lob["specifiedCents"] == 248_626
-        and lob["remainingCents"] is None
-    )
-    by_category = {r["label"]: r for r in budget["byCategory"]}
-    assert by_category["LUM — Luminaires"]["specifiedCents"] == 1_740_382
-    assert by_category["LUM — Luminaires"]["approvedCents"] == 1_740_382
-    assert budget["engagedCents"] == 0  # « Engagé » : aucun bon de commande émis (10b)
+    suppliers = {row["key"]: row for row in body["bySupplier"]}
+    assert suppliers[str(world["dixon"].id)]["specifiedCents"] == 1_740_382 + 80_000
+    assert suppliers[str(world["wood"].id)]["remainingCents"] == -10_000
+    assert suppliers[str(world["wood"].id)]["alert"] == "over"
+    line = next(line for line in body["lines"] if line["projectItemId"] == world["lamp"]["id"])
+    assert line["totalQtyMilli"] == 14_000 and line["netUnitEurCents"] == 124_313
+    assert line["totalHtCents"] == 1_740_382
+    gone = next(line for line in body["lines"] if not line["counted"])
+    assert gone["status"] == "cancelled" and gone["totalHtCents"] == 999_999
 
 
-def test_cancelling_a_line_frees_the_budget(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    put(client, p, [{"amountCents": 5_000_000}])
-    item = lamp_line(client, world, [{"zoneId": world["cha"].id, "qtyMilli": 1000}])
-    before = client.get(f"/api/v1/projects/{p}/summary").json()["budget"]
-    assert before["remainingCents"] == 5_000_000 - 1_491_756
-    client.post(
-        f"/api/v1/project-items/{item['id']}/status",
-        json={"status": "cancelled", "note": "abandon"},
-    )
-    after = client.get(f"/api/v1/projects/{p}/summary").json()["budget"]
-    assert after["specifiedCents"] == 0 and after["remainingCents"] == 5_000_000
-
-
-def test_alerts_at_90_and_100_percent_and_overdue_orders(
+def test_summary_filters_restrict_lines_and_placements(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
-    put(
-        client,
-        p,
-        [{"amountCents": 1_600_000}, {"zoneId": world["cha"].id, "amountCents": 1_500_000}],
-    )
-    lamp_line(client, world, [{"zoneId": world["cha"].id, "qtyMilli": 1000}])  # 14 917,56 € in CHA
-    summary = client.get(f"/api/v1/projects/{p}/summary").json()["budget"]
-    assert summary["alert"] == "warning"  # 1 491 756 / 1 600 000 = 93 %
-    assert {r["label"]: r["alert"] for r in summary["byZone"]}[
-        "Chambre type A"
-    ] == "warning"  # 1 491 756 / 1 500 000 = 99,45 % : entre 90 et 100 %
-    alerts = client.get(f"/api/v1/projects/{p}/alerts").json()
-    kinds = sorted(a["kind"] for a in alerts)
-    assert kinds == ["budget_90", "budget_90"]
-    put(client, p, [{"amountCents": 1_400_000}])
-    over = client.get(f"/api/v1/projects/{p}/alerts").json()
-    assert over[0]["kind"] == "budget_100" and over[0]["message"].startswith("Projet")
-    client.patch(
-        f"/api/v1/project-items/{lamp_line(client, world, [{'zoneId': world['lob'].id, 'qtyMilli': 1000}])['id']}",
-        json={"requiredOnSite": "2026-10-20", "leadTimeWeeks": 8},
-    )
-    late = [
-        a for a in client.get(f"/api/v1/projects/{p}/alerts").json() if a["kind"] == "order_overdue"
-    ]
-    assert len(late) == 1 and "LOB-LUM-01" in late[0]["message"]
+    pid = world["project"].id
+    lobby = summary(client, pid, locationId=world["lob"].id)
+    assert lobby["specifiedCents"] == 298_626 and lobby["approvedCents"] == 248_626
+    assert [r["key"] for r in lobby["byLocation"]] == [str(world["lob"].id)]
+    hosting = summary(client, pid, zone="Hébergement")
+    assert hosting["specifiedCents"] == 1_491_756
+    dixon = summary(client, pid, supplierId=world["dixon"].id)
+    assert dixon["specifiedCents"] == 1_740_382 + 80_000
+    both = summary(client, pid, supplierId=world["dixon"].id, zone="Zones communes")
+    assert both["specifiedCents"] == 248_626  # fee has no zone, table is Atelier Bois
+    assert summary(client, pid, family="custom")["specifiedCents"] == 50_000
+    assert summary(client, pid, categoryId=world["tab"].id)["quotedCents"] == 50_000
 
 
-def test_dashboard_lists_open_projects_with_their_figures(
+def test_cancelling_frees_the_budget_and_empty_project_is_all_zero(
     client: TestClient, session: Session, clock: Clock, world: dict[str, Any]
 ) -> None:
-    p = world["project"].id
-    put(client, p, [{"amountCents": 5_000_000}])
-    lamp_line(client, world, [{"zoneId": world["cha"].id, "qtyMilli": 1000}])
-    closed = make_project(session, clock, name="Fini")
-    client.post(f"/api/v1/projects/{closed.id}/status", json={"status": "closed"})
-    rows = client.get("/api/v1/dashboard").json()
-    assert [r["code"] for r in rows] == [world["project"].code]
-    row = rows[0]
-    assert row["clientName"].startswith("Client") and row["budgetCents"] == 5_000_000
-    assert row["specifiedCents"] == 1_491_756 and row["remainingCents"] == 5_000_000 - 1_491_756
-    assert row["draftLines"] == 1 and row["onHoldLines"] == 0 and row["overdueLines"] == 0
-
-
-def test_contingency_defaults_from_settings_and_is_editable(
-    client: TestClient, session: Session, clock: Clock
-) -> None:
-    project = make_project(session, clock, name="Sans contingence précisée")
-    assert client.get(f"/api/v1/projects/{project.id}").json()["contingencyBp"] == 1000
-    assert (
-        client.patch(f"/api/v1/projects/{project.id}", json={"contingencyBp": 500}).json()[
-            "contingencyBp"
-        ]
-        == 500
-    )
-    assert (
-        client.patch(f"/api/v1/projects/{project.id}", json={"contingencyBp": 10001}).status_code
-        == 422
-    )
-
-
-def test_closed_project_refuses_budget_changes(client: TestClient, world: dict[str, Any]) -> None:
-    p = world["project"].id
-    client.post(f"/api/v1/projects/{p}/status", json={"status": "closed"})
-    assert put(client, p, [{"amountCents": 1}]).status_code == 409
+    pid = world["project"].id
+    client.post(f"/api/v1/project-items/{world['lamp']['id']}/status", json={"status": "cancelled"})
+    assert summary(client, pid)["specifiedCents"] == 130_000
+    empty = make_project(session, clock)
+    body = summary(client, empty.id)
+    assert body["specifiedCents"] == 0 and body["budgetCents"] is None
+    assert body["remainingCents"] is None and body["alert"] == "none"
+    assert body["byLocation"] == [] and body["byStatus"][0]["count"] == 0
+    assert client.get("/api/v1/projects/999/summary").status_code == 404

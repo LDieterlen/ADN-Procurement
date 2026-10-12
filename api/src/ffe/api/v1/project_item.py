@@ -1,4 +1,4 @@
-"""Lines of a project: list/create nested, flat `/project-items/{id}`, placements, status, journal, files, summary."""
+"""Articles of a project: list/create nested, flat `/project-items/{id}`, placements, status, journal, files."""
 
 from typing import Annotated
 
@@ -16,11 +16,8 @@ from ffe.schemas.project_item import (
     ProjectItemCreate,
     ProjectItemRead,
     ProjectItemUpdate,
-    ProjectSummaryRead,
-    ReplaceProduct,
     StatusChange,
 )
-from ffe.services import budget as budget_service
 from ffe.services import project_item as service
 
 router = APIRouter(tags=["project-items"])
@@ -35,7 +32,7 @@ FileId = Annotated[int, Path(ge=1)]
 def list_items(
     project_id: ProjectId,
     session: SessionDep,
-    zone_id: Annotated[int | None, Query(alias="zoneId", ge=1)] = None,
+    location_id: Annotated[int | None, Query(alias="locationId", ge=1)] = None,
     status: ItemStatus | None = None,
     category_id: Annotated[int | None, Query(alias="categoryId", ge=1)] = None,
     supplier_id: Annotated[int | None, Query(alias="supplierId", ge=1)] = None,
@@ -45,7 +42,7 @@ def list_items(
     items = service.list_items(
         session,
         project_id,
-        zone_id=zone_id,
+        location_id=location_id,
         status=status,
         category_id=category_id,
         supplier_id=supplier_id,
@@ -62,14 +59,6 @@ def create_item(
     project_id: ProjectId, payload: ProjectItemCreate, session: SessionDep, deps: DepsDep
 ) -> ProjectItemRead:
     return ProjectItemRead.from_model(service.create_item(session, project_id, payload, deps.clock))
-
-
-@router.get("/projects/{project_id}/summary", operation_id="getProjectSummary")
-def get_summary(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectSummaryRead:
-    today = deps.clock().date()
-    return ProjectSummaryRead.model_validate(
-        budget_service.summary_with_budget(session, project_id, today)
-    )
 
 
 @router.get("/project-items/{item_id}", operation_id="getProjectItem")
@@ -95,22 +84,6 @@ def change_status(
     item_id: ItemId, payload: StatusChange, session: SessionDep, deps: DepsDep
 ) -> ProjectItemRead:
     return ProjectItemRead.from_model(service.change_status(session, item_id, payload, deps.clock))
-
-
-@router.post(
-    "/project-items/{item_id}/replace", status_code=201, operation_id="replaceProjectItemProduct"
-)
-def replace_product(
-    item_id: ItemId, payload: ReplaceProduct, session: SessionDep, deps: DepsDep
-) -> ProjectItemRead:
-    return ProjectItemRead.from_model(
-        service.replace_product(session, item_id, payload, deps.clock)
-    )
-
-
-@router.post("/project-items/{item_id}/refresh", operation_id="refreshProjectItemFromCatalogue")
-def refresh_from_catalogue(item_id: ItemId, session: SessionDep, deps: DepsDep) -> ProjectItemRead:
-    return ProjectItemRead.from_model(service.refresh_from_catalogue(session, item_id, deps.clock))
 
 
 @router.get("/project-items/{item_id}/events", operation_id="listProjectItemEvents")

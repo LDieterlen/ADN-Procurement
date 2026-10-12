@@ -1,4 +1,4 @@
-"""`/categories` router: flat two-level tree (parentId), create, update, archive, unarchive."""
+"""`/categories` router: the product types, create, update, archive, unarchive."""
 
 from typing import Annotated
 
