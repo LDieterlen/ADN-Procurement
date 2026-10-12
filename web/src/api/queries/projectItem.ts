@@ -16,6 +16,12 @@ export type ReplaceProduct = components['schemas']['ReplaceProduct']
 export type EventRead = components['schemas']['EventRead']
 export type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 export type LineAmountsRead = components['schemas']['LineAmountsRead']
+export type ItemFileAttach = components['schemas']['ItemFileAttach']
+export type ItemFileUpdate = components['schemas']['ItemFileUpdate']
+export type ItemFileRead = components['schemas']['ItemFileRead']
+export type ItemLocation = NonNullable<ProjectItemRead['location']>
+
+export const ITEM_LOCATION_LABELS: Record<ItemLocation, string> = { floor: 'Sol', wall: 'Mur', ceiling: 'Plafond', door: 'Porte', other: 'Autre' }
 export type ItemStatus = ProjectItemRead['status']
 export type ItemKind = ProjectItemRead['kind']
 
@@ -173,6 +179,35 @@ export function useDeletePlacement() {
   const invalidate = useInvalidateLines()
   return useMutation({
     mutationFn: (id: number) => call(api.DELETE('/api/v1/placements/{placement_id}', { params: { path: { placement_id: id } } })),
+    onSuccess: invalidate,
+  })
+}
+
+// --- étape 11c : photo et dessin d'une ligne (routes existantes depuis 7a) -----------------------
+
+export function useAttachItemFile() {
+  const invalidate = useInvalidateLines()
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: number; data: ItemFileAttach }) =>
+      call(api.POST('/api/v1/project-items/{item_id}/files', { params: { path: { item_id: itemId } }, body: data })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateItemFile() {
+  const invalidate = useInvalidateLines()
+  return useMutation({
+    mutationFn: ({ itemId, fileId, data }: { itemId: number; fileId: number; data: ItemFileUpdate }) =>
+      call(api.PATCH('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } }, body: data })),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDetachItemFile() {
+  const invalidate = useInvalidateLines()
+  return useMutation({
+    mutationFn: ({ itemId, fileId }: { itemId: number; fileId: number }) =>
+      call(api.DELETE('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } } })),
     onSuccess: invalidate,
   })
 }

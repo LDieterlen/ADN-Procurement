@@ -1,6 +1,13 @@
 // Label + control + error line. The error comes from react-hook-form (client rules or API 422 via setError).
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { useFormContext } from 'react-hook-form'
+
+/** Per-form id prefix (set by `Form`) so two forms on the same page (a drawer and a modal) never share an input id. */
+export const FieldIdContext = createContext('')
+
+export function useFieldId(name: string): string {
+  return useContext(FieldIdContext) + name
+}
 
 export function useFieldError(name: string): string | undefined {
   const { formState } = useFormContext()
@@ -13,14 +20,15 @@ export function useFieldError(name: string): string | undefined {
 
 export function Field({ name, label, hint, children }: { name: string; label: string; hint?: string; children: ReactNode }) {
   const error = useFieldError(name)
+  const fieldId = useFieldId(name)
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={name} className="text-sm font-medium text-neutral-700">
+      <label htmlFor={fieldId} className="text-sm font-medium text-neutral-700">
         {label}
       </label>
       {children}
       {error ? (
-        <p id={`${name}-error`} role="alert" className="text-xs text-red-700">
+        <p id={`${fieldId}-error`} role="alert" className="text-xs text-red-700">
           {error}
         </p>
       ) : (

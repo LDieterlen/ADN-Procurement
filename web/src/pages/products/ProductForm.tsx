@@ -159,11 +159,15 @@ export function ProductForm({
   submitLabel,
   banner,
   serverErrors,
+  onCreateManufacturer,
+  onCreateSupplier,
 }: {
   initial?: ProductRead
   categories: PickerOption[]
   manufacturers: PickerOption[]
   suppliers: PickerOption[]
+  onCreateManufacturer?: () => void
+  onCreateSupplier?: () => void
   onSubmit: (values: ProductFormValues) => void | Promise<void>
   submitting: boolean
   submitLabel: string
@@ -185,9 +189,9 @@ export function ProductForm({
       <div className="grid max-w-4xl grid-cols-2 gap-4">
         <TextInput name="name" label="Nom" autoFocus />
         <EntityPicker name="categoryId" label="Catégorie" options={categories} required />
-        <EntityPicker name="manufacturerId" label="Fabricant" options={manufacturers} />
+        <EntityPicker name="manufacturerId" label="Fabricant" options={manufacturers} onCreate={onCreateManufacturer} />
         <TextInput name="manufacturerRef" label="Référence fabricant" />
-        <EntityPicker name="supplierId" label="Fournisseur par défaut" options={suppliers} />
+        <EntityPicker name="supplierId" label="Fournisseur par défaut" options={suppliers} onCreate={onCreateSupplier} />
         <TextInput name="supplierRef" label="Référence fournisseur" />
         <Select name="unit" label="Unité" options={UNIT_OPTIONS} />
         <TextInput name="gtin" label="GTIN / EAN" inputMode="numeric" />

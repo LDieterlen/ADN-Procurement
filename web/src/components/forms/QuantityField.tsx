@@ -1,7 +1,7 @@
 // Quantity in thousandths (integer) shown as "12,5"; piece units stay whole (the API enforces it too).
 import { useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
-import { Field, controlClass, useFieldError } from './Field'
+import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
 export function milliToText(milli: number | null | undefined): string {
   if (milli === null || milli === undefined) return ''
@@ -26,9 +26,10 @@ export function QuantityField({ name, label, unit, hint, compact }: { name: stri
   const [text, setText] = useState(() => milliToText(field.value as number | null | undefined))
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
+  const fieldId = useFieldId(name)
   const input = (
     <input
-      id={name}
+      id={fieldId}
       inputMode="decimal"
       value={text}
       aria-label={compact ? label : undefined}

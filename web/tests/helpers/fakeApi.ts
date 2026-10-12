@@ -439,6 +439,7 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
           (p.fxRateMicro as number | null) ?? (currency === 'EUR' ? 1_000_000 : (state.items.find((i) => i.currency === currency)?.fxRateMicro ?? 1_000_000)),
         discountBp: (p.discountBp as number | null) ?? supplier?.defaultDiscountBp ?? 0,
         leadTimeWeeks: product?.leadTimeWeeks ?? null,
+        location: (p.location as ProjectItemRead['location']) ?? null,
         placements,
       },
       id,
@@ -933,6 +934,37 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
           })),
       ),
     )
+  if (sub === 'files' && method === 'POST') {
+    const f = payload as { fileId: number; kind: ProjectItemRead['files'][number]['kind']; isPrimary?: boolean; caption?: string | null; sortOrder?: number }
+    const file = state.files.find((x) => x.id === f.fileId)
+    if (!file) return error(404, 'not_found', `Fichier n° ${f.fileId} introuvable.`)
+    if (f.isPrimary) item.files.forEach((x) => (x.isPrimary = false))
+    item.files.push({
+      fileId: file.id,
+      kind: f.kind,
+      isPrimary: f.isPrimary ?? false,
+      caption: f.caption ?? null,
+      sortOrder: f.sortOrder ?? 0,
+      sha256: file.sha256,
+      ext: file.ext,
+      mimeType: file.mimeType,
+      originalName: file.originalName,
+      sizeBytes: file.sizeBytes,
+    })
+    return json(201, item)
+  }
+  const itemFile = /^files\/(\d+)$/.exec(sub ?? '')
+  if (itemFile && method === 'PATCH') {
+    const junction = item.files.find((x) => x.fileId === Number(itemFile[1]))
+    if (!junction) return error(409, 'conflict', "Ce fichier n'est pas joint à la ligne.")
+    if ((payload as { isPrimary?: boolean }).isPrimary) item.files.forEach((x) => (x.isPrimary = false))
+    Object.assign(junction, payload)
+    return json(200, item)
+  }
+  if (itemFile && method === 'DELETE') {
+    item.files = item.files.filter((x) => x.fileId !== Number(itemFile[1]))
+    return json(200, item)
+  }
   if (sub === 'events' && method === 'GET')
     return json(200, [
       { id: 0, projectItemId: item.id, kind: 'created', fromStatus: null, toStatus: 'draft', oldValue: null, newValue: null, changedAt: NOW, note: null },

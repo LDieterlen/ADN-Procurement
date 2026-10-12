@@ -1,7 +1,7 @@
 // Amount in cents (integer or null) shown as "1 250,00"; the text never becomes a float in the API.
 import { useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
-import { Field, controlClass, useFieldError } from './Field'
+import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
 export function centsToText(cents: number | null | undefined): string {
   if (cents === null || cents === undefined) return ''
@@ -30,11 +30,12 @@ export function MoneyField({ name, label, currency, hint }: { name: string; labe
   const [text, setText] = useState(() => centsToText(field.value as number | null | undefined))
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
+  const fieldId = useFieldId(name)
   return (
     <Field name={name} label={label} hint={invalid ? 'Montant attendu, deux décimales au plus (ex. 1 250,00).' : hint}>
       <div className="flex items-center gap-2">
         <input
-          id={name}
+          id={fieldId}
           inputMode="decimal"
           value={text}
           aria-invalid={error || invalid ? true : undefined}

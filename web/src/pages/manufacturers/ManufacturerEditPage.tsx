@@ -1,61 +1,11 @@
-import { useEffect } from 'react'
-import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
-import { isApiError, type ErrorDetail } from '../../api/errors'
-import {
-  useArchiveManufacturer,
-  useCreateManufacturer,
-  useManufacturer,
-  useUnarchiveManufacturer,
-  useUpdateManufacturer,
-  type ManufacturerCreate,
-  type ManufacturerRead,
-} from '../../api/queries/manufacturer'
-import { Form } from '../../components/forms/Form'
-import { TextArea } from '../../components/forms/TextArea'
-import { TextInput } from '../../components/forms/TextInput'
+import { isApiError } from '../../api/errors'
+import { useArchiveManufacturer, useCreateManufacturer, useManufacturer, useUnarchiveManufacturer, useUpdateManufacturer } from '../../api/queries/manufacturer'
 import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
-
-type Values = { name: string; website: string; notes: string }
-const EMPTY: Values = { name: '', website: '', notes: '' }
-const orNull = (text: string): string | null => (text.trim() === '' ? null : text.trim())
-const toPayload = (v: Values): ManufacturerCreate => ({ name: v.name, website: orNull(v.website), notes: orNull(v.notes) })
-
-function ManufacturerForm({
-  initial,
-  onSubmit,
-  submitting,
-  banner,
-  serverErrors,
-}: {
-  initial?: ManufacturerRead
-  onSubmit: (values: Values) => void | Promise<void>
-  submitting: boolean
-  banner: string | null
-  serverErrors: ErrorDetail[]
-}) {
-  const form = useForm<Values>({ defaultValues: initial ? { name: initial.name, website: initial.website ?? '', notes: initial.notes ?? '' } : EMPTY })
-  useEffect(() => {
-    for (const detail of serverErrors) if (detail.field in EMPTY) form.setError(detail.field as Path<Values>, { type: 'server', message: detail.message })
-  }, [serverErrors, form])
-  return (
-    <Form form={form} onSubmit={onSubmit} banner={banner}>
-      <div className="grid max-w-3xl grid-cols-2 gap-4">
-        <TextInput name="name" label="Nom" autoFocus />
-        <TextInput name="website" label="Site web" />
-      </div>
-      <div className="max-w-3xl">
-        <TextArea name="notes" label="Notes internes" />
-      </div>
-      <Button type="submit" variant="primary" disabled={submitting}>
-        {initial ? 'Enregistrer' : 'Créer'}
-      </Button>
-    </Form>
-  )
-}
+import { ManufacturerForm, toPayload, type ManufacturerFormValues } from './ManufacturerForm'
 
 export function ManufacturerEditPage() {
   const params = useParams<{ id: string }>()
@@ -68,7 +18,7 @@ export function ManufacturerEditPage() {
   const unarchive = useUnarchiveManufacturer()
   const errors = useSubmitErrors('fabricant')
 
-  async function submit(values: Values, force = false) {
+  async function submit(values: ManufacturerFormValues, force = false) {
     errors.reset()
     try {
       if (id === undefined) {

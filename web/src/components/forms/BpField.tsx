@@ -2,7 +2,7 @@
 // Form value stays an integer (or null when empty); the text the user types never becomes a float in the API.
 import { useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
-import { Field, controlClass, useFieldError } from './Field'
+import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
 export function bpToText(bp: number | null | undefined): string {
   if (bp === null || bp === undefined) return ''
@@ -26,11 +26,12 @@ export function BpField({ name, label, hint }: { name: string; label: string; hi
   const [text, setText] = useState(() => bpToText(field.value as number | null | undefined))
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
+  const fieldId = useFieldId(name)
   return (
     <Field name={name} label={label} hint={invalid ? 'Pourcentage attendu, deux décimales au plus (ex. 12,5).' : hint}>
       <div className="flex items-center gap-2">
         <input
-          id={name}
+          id={fieldId}
           inputMode="decimal"
           value={text}
           aria-invalid={error || invalid ? true : undefined}

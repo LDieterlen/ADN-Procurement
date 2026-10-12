@@ -19,12 +19,18 @@ import {
   useUpdateItem,
   useUpdatePlacement,
   type ItemStatus,
+  type ItemLocation,
   type ProjectItemRead,
   type ProjectItemUpdate,
 } from '../../api/queries/projectItem'
 import { useProducts } from '../../api/queries/product'
 import { useItemQuotes, useRetainQuoteLine } from '../../api/queries/quote'
-import { useSuppliers } from '../../api/queries/supplier'
+import { useSupplier, useSuppliers } from '../../api/queries/supplier'
+import { Drawer } from '../../components/ui/Drawer'
+import { useAdvancedMode } from '../../components/useAdvancedMode'
+import { LOCATION_OPTIONS } from './AddItemDrawer'
+import { NewSupplierModal } from './InlineCreate'
+import { ItemFiles } from './ItemFiles'
 import { BpField } from '../../components/forms/BpField'
 import { DateField } from '../../components/forms/DateField'
 import { EntityPicker } from '../../components/forms/EntityPicker'
@@ -64,6 +70,11 @@ type Values = {
   orderRef: string
   onHold: boolean
   internalNotes: string
+  location: ItemLocation | ''
+  widthMm: string
+  depthMm: string
+  heightMm: string
+  diameterMm: string
 }
 
 const orNull = (text: string): string | null => (text.trim() === '' ? null : text.trim())
@@ -91,6 +102,11 @@ function fromItem(item: ProjectItemRead): Values {
     orderRef: item.orderRef ?? '',
     onHold: item.onHold,
     internalNotes: item.internalNotes ?? '',
+    location: item.location ?? '',
+    widthMm: item.widthMm === null ? '' : String(item.widthMm),
+    depthMm: item.depthMm === null ? '' : String(item.depthMm),
+    heightMm: item.heightMm === null ? '' : String(item.heightMm),
+    diameterMm: item.diameterMm === null ? '' : String(item.diameterMm),
   }
 }
 
@@ -117,8 +133,15 @@ function toPayload(v: Values): ProjectItemUpdate {
     orderRef: orNull(v.orderRef),
     onHold: v.onHold,
     internalNotes: orNull(v.internalNotes),
+    location: v.location || null,
+    widthMm: mm(v.widthMm),
+    depthMm: mm(v.depthMm),
+    heightMm: mm(v.heightMm),
+    diameterMm: mm(v.diameterMm),
   }
 }
+
+const mm = (text: string): number | null => (text.trim() === '' ? null : Number.parseInt(text, 10))
 
 function PlacementsEditor({ item, zones, readOnly }: { item: ProjectItemRead; zones: ZoneRead[]; readOnly: boolean }) {
   const add = useAddPlacement()
@@ -226,6 +249,8 @@ function ItemForm({
   serverErrors,
   banner,
   readOnly,
+  onCreateSupplier,
+  supplierContact,
 }: {
   item: ProjectItemRead
   categories: { id: number; label: string }[]
@@ -234,6 +259,8 @@ function ItemForm({
   serverErrors: ErrorDetail[]
   banner: string | null
   readOnly: boolean
+  onCreateSupplier: () => void
+  supplierContact: string | null
 }) {
   const form = useForm<Values>({ defaultValues: fromItem(item) })
   const priceMode = useWatch({ control: form.control, name: 'priceMode' })
@@ -251,47 +278,55 @@ function ItemForm({
       <fieldset disabled={locked} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <TextInput name="name" label="Désignation" />
-          <Select
-            name="kind"
-            label="Type"
-            options={(Object.keys(ITEM_KIND_LABELS) as ProjectItemRead['kind'][]).map((k) => ({ value: k, label: ITEM_KIND_LABELS[k] }))}
-          />
-          <EntityPicker name="categoryId" label="Catégorie" options={categories} required />
-          <EntityPicker name="supplierId" label="Fournisseur" options={suppliers} />
-          <Select name="unit" label="Unité" options={UNIT_OPTIONS} />
+          <EntityPicker name="categoryId" label="Typologie" options={categories} required />
+          <Select name="location" label="Localisation" options={LOCATION_OPTIONS} />
+          <EntityPicker name="supplierId" label="Fournisseur" options={suppliers} onCreate={onCreateSupplier} />
           <TextInput name="finish" label="Finition" />
           <TextInput name="color" label="Couleur" />
           <TextInput name="materials" label="Matériaux" />
+          <Select name="unit" label="Unité" options={UNIT_OPTIONS} />
         </div>
-        <fieldset className="rounded border border-neutral-200 p-3">
-          <legend className="px-1 text-sm font-medium text-neutral-600">Prix figé</legend>
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              name="priceMode"
-              label="Saisie"
-              options={[
-                { value: 'net', label: 'Net direct' },
-                { value: 'list', label: 'Tarif + remise' },
-              ]}
-            />
-            <MoneyField name="unitCostCents" label={priceMode === 'net' ? 'Prix unitaire net HT' : 'Tarif unitaire HT'} currency={currency} />
-            {priceMode === 'list' && <BpField name="discountBp" label="Remise" />}
-            <Select name="currency" label="Devise" options={CURRENCIES} />
-            {currency !== 'EUR' && <TextInput name="fxRate" label="Taux (1 unité = … €)" hint="Figé sur la ligne" />}
-            <BpField name="vatRateBp" label="TVA" />
+        <div className="grid grid-cols-4 gap-3">
+          <TextInput name="widthMm" label="L (mm)" inputMode="numeric" />
+          <TextInput name="depthMm" label="P (mm)" inputMode="numeric" />
+          <TextInput name="heightMm" label="H (mm)" inputMode="numeric" />
+          <TextInput name="diameterMm" label="Ø (mm)" inputMode="numeric" />
+        </div>
+        <TextArea name="clientDescription" label="Commentaires (fiche client)" rows={2} />
+        {supplierContact && <p className="text-xs text-neutral-600">{supplierContact}</p>}
+        <details className="rounded border border-neutral-200 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-600">Prix, délai et références</summary>
+          <div className="mt-3 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                name="kind"
+                label="Type"
+                options={(Object.keys(ITEM_KIND_LABELS) as ProjectItemRead['kind'][]).map((k) => ({ value: k, label: ITEM_KIND_LABELS[k] }))}
+              />
+              <Select
+                name="priceMode"
+                label="Saisie"
+                options={[
+                  { value: 'net', label: 'Net direct' },
+                  { value: 'list', label: 'Tarif + remise' },
+                ]}
+              />
+              <MoneyField name="unitCostCents" label={priceMode === 'net' ? 'Prix unitaire net HT' : 'Tarif unitaire HT'} currency={currency} />
+              {priceMode === 'list' && <BpField name="discountBp" label="Remise" />}
+              <Select name="currency" label="Devise" options={CURRENCIES} />
+              {currency !== 'EUR' && <TextInput name="fxRate" label="Taux (1 unité = … €)" hint="Figé sur la ligne" />}
+              <BpField name="vatRateBp" label="TVA" />
+              <TextInput name="leadTimeWeeks" label="Délai (semaines)" inputMode="numeric" />
+              <DateField name="requiredOnSite" label="Besoin sur chantier" />
+              <TextInput name="quoteRef" label="Réf. devis" />
+              <TextInput name="orderRef" label="Réf. commande" hint="Requise pour « commandé »" />
+            </div>
+            <TextArea name="internalNotes" label="Notes internes" rows={2} />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...form.register('onHold')} /> En attente
+            </label>
           </div>
-        </fieldset>
-        <div className="grid grid-cols-2 gap-3">
-          <TextInput name="leadTimeWeeks" label="Délai (semaines)" inputMode="numeric" />
-          <DateField name="requiredOnSite" label="Besoin sur chantier" />
-          <TextInput name="quoteRef" label="Réf. devis" />
-          <TextInput name="orderRef" label="Réf. commande" hint="Requise pour « commandé »" />
-        </div>
-        <TextArea name="clientDescription" label="Description client" rows={2} />
-        <TextArea name="internalNotes" label="Notes internes" rows={2} />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" {...form.register('onHold')} /> En attente
-        </label>
+        </details>
         {!locked && (
           <Button type="submit" variant="primary">
             Enregistrer
@@ -595,6 +630,10 @@ export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: {
   const toast = useToast()
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
+  const [newSupplier, setNewSupplier] = useState(false)
+  const advanced = useAdvancedMode()
+  const supplier = useSupplier(item.data?.supplierId ?? undefined)
+  const supplierContact = supplier.data ? [supplier.data.contactName, supplier.data.phone, supplier.data.email].filter(Boolean).join(' · ') || null : null
 
   async function submit(values: Values) {
     setServerErrors([])
@@ -615,26 +654,21 @@ export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: {
   const supplierOptions = (suppliers.data?.items ?? []).map((s) => ({ id: s.id, label: s.name }))
 
   return (
-    <aside
-      role="dialog"
-      aria-label="Fiche de la ligne"
-      className="fixed inset-y-0 right-0 z-30 w-[34rem] overflow-y-auto border-l border-neutral-300 bg-white p-5 shadow-xl"
+    <Drawer
+      label="Fiche de la ligne"
+      title={
+        item.data ? (
+          <>
+            <span className="font-mono text-sm text-neutral-500">{item.data.itemCode}</span> {item.data.name}
+            <span className="ml-2 rounded bg-neutral-200 px-1.5 py-0.5 text-xs">{ITEM_STATUS_LABELS[item.data.status]}</span>
+            {item.data.indice && <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-xs">indice {item.data.indice}</span>}
+          </>
+        ) : (
+          'Chargement…'
+        )
+      }
+      onClose={onClose}
     >
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          {item.data ? (
-            <>
-              <span className="font-mono text-sm text-neutral-500">{item.data.itemCode}</span> {item.data.name}
-              <span className="ml-2 rounded bg-neutral-200 px-1.5 py-0.5 text-xs">{ITEM_STATUS_LABELS[item.data.status]}</span>
-            </>
-          ) : (
-            'Chargement…'
-          )}
-        </h2>
-        <Button variant="ghost" onClick={onClose} aria-label="Fermer le panneau">
-          ✕
-        </Button>
-      </div>
       {item.isError && <p className="text-sm text-red-700">{item.error.message}</p>}
       {item.data && (
         <div className="space-y-4">
@@ -647,11 +681,14 @@ export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: {
             serverErrors={serverErrors}
             banner={banner}
             readOnly={readOnly}
+            onCreateSupplier={() => setNewSupplier(true)}
+            supplierContact={supplierContact}
           />
+          <ItemFiles item={item.data} readOnly={readOnly || item.data.status === 'cancelled' || item.data.status === 'replaced'} />
           <PlacementsEditor item={item.data} zones={zones} readOnly={readOnly || item.data.status === 'cancelled' || item.data.status === 'replaced'} />
-          <QuotesSection item={item.data} readOnly={readOnly} />
+          {advanced && <QuotesSection item={item.data} readOnly={readOnly} />}
           <StatusSection item={item.data} readOnly={readOnly} />
-          {!readOnly && <ReplaceSection item={item.data} onReplaced={setItemId} />}
+          {advanced && !readOnly && <ReplaceSection item={item.data} onReplaced={setItemId} />}
           <HistorySection itemId={item.data.id} />
           {!readOnly && (
             <div className="flex gap-2 border-t border-neutral-200 pt-3">
@@ -687,6 +724,16 @@ export function ItemPanel({ itemId: initialItemId, zones, readOnly, onClose }: {
           )}
         </div>
       )}
-    </aside>
+      <NewSupplierModal
+        open={newSupplier}
+        onClose={() => setNewSupplier(false)}
+        onCreated={(id) => {
+          setNewSupplier(false)
+          void update
+            .mutateAsync({ id: itemId, data: { supplierId: id } })
+            .then(() => toast.show({ kind: 'success', message: 'Fournisseur créé et affecté à la ligne.' }))
+        }}
+      />
+    </Drawer>
   )
 }
