@@ -51,7 +51,7 @@ export function EntityPicker({
             id={fieldId}
             value={value ?? ''}
             aria-invalid={error ? true : undefined}
-            className={`${controlClass} bg-white`}
+            className={`${controlClass} w-full min-w-0 flex-1 bg-white`}
             onChange={(event) => field.onChange(event.target.value === '' ? null : Number(event.target.value))}
             onBlur={field.onBlur}
           >

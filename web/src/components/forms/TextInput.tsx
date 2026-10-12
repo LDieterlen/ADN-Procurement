@@ -31,7 +31,7 @@ export function TextInput({
         inputMode={inputMode}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${fieldId}-error` : undefined}
-        className={controlClass}
+        className={`${controlClass} w-full min-w-0`}
         {...register(name)}
       />
     </Field>

@@ -13,7 +13,7 @@ export function Select({ name, label, options, hint }: { name: string; label: st
         id={fieldId}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${fieldId}-error` : undefined}
-        className={`${controlClass} bg-white`}
+        className={`${controlClass} w-full min-w-0 bg-white`}
         {...register(name)}
       >
         {options.map((option) => (

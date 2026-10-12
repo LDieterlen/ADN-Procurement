@@ -22,7 +22,7 @@ export function Field({ name, label, hint, children }: { name: string; label: st
   const error = useFieldError(name)
   const fieldId = useFieldId(name)
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={fieldId} className="text-sm font-medium text-neutral-700">
         {label}
       </label>
