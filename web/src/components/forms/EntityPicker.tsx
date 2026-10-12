@@ -5,7 +5,7 @@ import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
 export type PickerOption = { id: number; label: string; hint?: string }
 
-const FILTER_FROM = 12
+const FILTER_FROM = 30
 
 export function EntityPicker({
   name,

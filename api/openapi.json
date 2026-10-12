@@ -1280,6 +1280,13 @@
             "title": "Netuniteurcents",
             "type": "integer"
           },
+          "placements": {
+            "items": {
+              "$ref": "#/components/schemas/PlacementAmountRead"
+            },
+            "title": "Placements",
+            "type": "array"
+          },
           "projectItemId": {
             "title": "Projectitemid",
             "type": "integer"
@@ -1306,7 +1313,8 @@
           "totalQtyMilli",
           "netUnitCents",
           "netUnitEurCents",
-          "totalHtCents"
+          "totalHtCents",
+          "placements"
         ],
         "title": "LineAmountsRead",
         "type": "object"
@@ -1762,6 +1770,25 @@
           "total"
         ],
         "title": "Page[SupplierRead]",
+        "type": "object"
+      },
+      "PlacementAmountRead": {
+        "description": "EUR share of one placement (quantity × multiplier at the net unit price).",
+        "properties": {
+          "placementId": {
+            "title": "Placementid",
+            "type": "integer"
+          },
+          "totalHtCents": {
+            "title": "Totalhtcents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "placementId",
+          "totalHtCents"
+        ],
+        "title": "PlacementAmountRead",
         "type": "object"
       },
       "PlacementCreate": {

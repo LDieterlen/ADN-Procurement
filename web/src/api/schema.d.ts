@@ -1202,6 +1202,8 @@ export interface components {
             netUnitCents: number;
             /** Netuniteurcents */
             netUnitEurCents: number;
+            /** Placements */
+            placements: components["schemas"]["PlacementAmountRead"][];
             /** Projectitemid */
             projectItemId: number;
             /** Status */
@@ -1329,6 +1331,16 @@ export interface components {
             items: components["schemas"]["SupplierRead"][];
             /** Total */
             total: number;
+        };
+        /**
+         * PlacementAmountRead
+         * @description EUR share of one placement (quantity × multiplier at the net unit price).
+         */
+        PlacementAmountRead: {
+            /** Placementid */
+            placementId: number;
+            /** Totalhtcents */
+            totalHtCents: number;
         };
         /** PlacementCreate */
         PlacementCreate: {

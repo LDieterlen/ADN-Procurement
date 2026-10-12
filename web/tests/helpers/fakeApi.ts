@@ -767,6 +767,10 @@ function summaryOf(state: FakeApi, projectId: number, url: URL): ProjectSummaryR
         netUnitCents: net,
         netUnitEurCents: eur,
         totalHtCents: totalHt,
+        placements:
+          i.kind === 'fee'
+            ? []
+            : i.placements.map((p) => ({ placementId: p.id, totalHtCents: divRound(eur * p.qtyMilli * (locationOf(p.locationId)?.multiplier ?? 1), 1000) })),
       }
     })
   const budgets = state.budgets.filter((b) => b.projectId === projectId)

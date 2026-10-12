@@ -33,7 +33,7 @@ export function StatusSelect({ item, readOnly, className = '' }: { item: Project
           if (status === 'cancelled') setCancelling(true)
           else void apply(status, null)
         }}
-        className={`rounded-lg border border-neutral-300 bg-white px-2 py-1 text-sm ${className}`}
+        className={`rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium ${className}`}
       >
         {ITEM_STATUSES.map((s) => (
           <option key={s} value={s}>

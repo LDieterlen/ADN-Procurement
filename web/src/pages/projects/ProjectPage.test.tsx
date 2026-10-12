@@ -72,7 +72,7 @@ describe('page projet', () => {
     await user.click(screen.getByRole('button', { name: "Ajouter l'article" }))
     const table = await screen.findByRole('table', { name: 'Articles du projet' })
     const row = await within(table).findByRole('row', { name: 'CHA-LUD-01 dans CHA' })
-    expect(cellsOf(row).slice(1, 5)).toEqual(['CHA-LUD-01', 'Luminaire décoratif', 'Applique de chevet', '2'])
+    expect(cellsOf(row).slice(1, 5)).toEqual(['CHA-LUD-01', 'Luminaire décoratif', 'Applique de chevet', '2 × 12'])
     expect(api.items[0]).toMatchObject({ itemCode: 'CHA-LUD-01', productId: 2, unitCostCents: 0 })
     expect(api.products.at(-1)?.name).toBe('Applique de chevet') // joins the catalogue by default
     expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('') // form reset
@@ -89,7 +89,7 @@ describe('page projet', () => {
     await user.click(screen.getByRole('button', { name: "Ajouter l'article" }))
     const table = await screen.findByRole('table', { name: 'Articles du projet' })
     const row = await within(table).findByRole('row', { name: 'CHA-LUD-01 dans CHA' })
-    expect(cellsOf(row).slice(3, 7)).toEqual(['Beat Light Fat', '1', 'Tom Dixon', '14 917,56 €'])
+    expect(cellsOf(row).slice(3, 7)).toEqual(['Beat Light Fat', '1 × 12', 'Tom Dixon', '14 917,56 €'])
     expect(api.items[0]).toMatchObject({ fxRateMicro: 1_170_000, discountBp: 1500, reference: 'BLS01', finish: 'laiton', productId: 1 })
     const strip = screen.getByRole('region', { name: 'Synthèse budget' })
     await waitFor(() => expect(strip.textContent).toContain('Prescrit HT14 917,56 €'))

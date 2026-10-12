@@ -1,6 +1,7 @@
 // Articles of a project (ADR-0013), grouped by location: photo · Code · Type · Désignation · Qté ·
-// Fournisseur · Montant HT · Statut · Indice ; a row opens the article page ; the add form sits at
-// the bottom of the table (free article, or from the catalogue). Amounts come from the server summary.
+// Fournisseur · Montant HT · État · Indice ; a row opens the article page ; the add form sits at
+// the bottom of the table (free article, or from the catalogue). Amounts come from the server summary
+// (the share of each placement, the total for a fee line).
 import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router'
@@ -32,6 +33,7 @@ import { StatusSelect } from './StatusSelect'
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
 
 type Row = { item: ProjectItemRead; placement: ProjectItemRead['placements'][number] | null; amounts: LineAmountsRead | undefined }
+type Group = { key: string; code: string; title: string; detail: string; multiplier: number; rows: Row[] }
 
 export function ItemsSection({ projectId, locations, readOnly }: { projectId: number; locations: LocationRead[]; readOnly: boolean }) {
   const items = useProjectItems(projectId)
@@ -43,22 +45,25 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
   const supplierName = (id: number | null) => suppliers.data?.items.find((s) => s.id === id)?.name ?? ''
   const typeName = (id: number | null) => categories.data?.find((c) => c.id === id)?.name ?? ''
 
-  const groups = useMemo(() => {
+  const groups: Group[] = useMemo(() => {
     const list = items.data ?? []
     const toRow = (item: ProjectItemRead, placement: Row['placement']): Row => ({ item, placement, amounts: amountsById.get(item.id) })
     const active = locations.filter((l) => l.archivedAt === null)
-    const result: { key: string; title: string; rows: Row[] }[] = active.map((location) => ({
+    const result: Group[] = active.map((location) => ({
       key: String(location.id),
-      title: `${location.code} — ${location.name}${location.zone ? ` · ${location.zone}` : ''}${location.level ? ` · ${location.level}` : ''}${location.multiplier > 1 ? ` (×${location.multiplier})` : ''}`,
+      code: location.code,
+      title: location.name,
+      detail: [location.zone, location.level].filter(Boolean).join(' · '),
+      multiplier: location.multiplier,
       rows: list.flatMap((item) => item.placements.filter((p) => p.locationId === location.id).map((p) => toRow(item, p))),
     }))
     const unassigned = list.flatMap((item) =>
       item.placements.filter((p) => p.locationId === null || !active.some((l) => l.id === p.locationId)).map((p) => toRow(item, p)),
     )
-    if (unassigned.length) result.push({ key: 'none', title: 'Non affecté', rows: unassigned })
+    if (unassigned.length) result.push({ key: 'none', code: '', title: 'Non affecté', detail: '', multiplier: 1, rows: unassigned })
     const fees = list.filter((item) => item.kind === 'fee').map((item) => toRow(item, null))
-    if (fees.length) result.push({ key: 'fees', title: 'Frais (livraison, emballage…)', rows: fees })
-    return result.filter((g) => g.rows.length > 0 || g.key !== 'none')
+    if (fees.length) result.push({ key: 'fees', code: '', title: 'Frais', detail: 'livraison, emballage…', multiplier: 1, rows: fees })
+    return result
   }, [items.data, locations, amountsById])
 
   const count = (items.data ?? []).length
@@ -76,29 +81,28 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
     >
       {items.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
       {items.data && count === 0 && (
-        <p className="mb-3 text-sm text-neutral-500">Aucun article. Ajouter le premier ci-dessous : libre, ou depuis le catalogue.</p>
+        <p className="mb-4 text-sm text-neutral-500">Aucun article. Ajouter le premier ci-dessous : libre, ou depuis le catalogue.</p>
       )}
       {count > 0 && (
-        <table className="mb-4 w-full text-sm" aria-label="Articles du projet">
+        <table className="mb-5 w-full text-sm" aria-label="Articles du projet">
           <thead>
-            <tr className="border-b border-neutral-300 text-left text-sm text-neutral-900">
+            <tr className="border-b border-neutral-300 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
               <th className="w-12 px-2 py-2"></th>
-              <th className="px-2 py-2 font-medium">Code</th>
-              <th className="px-2 py-2 font-medium">Type</th>
-              <th className="px-2 py-2 font-medium">Désignation</th>
-              <th className="px-2 py-2 text-right font-medium">Qté</th>
-              <th className="px-2 py-2 font-medium">Fournisseur</th>
-              <th className="px-2 py-2 text-right font-medium">Montant HT</th>
-              <th className="px-2 py-2 font-medium">État</th>
-              <th className="px-2 py-2 font-medium">Ind.</th>
+              <th className="px-2 py-2">Code</th>
+              <th className="px-2 py-2">Type</th>
+              <th className="px-2 py-2">Désignation</th>
+              <th className="px-2 py-2 text-right">Qté</th>
+              <th className="px-2 py-2">Fournisseur</th>
+              <th className="px-2 py-2 text-right">Montant HT</th>
+              <th className="px-2 py-2">État</th>
+              <th className="px-2 py-2 text-center">Indice</th>
             </tr>
           </thead>
           <tbody>
             {groups.map((group) => (
-              <Group
+              <GroupRows
                 key={group.key}
                 group={group}
-                projectId={projectId}
                 readOnly={readOnly}
                 supplierName={supplierName}
                 typeName={typeName}
@@ -113,15 +117,14 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
   )
 }
 
-function Group({
+function GroupRows({
   group,
   readOnly,
   supplierName,
   typeName,
   onOpen,
 }: {
-  group: { key: string; title: string; rows: Row[] }
-  projectId: number
+  group: Group
   readOnly: boolean
   supplierName: (id: number | null) => string
   typeName: (id: number | null) => string
@@ -129,9 +132,14 @@ function Group({
 }) {
   return (
     <>
-      <tr className="bg-neutral-50">
-        <td colSpan={9} className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-600">
-          {group.title}
+      <tr>
+        <td colSpan={9} className="px-2 pt-5 pb-1.5 text-sm">
+          {group.code && <span className="mr-2 font-mono text-xs text-neutral-500">{group.code}</span>}
+          <span className="font-semibold">{group.title}</span>
+          {group.detail && <span className="text-neutral-500"> · {group.detail}</span>}
+          {group.multiplier > 1 && (
+            <span className="ml-2 rounded-full border border-neutral-300 px-2 py-0.5 text-xs text-neutral-700">× {group.multiplier}</span>
+          )}
         </td>
       </tr>
       {group.rows.length === 0 && (
@@ -144,34 +152,38 @@ function Group({
       {group.rows.map(({ item, placement, amounts }) => {
         const image = item.files.find((f) => f.isPrimary)
         const muted = item.status === 'cancelled'
+        const share = placement ? amounts?.placements.find((p) => p.placementId === placement.id)?.totalHtCents : amounts?.totalHtCents
         return (
           <tr
             key={`${item.id}-${placement?.id ?? 'fee'}`}
             onClick={() => onOpen(item.id)}
-            className={`cursor-pointer border-b border-neutral-200 hover:bg-neutral-50 ${muted ? 'text-neutral-400' : ''}`}
-            aria-label={`${item.itemCode} dans ${group.key === 'fees' ? 'frais' : group.title.split(' — ')[0]}`}
+            className={`cursor-pointer border-t border-neutral-100 hover:bg-neutral-50 ${muted ? 'text-neutral-400' : ''}`}
+            aria-label={`${item.itemCode} dans ${group.key === 'fees' ? 'frais' : group.code || 'non affecté'}`}
           >
-            <td className="px-2 py-2">
+            <td className="px-2 py-2.5">
               {image ? (
-                <img src={fileContentUrl(image.fileId)} alt="" className="h-9 w-9 rounded object-cover" />
+                <img src={fileContentUrl(image.fileId)} alt="" className="h-9 w-9 rounded-md border border-neutral-200 object-cover" />
               ) : (
-                <span className="block h-9 w-9 rounded bg-neutral-100" />
+                <span className="block h-9 w-9 rounded-md border border-dashed border-neutral-200" />
               )}
             </td>
-            <td className="px-2 py-2 font-mono text-xs">{item.itemCode}</td>
-            <td className="px-2 py-2 text-neutral-600">{item.kind === 'fee' ? 'Frais' : typeName(item.categoryId)}</td>
-            <td className={`px-2 py-2 font-medium ${muted ? 'line-through' : ''}`}>{item.name}</td>
-            <td className="px-2 py-2 text-right">{placement ? milliToText(placement.qtyMilli) : '—'}</td>
-            <td className="px-2 py-2 text-neutral-600">{supplierName(item.supplierId)}</td>
-            <td className="px-2 py-2 text-right">{amounts && !muted ? `${centsToText(amounts.totalHtCents)} €` : ''}</td>
-            <td className="px-2 py-2">
+            <td className="px-2 py-2.5 font-mono text-xs text-neutral-600">{item.itemCode}</td>
+            <td className="px-2 py-2.5 text-neutral-600">{item.kind === 'fee' ? 'Frais' : typeName(item.categoryId)}</td>
+            <td className={`px-2 py-2.5 font-medium ${muted ? 'line-through' : ''}`}>{item.name}</td>
+            <td className="px-2 py-2.5 text-right tabular-nums">
+              {placement ? milliToText(placement.qtyMilli) : '—'}
+              {placement && group.multiplier > 1 && <span className="text-xs text-neutral-400"> × {group.multiplier}</span>}
+            </td>
+            <td className="px-2 py-2.5 text-neutral-600">{supplierName(item.supplierId)}</td>
+            <td className="px-2 py-2.5 text-right tabular-nums">{share !== undefined && !muted ? `${centsToText(share)} €` : ''}</td>
+            <td className="px-2 py-2.5">
               {readOnly ? (
                 <Pill filled={ENGAGED_STATUSES.includes(item.status)}>{ITEM_STATUS_LABELS[item.status]}</Pill>
               ) : (
                 <StatusSelect item={item} readOnly={readOnly} />
               )}
             </td>
-            <td className="px-2 py-2 text-center">{item.indice ?? ''}</td>
+            <td className="px-2 py-2.5 text-center">{item.indice ?? ''}</td>
           </tr>
         )
       })}
@@ -231,17 +243,17 @@ function AddItemCard({ projectId, locations }: { projectId: number; locations: L
   const locationOptions = locations.map((l) => ({ id: l.id, label: locationLabel(l) }))
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-      <h3 className="mb-3 text-sm font-semibold">Ajouter un article</h3>
+    <div className="rounded-xl border border-neutral-200 bg-white p-5">
+      <h3 className="mb-4 text-base font-semibold">Ajouter un article</h3>
       <Form form={form} onSubmit={submit} banner={banner}>
-        <div className="grid grid-cols-4 gap-3">
-          <div className="col-span-2">
+        <div className="grid grid-cols-6 gap-4">
+          <div className="col-span-3">
             <TextInput name="name" label="Désignation" hint={product ? 'Vide = nom du produit du catalogue' : undefined} />
           </div>
           <EntityPicker name="categoryId" label="Type" options={categoryOptions} required={!product} hint={product ? 'Celui du produit' : undefined} />
           <EntityPicker name="locationId" label="Localisation" options={locationOptions} emptyLabel="Non affecté" />
           <QuantityField name="qtyMilli" label="Quantité" hint="Par localisation" />
-          <div className="col-span-2">
+          <div className="col-span-3">
             <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
               Ou depuis le catalogue
               <input
@@ -254,8 +266,14 @@ function AddItemCard({ projectId, locations }: { projectId: number; locations: L
               />
             </label>
           </div>
-          <EntityPicker name="productId" label="Produit" options={productOptions} emptyLabel="— aucun —" />
-          {product && product.currency !== 'EUR' && <TextInput name="fxRate" label={`Taux (1 ${product.currency} = … €)`} placeholder="vide si déjà connu" />}
+          <div className="col-span-2">
+            <EntityPicker name="productId" label="Produit" options={productOptions} emptyLabel="— aucun —" />
+          </div>
+          {product && product.currency !== 'EUR' ? (
+            <TextInput name="fxRate" label={`Taux (1 ${product.currency} = … €)`} placeholder="vide si déjà connu" />
+          ) : (
+            <div />
+          )}
         </div>
         <Button type="submit" variant="primary" disabled={create.isPending}>
           Ajouter l'article

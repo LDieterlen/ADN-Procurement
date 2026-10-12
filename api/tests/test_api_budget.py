@@ -194,6 +194,7 @@ def test_summary_totals_by_status_and_by_axis(client: TestClient, world: dict[st
     line = next(line for line in body["lines"] if line["projectItemId"] == world["lamp"]["id"])
     assert line["totalQtyMilli"] == 14_000 and line["netUnitEurCents"] == 124_313
     assert line["totalHtCents"] == 1_740_382
+    assert [p["totalHtCents"] for p in line["placements"]] == [248_626, 1_491_756]
     gone = next(line for line in body["lines"] if not line["counted"])
     assert gone["status"] == "cancelled" and gone["totalHtCents"] == 999_999
 

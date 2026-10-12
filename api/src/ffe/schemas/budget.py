@@ -42,6 +42,13 @@ class BudgetLineRead(BaseSchema):
     updated_at: str
 
 
+class PlacementAmountRead(BaseSchema):
+    """EUR share of one placement (quantity × multiplier at the net unit price)."""
+
+    placement_id: int
+    total_ht_cents: int
+
+
 class LineAmountsRead(BaseSchema):
     """Amounts of one article, computed by `money.py`, never stored."""
 
@@ -54,6 +61,7 @@ class LineAmountsRead(BaseSchema):
     net_unit_cents: int
     net_unit_eur_cents: int
     total_ht_cents: int
+    placements: list[PlacementAmountRead]
 
 
 class StatusShareRead(BaseSchema):

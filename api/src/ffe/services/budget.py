@@ -193,6 +193,19 @@ def summary(
                 "net_unit_cents": amounts.net_unit_cents,
                 "net_unit_eur_cents": amounts.net_unit_eur_cents,
                 "total_ht_cents": amounts.total_ht_cents,
+                "placements": [
+                    {
+                        "placement_id": p.id,
+                        "total_ht_cents": money.placement_ht_cents(
+                            amounts.net_unit_eur_cents,
+                            p.qty_milli,
+                            locations[p.location_id].multiplier
+                            if p.location_id in locations
+                            else 1,
+                        ),
+                    }
+                    for p in item.placements
+                ],
             }
         )
         if not _item_matches(item, filters):
