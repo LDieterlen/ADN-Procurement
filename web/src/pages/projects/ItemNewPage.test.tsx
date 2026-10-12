@@ -118,6 +118,8 @@ describe('page Nouvel article', () => {
     expect(api.manufacturers.at(-1)?.name).toBe('Tikamoon')
     expect((screen.getByLabelText('Fabricant') as HTMLSelectElement).value).toBe(String(api.manufacturers.at(-1)?.id))
     expect(api.files).toHaveLength(1) // the image was downloaded by the server on « Utiliser »
+    const photo = within(screen.getByRole('region', { name: 'Article' })).getByRole('img', { name: 'Photo' })
+    expect(photo.getAttribute('src')).toBe('/api/v1/files/1/content') // visible before « Créer »
     await screen.findByRole('option', { name: 'AS — Assise' })
     await user.selectOptions(screen.getByLabelText('Type'), '2')
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))

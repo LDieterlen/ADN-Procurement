@@ -6,13 +6,14 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
 import { useCreateManufacturer, useManufacturers } from '../../api/queries/manufacturer'
-import { useProducts } from '../../api/queries/product'
+import { useProducts, type FileRead } from '../../api/queries/product'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
 import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
+import { PendingPhoto } from '../../components/PendingPhoto'
 import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -38,6 +39,7 @@ export function ItemNewPage() {
   const createManufacturer = useCreateManufacturer()
   const toast = useToast()
   const [captured, setCaptured] = useState<Captured | null>(null)
+  const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
   const [modal, setModal] = useState<'manufacturer' | 'supplier' | null>(null)
   const [productId, setProductId] = useState<number | null>(null)
   const [addToCatalogue, setAddToCatalogue] = useState(true)
@@ -50,6 +52,22 @@ export function ItemNewPage() {
   function pickProduct(id: number | null) {
     setProductId(id)
     const product = (products.data?.items ?? []).find((p) => p.id === id)
+    const primary = product?.files.find((f) => f.isPrimary)
+    if (primary) {
+      setPhoto({
+        file: {
+          id: primary.fileId,
+          sha256: primary.sha256,
+          ext: primary.ext,
+          mimeType: primary.mimeType,
+          sizeBytes: primary.sizeBytes,
+          originalName: primary.originalName,
+          sourceUrl: null,
+          createdAt: '',
+        },
+        origin: 'Photo du produit du catalogue ; jointe à la création.',
+      })
+    }
     form.reset(product ? fromProduct(product, form.getValues()) : form.getValues())
     setFormKey((k) => k + 1) // MoneyField and BpField keep their own text: remount them
   }
@@ -70,6 +88,7 @@ export function ItemNewPage() {
   async function useCapture(result: Captured) {
     setCaptured(result)
     setProductId(null)
+    if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
     const manufacturerId = await manufacturerFor(result.preview.brand)
     form.reset(fromCapture(result.preview, form.getValues(), manufacturerId))
     setFormKey((k) => k + 1)
@@ -197,6 +216,11 @@ export function ItemNewPage() {
         <Form form={form} onSubmit={submit} banner={banner}>
           <Card title="Article" label="Article">
             <div className="space-y-4">
+              <PendingPhoto
+                file={photo?.file ?? null}
+                origin={photo?.origin}
+                onChange={(file) => setPhoto(file ? { file, origin: 'Déposée ici ; jointe à la création.' } : null)}
+              />
               <ItemFields
                 key={formKey}
                 form={form}

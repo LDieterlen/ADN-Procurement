@@ -4,6 +4,10 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-12 — Retouche : la photo visible avant « Créer »
+
+**Compte rendu** : demande de l'utilisateur. Nouveau composant `PendingPhoto` (vignette, « Déposer une photo », « Remplacer », « Retirer ») dans la carte Article de « Nouvel article » et au-dessus du formulaire « Nouveau produit » : la photo lue sur la page, celle du produit du catalogue choisi ou une photo déposée s'affiche immédiatement et est jointe à la création (sauf si le serveur l'a déjà copiée depuis le produit). Tests étendus (`img` nommée « Photo » visible avant « Créer »). `./check.sh web` vert. **Commit** : `feat(web)`.
+
 ## 2026-10-12 — Retouche : photo du catalogue sur l'article
 
 **Compte rendu** : question de l'utilisateur (articles du projet sans photo, photo lue par « Coller une adresse » absente du formulaire produit). Réponse : la photo d'un produit est jointe à la création (« Créer ») ; un article ne montrait que ses propres fichiers. Correctif : à la création d'un article depuis un produit, la photo principale du produit est jointe à l'article (même fichier, nouvelle jointure, divergence possible ensuite) ; `ProjectItemRead.catalogueImageFileId` (photo principale du produit lié, relation `ProjectItem.product` en lecture seule) sert de repli dans la liste des articles et sur la page article. Test `test_catalogue_photo_is_copied_onto_the_article_and_shown_as_fallback`. Pas de changement de schéma. `./check.sh` vert. **Commits** : `feat(api)`, `feat(web)`.

@@ -61,6 +61,7 @@ describe('produits', () => {
     await screen.findByText(/Fiche pré-remplie/)
     expect((screen.getByLabelText('Nom') as HTMLInputElement).value).toBe('Santino - Chaise en chêne massif et cuir')
     expect((screen.getByLabelText('Prix HT') as HTMLInputElement).value).toBe('399,00')
+    expect(screen.getByRole('img', { name: 'Photo' }).getAttribute('src')).toBe('/api/v1/files/1/content') // visible before « Créer »
     await screen.findByRole('option', { name: 'LUM — Luminaires' })
     await user.selectOptions(screen.getByLabelText('Type'), '1')
     await user.click(screen.getByRole('button', { name: 'Créer' }))

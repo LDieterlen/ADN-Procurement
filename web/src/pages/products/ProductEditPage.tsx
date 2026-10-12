@@ -15,11 +15,13 @@ import {
   useUpdateProduct,
   useUpdateProductFile,
   useUploadFile,
+  type FileRead,
   type ProductRead,
 } from '../../api/queries/product'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Button } from '../../components/ui/Button'
 import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
+import { PendingPhoto } from '../../components/PendingPhoto'
 import { PageHeader } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -167,11 +169,13 @@ export function ProductEditPage() {
   const createManufacturer = useCreateManufacturer()
   const errors = useSubmitErrors('produit')
   const [captured, setCaptured] = useState<Captured | null>(null)
+  const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
   const [prefill, setPrefill] = useState<Partial<ProductFormValues> | undefined>(undefined)
   const [formKey, setFormKey] = useState(0)
 
   async function useCapture(result: Captured) {
     setCaptured(result)
+    if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
     const brand = result.preview.brand
     let manufacturerId: number | null = null
     if (brand) {
@@ -288,6 +292,15 @@ export function ProductEditPage() {
         <Card title="Coller une adresse" label="Coller une adresse" className="max-w-4xl">
           <UrlCaptureBox onUse={(result) => void useCapture(result)} />
         </Card>
+      )}
+      {!product && (
+        <div className="max-w-4xl">
+          <PendingPhoto
+            file={photo?.file ?? null}
+            origin={photo?.origin}
+            onChange={(file) => setPhoto(file ? { file, origin: 'Déposée ici ; jointe à la création.' } : null)}
+          />
+        </div>
       )}
       {archived ? (
         <p className="text-sm text-neutral-600">Produit archivé : restaurer pour modifier.</p>
