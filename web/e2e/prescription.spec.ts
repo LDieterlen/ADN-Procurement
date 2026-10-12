@@ -30,18 +30,14 @@ test('créer un projet, une localisation et un article : les totaux viennent du 
   await page.getByRole('button', { name: 'Ajouter la localisation' }).click()
   await expect(page.getByRole('table', { name: 'Localisations du projet' })).toContainText('Chambre typo A')
 
+  await page.getByRole('link', { name: '+ Ajouter un article' }).click()
+  await expect(page.getByRole('heading', { name: 'Nouvel article' })).toBeVisible()
   await page.getByLabel('Désignation', { exact: true }).fill('Applique de chevet')
   await page.getByLabel('Type', { exact: true }).selectOption({ label: 'LUD — Luminaire décoratif' })
-  await page.getByLabel('Localisation', { exact: true }).selectOption({ label: 'CHA — Chambre typo A (×12)' })
-  await page.getByRole('button', { name: "Ajouter l'article" }).click()
-  const articles = page.getByRole('table', { name: 'Articles du projet' })
-  await expect(articles.getByRole('row', { name: 'CHA-LUD-01 dans CHA' })).toBeVisible()
-
-  await articles.getByRole('row', { name: 'CHA-LUD-01 dans CHA' }).click()
-  await expect(page.getByRole('heading', { name: 'Applique de chevet' })).toBeVisible()
   await page.getByLabel('Prix unitaire HT', { exact: true }).fill('450')
-  await page.getByRole('button', { name: 'Enregistrer' }).click()
-  await expect(page.getByText('Article enregistré.')).toBeVisible()
+  await page.getByRole('region', { name: 'Implantation' }).getByLabel('Localisation').selectOption({ label: 'CHA — Chambre typo A (×12)' })
+  await page.getByRole('button', { name: "Créer l'article" }).click()
+  await expect(page.getByRole('heading', { name: 'Applique de chevet' })).toBeVisible()
   // 450,00 € × 1 × 12 = 5 400,00 € HT, calculé par le serveur.
   await expect(page.getByText('5 400,00 € HT')).toBeVisible()
 

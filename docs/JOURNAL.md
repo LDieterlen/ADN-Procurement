@@ -4,6 +4,10 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-12 — Retouches : localisation repliée, page « Nouvel article », porte plus rapide
+
+**Compte rendu** : à la demande de l'utilisateur. Le formulaire de localisation est replié derrière « + Ajouter une localisation » et se referme après l'ajout. « + Ajouter un article » ouvre désormais une page `/projects/:id/items/new` bâtie sur la même fiche que la page article (`ItemForm.tsx` partagé : `ItemFields`, `fromItem`, `fromProduct`, `toCreatePayload`, `toUpdatePayload`) : choix facultatif d'un produit du catalogue qui pré-remplit la fiche, case « Ne pas ajouter au catalogue », première implantation (localisation, quantité), puis arrivée sur la page de l'article créé. Performance : vitest sans isolation par fichier (41 s → 19 s), `./check.sh web|api` pour un commit mono-sous-projet, copie de `web/node_modules` sur ext4 prête (`~/.persist/npm/ffe-web`), basculement du lien symbolique en attente de l'arrêt du serveur Vite de l'utilisateur. Tests : `ItemNewPage.test.tsx` (article libre au catalogue, « ne pas ajouter », pré-remplissage GBP et taux, fournisseur créé en place), e2e adapté ; 57 vitest, `./check.sh web` vert. **Commits** : `feat(web)` 6fe62df, `chore(repo)` 9019a5d, `feat(web)` (page Nouvel article).
+
 ## 2026-10-12 — Retouche : esthétique de la section Articles
 
 **Compte rendu** : sur capture de l'utilisateur. En-têtes de groupe lisibles (code mono, nom en gras, zone · niveau en gris, pastille « × 24 »), vignettes en pointillé discret au lieu de pavés gris, quantité suivie de son multiplicateur (« 2 × 12 »), montant HT **par implantation** (nouveau `placements[]` dans `summary.lines`, calculé par `money.placement_ht_cents`, plus le même total répété sur chaque localisation), statut en pastille, formulaire d'ajout sur une grille de six colonnes dans une carte blanche, champ « Filtrer » des sélecteurs réservé aux listes de 30 entrées et plus. `./check.sh` vert. **Commit** : `feat(web)`.

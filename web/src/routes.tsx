@@ -11,6 +11,7 @@ import { ManufacturersPage } from './pages/manufacturers/ManufacturersPage'
 import { ProductEditPage } from './pages/products/ProductEditPage'
 import { ProductsPage } from './pages/products/ProductsPage'
 import { BudgetPage } from './pages/projects/BudgetPage'
+import { ItemNewPage } from './pages/projects/ItemNewPage'
 import { ItemPage } from './pages/projects/ItemPage'
 import { ProjectEditPage } from './pages/projects/ProjectEditPage'
 import { ProjectPage } from './pages/projects/ProjectPage'
@@ -28,6 +29,7 @@ export function AppRoutes() {
         <Route path="/projects/:id" element={<ProjectPage />} />
         <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
         <Route path="/projects/:id/budget" element={<BudgetPage />} />
+        <Route path="/projects/:id/items/new" element={<ItemNewPage />} />
         <Route path="/projects/:id/items/:itemId" element={<ItemPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/new" element={<ClientEditPage />} />

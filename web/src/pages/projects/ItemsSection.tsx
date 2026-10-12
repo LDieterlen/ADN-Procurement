@@ -1,33 +1,20 @@
 // Articles of a project (ADR-0013), grouped by location: photo · Code · Type · Désignation · Qté ·
-// Fournisseur · Montant HT · État · Indice ; a row opens the article page ; the add form sits at
-// the bottom of the table (free article, or from the catalogue). Amounts come from the server summary
+// Fournisseur · Montant HT · État · Indice ; a row opens the article page ; « + Ajouter un article »
+// opens the creation page. Amounts come from the server summary
 // (the share of each placement, the total for a fee line).
-import { useMemo, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { useNavigate } from 'react-router'
-import { isApiError, type ErrorDetail } from '../../api/errors'
+import { useMemo } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { useProjectSummary, type LineAmountsRead } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
-import { fileContentUrl, useProducts } from '../../api/queries/product'
-import { locationLabel, type LocationRead } from '../../api/queries/project'
-import {
-  ENGAGED_STATUSES,
-  ITEM_STATUS_LABELS,
-  useCreateItem,
-  useProjectItems,
-  type ProjectItemCreate,
-  type ProjectItemRead,
-} from '../../api/queries/projectItem'
+import { fileContentUrl } from '../../api/queries/product'
+import type { LocationRead } from '../../api/queries/project'
+import { ENGAGED_STATUSES, ITEM_STATUS_LABELS, useProjectItems, type ProjectItemRead } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
-import { EntityPicker } from '../../components/forms/EntityPicker'
-import { Form } from '../../components/forms/Form'
 import { centsToText } from '../../components/forms/MoneyField'
-import { milliToText, QuantityField } from '../../components/forms/QuantityField'
-import { TextInput } from '../../components/forms/TextInput'
+import { milliToText } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
-import { useToast } from '../../components/ui/Toast'
 import { StatusSelect } from './StatusSelect'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
@@ -112,7 +99,11 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
           </tbody>
         </table>
       )}
-      {!readOnly && <AddItemCard projectId={projectId} locations={locations.filter((l) => l.archivedAt === null)} />}
+      {!readOnly && (
+        <Link to={`/projects/${projectId}/items/new`}>
+          <Button variant="primary">+ Ajouter un article</Button>
+        </Link>
+      )}
     </Card>
   )
 }
@@ -188,97 +179,5 @@ function GroupRows({
         )
       })}
     </>
-  )
-}
-
-type AddValues = { productId: number | null; name: string; categoryId: number | null; locationId: number | null; qtyMilli: number | null; fxRate: string }
-
-function AddItemCard({ projectId, locations }: { projectId: number; locations: LocationRead[] }) {
-  const [search, setSearch] = useState('')
-  const products = useProducts({ ...ALL, q: search, categoryId: null, manufacturerId: null, supplierId: null, limit: 50 })
-  const categories = useCategories(false)
-  const create = useCreateItem()
-  const toast = useToast()
-  const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
-  const [banner, setBanner] = useState<string | null>(null)
-  const form = useForm<AddValues>({
-    defaultValues: { productId: null, name: '', categoryId: null, locationId: locations[0]?.id ?? null, qtyMilli: 1000, fxRate: '' },
-  })
-  const productId = useWatch({ control: form.control, name: 'productId' })
-  const product = (products.data?.items ?? []).find((p) => p.id === productId)
-  for (const detail of serverErrors) {
-    const field = detail.field === 'fxRateMicro' ? 'fxRate' : detail.field === 'placements' ? 'locationId' : detail.field
-    if (field in form.getValues() && !form.formState.errors[field as keyof AddValues])
-      form.setError(field as keyof AddValues, { type: 'server', message: detail.message })
-  }
-
-  async function submit(values: AddValues) {
-    setServerErrors([])
-    setBanner(null)
-    const fx = values.fxRate.trim() ? Math.round(Number(values.fxRate.replace(',', '.')) * 1_000_000) : null
-    const data: ProjectItemCreate = {
-      kind: 'product',
-      addToCatalogue: true,
-      sortOrder: 0,
-      productId: values.productId,
-      name: values.name.trim() || null,
-      categoryId: values.productId ? null : values.categoryId,
-      fxRateMicro: fx && fx > 0 ? fx : null,
-      placements: [{ locationId: values.locationId, qtyMilli: values.qtyMilli ?? 1000, sortOrder: 0 }],
-    }
-    try {
-      const created = await create.mutateAsync({ projectId, data })
-      toast.show({ kind: 'success', message: `${created.itemCode} ajouté.` })
-      form.reset({ productId: null, name: '', categoryId: null, locationId: values.locationId, qtyMilli: 1000, fxRate: '' })
-      setSearch('')
-    } catch (error) {
-      if (!isApiError(error)) throw error
-      if (error.code === 'validation_error') setServerErrors(error.details)
-      setBanner(error.message)
-    }
-  }
-
-  const productOptions = (products.data?.items ?? []).map((p) => ({ id: p.id, label: p.name, hint: p.reference ?? undefined }))
-  const categoryOptions = (categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))
-  const locationOptions = locations.map((l) => ({ id: l.id, label: locationLabel(l) }))
-
-  return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-5">
-      <h3 className="mb-4 text-base font-semibold">Ajouter un article</h3>
-      <Form form={form} onSubmit={submit} banner={banner}>
-        <div className="grid grid-cols-6 gap-4">
-          <div className="col-span-3">
-            <TextInput name="name" label="Désignation" hint={product ? 'Vide = nom du produit du catalogue' : undefined} />
-          </div>
-          <EntityPicker name="categoryId" label="Type" options={categoryOptions} required={!product} hint={product ? 'Celui du produit' : undefined} />
-          <EntityPicker name="locationId" label="Localisation" options={locationOptions} emptyLabel="Non affecté" />
-          <QuantityField name="qtyMilli" label="Quantité" hint="Par localisation" />
-          <div className="col-span-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
-              Ou depuis le catalogue
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
-                placeholder="Rechercher un produit…"
-                aria-label="Rechercher un produit"
-              />
-            </label>
-          </div>
-          <div className="col-span-2">
-            <EntityPicker name="productId" label="Produit" options={productOptions} emptyLabel="— aucun —" />
-          </div>
-          {product && product.currency !== 'EUR' ? (
-            <TextInput name="fxRate" label={`Taux (1 ${product.currency} = … €)`} placeholder="vide si déjà connu" />
-          ) : (
-            <div />
-          )}
-        </div>
-        <Button type="submit" variant="primary" disabled={create.isPending}>
-          Ajouter l'article
-        </Button>
-      </Form>
-    </div>
   )
 }

@@ -1,7 +1,7 @@
 // The article page (ADR-0013): photo and drawing, the spec sheet and budget in one form, the
 // placements by location, the journal. Manufacturer and supplier can be created in place.
 import { useEffect, useState } from 'react'
-import { useForm, useWatch, type Path } from 'react-hook-form'
+import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useProjectSummary } from '../../api/queries/budget'
@@ -10,9 +10,7 @@ import { useManufacturers } from '../../api/queries/manufacturer'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject, type LocationRead } from '../../api/queries/project'
 import {
   ENGAGED_STATUSES,
-  ITEM_FAMILY_LABELS,
   ITEM_STATUS_LABELS,
-  ITEM_USAGE_LABELS,
   useAddPlacement,
   useDeleteItem,
   useDeletePlacement,
@@ -21,109 +19,24 @@ import {
   useUpdateItem,
   useUpdatePlacement,
   type EventRead,
-  type ItemFamily,
-  type ItemUsage,
   type ProjectItemRead,
-  type ProjectItemUpdate,
 } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
-import { BpField } from '../../components/forms/BpField'
-import { EntityPicker } from '../../components/forms/EntityPicker'
 import { Form } from '../../components/forms/Form'
-import { centsToText, MoneyField } from '../../components/forms/MoneyField'
+import { centsToText } from '../../components/forms/MoneyField'
 import { milliToText, textToMilli } from '../../components/forms/QuantityField'
-import { Select } from '../../components/forms/Select'
-import { TextArea } from '../../components/forms/TextArea'
-import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
 import { useToast } from '../../components/ui/Toast'
-import { CURRENCIES } from '../suppliers/SupplierForm'
 import { NewManufacturerModal, NewSupplierModal } from './InlineCreate'
 import { ItemFiles } from './ItemFiles'
+import { fromItem, ItemFields, toUpdatePayload, type ItemFormValues } from './ItemForm'
 import { StatusSelect } from './StatusSelect'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
-
-type Values = {
-  name: string
-  categoryId: number | null
-  manufacturerId: number | null
-  reference: string
-  supplierId: number | null
-  finish: string
-  dimensions: string
-  sourceUrl: string
-  family: ItemFamily | ''
-  usage: ItemUsage | ''
-  comments: string
-  unitCostCents: number | null
-  currency: string
-  fxRate: string
-  discountBp: number | null
-  quoteRef: string
-  quoteIndice: string
-  quoteUrl: string
-}
-
-const FAMILY_OPTIONS = [
-  { value: '', label: '—' },
-  ...(Object.keys(ITEM_FAMILY_LABELS) as ItemFamily[]).map((f) => ({ value: f, label: ITEM_FAMILY_LABELS[f] })),
-]
-const USAGE_OPTIONS = [{ value: '', label: '—' }, ...(Object.keys(ITEM_USAGE_LABELS) as ItemUsage[]).map((u) => ({ value: u, label: ITEM_USAGE_LABELS[u] }))]
-
-function fromItem(item: ProjectItemRead): Values {
-  return {
-    name: item.name,
-    categoryId: item.categoryId,
-    manufacturerId: item.manufacturerId,
-    reference: item.reference ?? '',
-    supplierId: item.supplierId,
-    finish: item.finish ?? '',
-    dimensions: item.dimensions ?? '',
-    sourceUrl: item.sourceUrl ?? '',
-    family: item.family ?? '',
-    usage: item.usage ?? '',
-    comments: item.comments ?? '',
-    unitCostCents: item.unitCostCents,
-    currency: item.currency,
-    fxRate: item.currency === 'EUR' ? '' : String(item.fxRateMicro / 1_000_000).replace('.', ','),
-    discountBp: item.discountBp,
-    quoteRef: item.quoteRef ?? '',
-    quoteIndice: item.quoteIndice ?? '',
-    quoteUrl: item.quoteUrl ?? '',
-  }
-}
-
-const orNull = (text: string): string | null => (text.trim() === '' ? null : text.trim())
-
-export function toPayload(v: Values, item: ProjectItemRead): ProjectItemUpdate {
-  const fx = v.fxRate.trim() ? Math.round(Number(v.fxRate.replace(',', '.')) * 1_000_000) : null
-  const payload: ProjectItemUpdate = {
-    name: v.name,
-    manufacturerId: v.manufacturerId,
-    reference: orNull(v.reference),
-    supplierId: v.supplierId,
-    finish: orNull(v.finish),
-    dimensions: orNull(v.dimensions),
-    sourceUrl: orNull(v.sourceUrl),
-    family: v.family || null,
-    usage: v.usage || null,
-    comments: orNull(v.comments),
-    unitCostCents: v.unitCostCents ?? 0,
-    currency: v.currency,
-    discountBp: v.discountBp ?? 0,
-    quoteRef: orNull(v.quoteRef),
-    quoteIndice: orNull(v.quoteIndice),
-    quoteUrl: orNull(v.quoteUrl),
-  }
-  if (item.kind === 'product') payload.categoryId = v.categoryId
-  if (v.currency !== 'EUR' && fx && fx > 0) payload.fxRateMicro = fx
-  return payload
-}
 
 export function ItemPage() {
   const params = useParams<{ id: string; itemId: string }>()
@@ -145,8 +58,7 @@ export function ItemPage() {
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const form = useForm<Values>({ defaultValues: item.data ? fromItem(item.data) : undefined })
-  const currency = useWatch({ control: form.control, name: 'currency' })
+  const form = useForm<ItemFormValues>({ defaultValues: item.data ? fromItem(item.data) : undefined })
 
   useEffect(() => {
     if (item.data && !form.formState.isDirty) form.reset(fromItem(item.data))
@@ -154,7 +66,7 @@ export function ItemPage() {
   useEffect(() => {
     for (const detail of serverErrors) {
       const field = detail.field === 'fxRateMicro' ? 'fxRate' : detail.field
-      if (item.data && field in fromItem(item.data)) form.setError(field as Path<Values>, { type: 'server', message: detail.message })
+      if (item.data && field in fromItem(item.data)) form.setError(field as Path<ItemFormValues>, { type: 'server', message: detail.message })
     }
   }, [serverErrors, form, item.data])
 
@@ -176,11 +88,11 @@ export function ItemPage() {
   const supplier = suppliers.data?.items.find((s) => s.id === it.supplierId)
   const typeName = categories.data?.find((c) => c.id === it.categoryId)?.name ?? ''
 
-  async function submit(values: Values) {
+  async function submit(values: ItemFormValues) {
     setServerErrors([])
     setBanner(null)
     try {
-      const saved = await update.mutateAsync({ id: it.id, data: toPayload(values, it) })
+      const saved = await update.mutateAsync({ id: it.id, data: toUpdatePayload(values, it) })
       form.reset(fromItem(saved))
       toast.show({ kind: 'success', message: 'Article enregistré.' })
     } catch (error) {
@@ -256,61 +168,20 @@ export function ItemPage() {
         </Card>
         <Card title="Article">
           <Form form={form} onSubmit={submit} banner={banner}>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <TextInput name="name" label="Désignation" />
-              </div>
-              {it.kind === 'product' ? (
-                <EntityPicker
-                  name="categoryId"
-                  label="Type"
-                  options={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
-                  required
-                />
-              ) : (
-                <div />
-              )}
-              <EntityPicker
-                name="manufacturerId"
-                label="Fabricant"
-                options={options(manufacturers.data?.items)}
-                onCreate={readOnly ? undefined : () => setModal('manufacturer')}
-              />
-              <TextInput name="reference" label="Référence" />
-              <EntityPicker
-                name="supplierId"
-                label="Fournisseur"
-                options={options(suppliers.data?.items)}
-                onCreate={readOnly ? undefined : () => setModal('supplier')}
-              />
-              <TextInput name="dimensions" label="Dimensions" placeholder="L 120 × P 60 × H 75 cm" />
-              <TextInput name="finish" label="Finitions" />
-              <TextInput name="sourceUrl" label="Lien internet" placeholder="Adresse de la fiche produit" />
-              <Select name="family" label="Famille" options={FAMILY_OPTIONS} />
-              <Select name="usage" label="Usage" options={USAGE_OPTIONS} />
-              <div className="col-span-3">
-                <TextArea name="comments" label="Commentaires" hint="Imprimés sur la fiche de prescription" rows={2} />
-              </div>
-            </div>
-            {supplier && (supplier.contactName || supplier.phone || supplier.email) && (
-              <p className="text-sm text-neutral-600">
-                Contact fournisseur : {[supplier.contactName, supplier.phone, supplier.email].filter(Boolean).join(' · ')}
-              </p>
-            )}
-            <fieldset className="rounded-lg border border-neutral-200 p-4">
-              <legend className="px-1 text-sm font-semibold">Budget</legend>
-              <div className="grid grid-cols-4 gap-4">
-                <MoneyField name="unitCostCents" label="Prix unitaire HT" currency={currency} />
-                <Select name="currency" label="Devise" options={CURRENCIES} />
-                {currency !== 'EUR' ? <TextInput name="fxRate" label={`Taux (1 ${currency} = … €)`} /> : <div />}
-                <BpField name="discountBp" label="Remise" />
-                <TextInput name="quoteRef" label="N° de devis" />
-                <TextInput name="quoteIndice" label="Indice de devis" placeholder="A, B, C…" />
-                <div className="col-span-2">
-                  <TextInput name="quoteUrl" label="Lien vers le devis" placeholder="Adresse du devis" />
-                </div>
-              </div>
-            </fieldset>
+            <ItemFields
+              form={form}
+              kind={it.kind}
+              categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
+              manufacturers={options(manufacturers.data?.items)}
+              suppliers={options(suppliers.data?.items)}
+              onCreateManufacturer={readOnly ? undefined : () => setModal('manufacturer')}
+              onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
+              contact={
+                supplier && (supplier.contactName || supplier.phone || supplier.email)
+                  ? [supplier.contactName, supplier.phone, supplier.email].filter(Boolean).join(' · ')
+                  : undefined
+              }
+            />
             {!readOnly && (
               <Button type="submit" variant="primary" disabled={update.isPending}>
                 Enregistrer

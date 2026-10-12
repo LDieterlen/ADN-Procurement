@@ -2,7 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { installFakeApi, type FakeApi } from '../../../tests/helpers/fakeApi'
+import { installFakeApi, itemRow, placementRow, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
 
 let api: FakeApi
@@ -26,8 +26,6 @@ beforeEach(() => {
   })
 })
 afterEach(() => api.restore())
-
-const cellsOf = (row: HTMLElement) => Array.from((row as HTMLTableRowElement).cells).map((c) => c.textContent)
 
 describe('page projet', () => {
   test('localisations : liste avec zone, niveau et nombre ; ajout en bas de tableau ; code dupliqué refusé', async () => {
@@ -60,55 +58,10 @@ describe('page projet', () => {
     await waitFor(() => expect(api.locations.some((l) => l.code === 'SUI')).toBe(false))
   })
 
-  test('ajouter un article libre dans CHA ×12 : code CHA-LUD-01, montant du serveur, bandeau budget, produit créé au catalogue', async () => {
-    const user = userEvent.setup()
-    renderApp('/projects/1')
-    expect(await screen.findByText(/Aucun article/)).toBeTruthy()
-    const strip = screen.getByRole('region', { name: 'Synthèse budget' })
-    expect(strip.textContent).toContain('Reste50 000,00 €')
-    await user.type(screen.getByLabelText('Désignation'), 'Applique de chevet')
-    await screen.findByRole('option', { name: 'LUD — Luminaire décoratif' })
-    await user.selectOptions(screen.getByLabelText('Type'), '1')
-    await user.selectOptions(screen.getByLabelText('Localisation'), '2')
-    await user.clear(screen.getByLabelText('Quantité'))
-    await user.type(screen.getByLabelText('Quantité'), '2')
-    await user.click(screen.getByRole('button', { name: "Ajouter l'article" }))
-    const table = await screen.findByRole('table', { name: 'Articles du projet' })
-    const row = await within(table).findByRole('row', { name: 'CHA-LUD-01 dans CHA' })
-    expect(cellsOf(row).slice(1, 5)).toEqual(['CHA-LUD-01', 'Luminaire décoratif', 'Applique de chevet', '2 × 12'])
-    expect(api.items[0]).toMatchObject({ itemCode: 'CHA-LUD-01', productId: 2, unitCostCents: 0 })
-    expect(api.products.at(-1)?.name).toBe('Applique de chevet') // joins the catalogue by default
-    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('') // form reset
-  })
-
-  test('ajouter depuis le catalogue en GBP : le taux est demandé, puis le montant 14 917,56 € apparaît', async () => {
-    const user = userEvent.setup()
-    renderApp('/projects/1')
-    await screen.findByText(/Aucun article/)
-    await screen.findByRole('option', { name: /Beat Light Fat/ })
-    await user.selectOptions(screen.getByLabelText('Produit'), '1')
-    await user.selectOptions(screen.getByLabelText('Localisation'), '2')
-    await user.type(await screen.findByLabelText('Taux (1 GBP = … €)'), '1,17')
-    await user.click(screen.getByRole('button', { name: "Ajouter l'article" }))
-    const table = await screen.findByRole('table', { name: 'Articles du projet' })
-    const row = await within(table).findByRole('row', { name: 'CHA-LUD-01 dans CHA' })
-    expect(cellsOf(row).slice(3, 7)).toEqual(['Beat Light Fat', '1 × 12', 'Tom Dixon', '14 917,56 €'])
-    expect(api.items[0]).toMatchObject({ fxRateMicro: 1_170_000, discountBp: 1500, reference: 'BLS01', finish: 'laiton', productId: 1 })
-    const strip = screen.getByRole('region', { name: 'Synthèse budget' })
-    await waitFor(() => expect(strip.textContent).toContain('Prescrit HT14 917,56 €'))
-    expect(strip.textContent).toContain('Reste35 082,44 €')
-  })
-
   test("le statut se change dans la liste et l'article annulé sort des totaux", async () => {
     const user = userEvent.setup()
-    api.items.push({ ...api.items[0]!, id: 1 } as never)
-    api.items.length = 0
+    api.items.push(itemRow({ projectId: 1, itemCode: 'LOB-AS-01', categoryId: 2, name: 'Tabouret', placements: [placementRow(1, 1, 1000)] }, 1))
     renderApp('/projects/1')
-    await screen.findByText(/Aucun article/)
-    await user.type(screen.getByLabelText('Désignation'), 'Tabouret')
-    await screen.findByRole('option', { name: 'AS — Assise' })
-    await user.selectOptions(screen.getByLabelText('Type'), '2')
-    await user.click(screen.getByRole('button', { name: "Ajouter l'article" }))
     const table = await screen.findByRole('table', { name: 'Articles du projet' })
     await within(table).findByRole('row', { name: 'LOB-AS-01 dans LOB' })
     await user.selectOptions(within(table).getByLabelText('Statut de LOB-AS-01'), 'approved')
@@ -127,6 +80,7 @@ describe('page projet', () => {
     expect(screen.getByRole('link', { name: 'Fiches PDF' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/sheets.pdf')
     expect(screen.getByRole('link', { name: 'Listing PDF' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/list.pdf')
     expect(screen.getByRole('link', { name: 'Budget' }).getAttribute('href')).toBe('/projects/1/budget')
+    expect(screen.getByRole('link', { name: '+ Ajouter un article' }).getAttribute('href')).toBe('/projects/1/items/new')
     await user.click(screen.getByRole('link', { name: 'Modifier' }))
     expect(await screen.findByRole('heading', { name: 'Modifier Rénovation' })).toBeTruthy()
   })
