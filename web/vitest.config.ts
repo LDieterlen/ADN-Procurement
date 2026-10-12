@@ -6,7 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'node', // component tests opt in to jsdom with `// @vitest-environment jsdom`
-      include: ['tests/**/*.test.ts', 'src/**/*.test.tsx'],
+      include: ['tests/**/*.test.ts', 'src/**/*.test.{ts,tsx}'],
       setupFiles: ['tests/setup.ts'],
     },
   }),

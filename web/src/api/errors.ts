@@ -60,6 +60,8 @@ function defaultMessage(status: number): string {
 /** Turns an openapi-fetch result into data or a thrown ApiError. */
 export function unwrap<T>(result: { data?: T; error?: unknown; response: Response }): T {
   if (result.data !== undefined) return result.data
+  // 204 No Content (deletes): openapi-fetch yields no data, which is not an error.
+  if (result.response.ok && result.error === undefined) return undefined as T
   throw new ApiError(result.response.status, result.error)
 }
 
