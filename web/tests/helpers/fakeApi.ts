@@ -193,6 +193,7 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     updatedAt: NOW,
     placements: [],
     files: [],
+    catalogueImageFileId: null,
     ...i,
   }
 }
@@ -486,6 +487,8 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       quoteIndice: (p.quoteIndice as string | null) ?? null,
       quoteUrl: (p.quoteUrl as string | null) ?? null,
       placements: placementsIn.map((pl) => placementRow(id, pl.locationId, pl.qtyMilli)),
+      files: (product?.files ?? []).filter((f) => f.isPrimary).map((f) => ({ ...f, kind: 'image' as const })),
+      catalogueImageFileId: product?.files.find((f) => f.isPrimary)?.fileId ?? null,
     },
     id,
   )

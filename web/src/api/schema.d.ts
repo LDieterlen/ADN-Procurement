@@ -1704,6 +1704,8 @@ export interface components {
         };
         /** ProjectItemRead */
         ProjectItemRead: {
+            /** Catalogueimagefileid */
+            catalogueImageFileId: number | null;
             /** Categoryid */
             categoryId: number | null;
             /** Comments */
