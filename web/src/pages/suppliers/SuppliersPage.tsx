@@ -12,10 +12,11 @@ const LIMIT = 50
 
 const COLUMNS: Column<SupplierRead>[] = [
   { key: 'name', header: 'Nom', render: (s) => <span className="font-medium">{s.name}</span> },
-  { key: 'country', header: 'Pays', render: (s) => s.countryCode },
   { key: 'currency', header: 'Devise', render: (s) => s.currency },
   { key: 'discount', header: 'Remise', render: (s) => (s.defaultDiscountBp ? `${bpToText(s.defaultDiscountBp)} %` : ''), className: 'text-right' },
-  { key: 'contact', header: 'Contact', render: (s) => s.contactName ?? '' },
+  { key: 'contact', header: 'Représentant', render: (s) => s.contactName ?? '' },
+  { key: 'email', header: 'E-mail', render: (s) => s.email ?? '' },
+  { key: 'phone', header: 'Téléphone', render: (s) => s.phone ?? '' },
   { key: 'status', header: '', render: (s) => (s.archivedAt ? <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs">Archivé</span> : null) },
 ]
 
@@ -47,7 +48,7 @@ export function SuppliersPage() {
             setQ(event.target.value)
             setOffset(0)
           }}
-          placeholder="Nom ou raison sociale…"
+          placeholder="Nom ou représentant…"
           aria-label="Rechercher"
           className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
         />

@@ -1,47 +1,48 @@
-// Shell: sidebar navigation, « BASE DE DEV » badge from /health, page outlet.
+// Shell (ADR-0013): a thin top bar with the brand and the catalogue links, the page below.
 import { NavLink, Outlet } from 'react-router'
 import { useHealth } from '../api/queries/health'
-import { useAdvancedMode } from './useAdvancedMode'
 
-const LINKS: { to: string; label: string; advanced?: boolean }[] = [
+const LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Projets' },
   { to: '/clients', label: 'Clients' },
   { to: '/products', label: 'Produits' },
   { to: '/suppliers', label: 'Fournisseurs' },
   { to: '/manufacturers', label: 'Fabricants' },
-  { to: '/categories', label: 'Catégories' },
-  { to: '/dashboard', label: 'Tableau de bord', advanced: true },
-  { to: '/imports/products', label: 'Import tarifs', advanced: true },
+  { to: '/categories', label: 'Types' },
   { to: '/settings', label: 'Réglages' },
-  { to: '/health', label: 'Santé', advanced: true },
 ]
 
 export function Layout() {
   const health = useHealth()
   const isDev = health.data?.isDevDb === true
-  const advanced = useAdvancedMode()
   return (
-    <div className="flex min-h-screen bg-neutral-50 font-sans text-neutral-900">
-      <aside className="flex w-52 flex-col border-r border-neutral-200 bg-white">
-        <div className="px-4 py-4">
-          <span className="text-lg font-semibold">FFE</span>
-          {isDev && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">BASE DE DEV</span>}
-        </div>
-        <nav className="flex flex-col gap-0.5 px-2" aria-label="Navigation principale">
-          {LINKS.filter((link) => advanced || !link.advanced).map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === '/'}
-              className={({ isActive }) => `rounded px-2 py-1.5 text-sm ${isActive ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}
-            >
-              {link.label}
+    <div className="min-h-screen bg-white font-sans text-neutral-900">
+      <header className="border-b border-neutral-200">
+        <div className="mx-auto flex max-w-6xl items-center gap-8 px-6 py-3">
+          <NavLink to="/" className="text-base font-semibold tracking-tight">
+            FF&amp;E
+          </NavLink>
+          <nav className="flex flex-1 items-center gap-5" aria-label="Navigation principale">
+            {LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/'}
+                className={({ isActive }) => `text-sm ${isActive ? 'font-semibold text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+          {isDev && <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900">base de dev</span>}
+          {health.isError && (
+            <NavLink to="/health" className="text-xs text-red-700">
+              API injoignable
             </NavLink>
-          ))}
-        </nav>
-        {health.isError && <p className="mt-auto px-4 py-3 text-xs text-red-700">API injoignable</p>}
-      </aside>
-      <main className="flex-1 px-8 py-6">
+          )}
+        </div>
+      </header>
+      <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />
       </main>
     </div>

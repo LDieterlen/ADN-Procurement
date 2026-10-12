@@ -1,22 +1,22 @@
+// Projects list (ADR-0013): Projet · Client · Statut · Échéance · Budget HT · Prescrit HT · Articles.
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useClients } from '../../api/queries/client'
-import { PROJECT_STATUS_LABELS, useProjects, type ProjectRead, type ProjectStatus } from '../../api/queries/project'
+import { PROJECT_STATUS_LABELS, useProjects, type ProjectListRead, type ProjectStatus } from '../../api/queries/project'
+import { centsToText } from '../../components/forms/MoneyField'
 import { DataTable, type Column } from '../../components/tables/DataTable'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Pill } from '../../components/ui/Pill'
 import { useToast } from '../../components/ui/Toast'
 
-const STATUS_CLASSES: Record<ProjectStatus, string> = {
-  prospect: 'bg-neutral-200 text-neutral-800',
-  active: 'bg-green-100 text-green-800',
-  delivered: 'bg-blue-100 text-blue-800',
-  closed: 'bg-neutral-100 text-neutral-500',
-  cancelled: 'bg-red-100 text-red-800',
-}
-
 export function StatusBadge({ status }: { status: ProjectStatus }) {
-  return <span className={`rounded px-1.5 py-0.5 text-xs ${STATUS_CLASSES[status]}`}>{PROJECT_STATUS_LABELS[status]}</span>
+  return (
+    <Pill filled={status === 'active'} tone={status === 'cancelled' ? 'red' : 'neutral'}>
+      {PROJECT_STATUS_LABELS[status]}
+    </Pill>
+  )
 }
 
 export function ProjectsPage() {
@@ -31,37 +31,44 @@ export function ProjectsPage() {
   }, [projects.isError, projects.error, toast])
 
   const clientName = (id: number) => clients.data?.find((c) => c.id === id)?.name ?? ''
-  const columns: Column<ProjectRead>[] = [
-    { key: 'code', header: 'Code', render: (p) => <span className="font-mono text-xs">{p.code}</span> },
-    { key: 'name', header: 'Nom', render: (p) => <span className="font-medium">{p.name}</span> },
+  const columns: Column<ProjectListRead>[] = [
+    { key: 'name', header: 'Projet', render: (p) => <span className="font-medium">{p.name}</span> },
     { key: 'client', header: 'Client', render: (p) => clientName(p.clientId) },
     { key: 'status', header: 'Statut', render: (p) => <StatusBadge status={p.status} /> },
-    { key: 'due', header: 'Échéance', render: (p) => p.dueOn ?? '' },
+    { key: 'due', header: 'Échéance', render: (p) => p.dueOn ?? '—' },
+    { key: 'budget', header: 'Budget HT', className: 'text-right', render: (p) => (p.budgetCents === null ? '—' : `${centsToText(p.budgetCents)} €`) },
+    { key: 'specified', header: 'Prescrit HT', className: 'text-right', render: (p) => `${centsToText(p.specifiedCents)} €` },
+    { key: 'items', header: 'Articles', className: 'text-right', render: (p) => String(p.itemCount) },
   ]
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Projets</h1>
-        <Link to="/projects/new">
-          <Button variant="primary">Nouveau projet</Button>
-        </Link>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-neutral-700">
-        Statut
-        <select
-          value={status ?? ''}
-          onChange={(event) => setStatus(event.target.value === '' ? null : (event.target.value as ProjectStatus))}
-          className="rounded border border-neutral-300 bg-white px-2 py-1 text-sm"
-        >
-          <option value="">Tous</option>
-          {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {PROJECT_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
-      </label>
+    <section>
+      <PageHeader
+        title="Projets"
+        subtitle={projects.data ? `${projects.data.length} projet${projects.data.length > 1 ? 's' : ''}` : undefined}
+        actions={
+          <>
+            <label className="flex items-center gap-2 text-sm text-neutral-600">
+              Statut
+              <select
+                value={status ?? ''}
+                onChange={(event) => setStatus(event.target.value === '' ? null : (event.target.value as ProjectStatus))}
+                className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+              >
+                <option value="">Tous</option>
+                {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
+                  <option key={s} value={s}>
+                    {PROJECT_STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link to="/projects/new">
+              <Button variant="primary">Nouveau projet</Button>
+            </Link>
+          </>
+        }
+      />
       {projects.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
       {projects.isError && (
         <EmptyState title="Impossible de charger les projets">
@@ -78,7 +85,7 @@ export function ProjectsPage() {
           rows={projects.data}
           rowKey={(p) => p.id}
           onRowClick={(p) => navigate(`/projects/${p.id}`)}
-          empty={<EmptyState title="Aucun projet." />}
+          empty={<EmptyState title="Aucun projet.">Créer le premier avec « Nouveau projet ».</EmptyState>}
         />
       )}
     </section>

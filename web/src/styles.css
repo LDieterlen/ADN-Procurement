@@ -1,8 +1,13 @@
 @import 'tailwindcss';
 
-/* Print (ROADMAP 7c): the lines table alone, without navigation, panels, buttons and filters. */
+/* Look of the earlier tool (ADR-0013): white page, thin top bar, cards with a hairline border. */
+body {
+  background: #fff;
+  color: #111;
+}
+
 @media print {
-  aside,
+  header,
   nav,
   .no-print,
   [role='dialog'] {
@@ -10,19 +15,5 @@
   }
   main {
     padding: 0 !important;
-  }
-  body:has(.print-document) main > *:not(:has(.print-document)),
-  body:has(.print-document) article > *:not(.print-document) {
-    display: none !important;
-  }
-  .print-document {
-    position: static !important;
-    padding: 0 !important;
-  }
-  table {
-    font-size: 9pt;
-  }
-  tr {
-    break-inside: avoid;
   }
 }

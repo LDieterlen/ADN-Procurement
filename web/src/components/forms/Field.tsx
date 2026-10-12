@@ -39,4 +39,4 @@ export function Field({ name, label, hint, children }: { name: string; label: st
 }
 
 export const controlClass =
-  'rounded border border-neutral-300 px-2 py-1.5 text-sm focus:border-neutral-600 focus:outline-none aria-[invalid=true]:border-red-500'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-700 focus:outline-none aria-[invalid=true]:border-red-500'

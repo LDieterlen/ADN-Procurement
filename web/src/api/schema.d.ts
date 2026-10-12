@@ -141,40 +141,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Dashboard */
-        get: operations["getDashboard"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/deliveries/{delivery_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Delivery */
-        delete: operations["deleteDelivery"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/files": {
         parameters: {
             query?: never;
@@ -229,24 +195,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/imports/products/batches": {
+    "/api/v1/locations/{location_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Batches */
-        get: operations["listProductImportBatches"];
+        /** Get Location */
+        get: operations["getLocation"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Location */
+        delete: operations["deleteLocation"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Location */
+        patch: operations["updateLocation"];
         trace?: never;
     };
-    "/api/v1/imports/products/commit": {
+    "/api/v1/locations/{location_id}/archive": {
         parameters: {
             query?: never;
             header?: never;
@@ -255,32 +223,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Commit Import */
-        post: operations["commitProductImport"];
+        /** Archive Location */
+        post: operations["archiveLocation"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/imports/products/mapping": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Mapping */
-        get: operations["getProductImportMapping"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/imports/products/preview": {
+    "/api/v1/locations/{location_id}/unarchive": {
         parameters: {
             query?: never;
             header?: never;
@@ -289,43 +240,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview Import */
-        post: operations["previewProductImport"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/invoices/{invoice_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Invoice */
-        delete: operations["deleteInvoice"];
-        options?: never;
-        head?: never;
-        /** Update Invoice */
-        patch: operations["updateInvoice"];
-        trace?: never;
-    };
-    "/api/v1/invoices/{invoice_id}/pay": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Pay Invoice */
-        post: operations["payInvoice"];
+        /** Unarchive Location */
+        post: operations["unarchiveLocation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -613,57 +529,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/project-items/{item_id}/quotes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Item Quotes */
-        get: operations["listProjectItemQuotes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/project-items/{item_id}/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Refresh From Catalogue */
-        post: operations["refreshProjectItemFromCatalogue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/project-items/{item_id}/replace": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Replace Product */
-        post: operations["replaceProjectItemProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/project-items/{item_id}/status": {
         parameters: {
             query?: never;
@@ -717,23 +582,6 @@ export interface paths {
         patch: operations["updateProject"];
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/alerts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Alerts */
-        get: operations["listProjectAlerts"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/projects/{project_id}/budget-lines": {
         parameters: {
             query?: never;
@@ -769,15 +617,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/exports/book.pdf": {
+    "/api/v1/projects/{project_id}/exports/list.pdf": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Export Book */
-        get: operations["exportBook"];
+        /** Export List */
+        get: operations["exportList"];
         put?: never;
         post?: never;
         delete?: never;
@@ -786,17 +634,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/exports/schedule.xlsx": {
+    "/api/v1/projects/{project_id}/exports/sheets.pdf": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Export Schedule */
-        get: operations["exportSchedule"];
+        /** Export Sheets */
+        get: operations["exportSheets"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Locations */
+        get: operations["listLocations"];
+        put?: never;
+        /** Create Location */
+        post: operations["createLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/locations/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder Locations */
+        post: operations["reorderLocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -815,42 +698,6 @@ export interface paths {
         put?: never;
         /** Create Item */
         post: operations["createProjectItem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{project_id}/purchase-orders": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Pos */
-        get: operations["listPurchaseOrders"];
-        put?: never;
-        /** Create Po */
-        post: operations["createPurchaseOrder"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{project_id}/quotes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Quotes */
-        get: operations["listQuotes"];
-        put?: never;
-        /** Create Quote */
-        post: operations["createQuote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -885,338 +732,6 @@ export interface paths {
         get: operations["getProjectSummary"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{project_id}/zones": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Zones */
-        get: operations["listZones"];
-        put?: never;
-        /** Create Zone */
-        post: operations["createZone"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{project_id}/zones/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reorder Zones */
-        post: operations["reorderZones"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-order-lines/{line_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Line */
-        delete: operations["deletePurchaseOrderLine"];
-        options?: never;
-        head?: never;
-        /** Update Line */
-        patch: operations["updatePurchaseOrderLine"];
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Po */
-        get: operations["getPurchaseOrder"];
-        put?: never;
-        post?: never;
-        /** Delete Po */
-        delete: operations["deletePurchaseOrder"];
-        options?: never;
-        head?: never;
-        /** Update Po */
-        patch: operations["updatePurchaseOrder"];
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/deliveries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Deliveries */
-        get: operations["listDeliveries"];
-        put?: never;
-        /** Create Delivery */
-        post: operations["createDelivery"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Attach File */
-        post: operations["attachPurchaseOrderFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/files/{file_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Detach File */
-        delete: operations["detachPurchaseOrderFile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/invoices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Invoices */
-        get: operations["listInvoices"];
-        put?: never;
-        /** Create Invoice */
-        post: operations["createInvoice"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/issue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Issue Po */
-        post: operations["issuePurchaseOrder"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/lines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add Lines */
-        post: operations["addPurchaseOrderLines"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Export Pdf */
-        get: operations["exportPurchaseOrderPdf"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/purchase-orders/{po_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Change Status */
-        post: operations["changePurchaseOrderStatus"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/quote-lines/{line_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Line */
-        delete: operations["deleteQuoteLine"];
-        options?: never;
-        head?: never;
-        /** Update Line */
-        patch: operations["updateQuoteLine"];
-        trace?: never;
-    };
-    "/api/v1/quote-lines/{line_id}/retain": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Retain Line */
-        post: operations["retainQuoteLine"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/quotes/{quote_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Quote */
-        get: operations["getQuote"];
-        put?: never;
-        post?: never;
-        /** Delete Quote */
-        delete: operations["deleteQuote"];
-        options?: never;
-        head?: never;
-        /** Update Quote */
-        patch: operations["updateQuote"];
-        trace?: never;
-    };
-    "/api/v1/quotes/{quote_id}/decline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Decline Quote */
-        post: operations["declineQuote"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/quotes/{quote_id}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Attach File */
-        post: operations["attachQuoteFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/quotes/{quote_id}/files/{file_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Detach File */
-        delete: operations["detachQuoteFile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/quotes/{quote_id}/lines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add Line */
-        post: operations["addQuoteLine"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1328,79 +843,10 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/zones/{zone_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Zone */
-        get: operations["getZone"];
-        put?: never;
-        post?: never;
-        /** Delete Zone */
-        delete: operations["deleteZone"];
-        options?: never;
-        head?: never;
-        /** Update Zone */
-        patch: operations["updateZone"];
-        trace?: never;
-    };
-    "/api/v1/zones/{zone_id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Archive Zone */
-        post: operations["archiveZone"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/zones/{zone_id}/unarchive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Unarchive Zone */
-        post: operations["unarchiveZone"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AlertRead */
-        AlertRead: {
-            /** Categoryid */
-            categoryId?: number | null;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "budget_90" | "budget_100" | "order_overdue";
-            /** Message */
-            message: string;
-            /** Projectitemid */
-            projectItemId?: number | null;
-            /** Zoneid */
-            zoneId?: number | null;
-        };
         /** BackupRead */
         BackupRead: {
             /** At */
@@ -1414,29 +860,6 @@ export interface components {
             /** Quickcheck */
             quickCheck: string;
         };
-        /** Body_commitProductImport */
-        Body_commitProductImport: {
-            /** File */
-            file: string;
-            /** Mapping */
-            mapping?: string | null;
-            /**
-             * Markmissingdiscontinued
-             * @default false
-             */
-            markMissingDiscontinued: boolean;
-            /** Supplierid */
-            supplierId: number;
-        };
-        /** Body_previewProductImport */
-        Body_previewProductImport: {
-            /** File */
-            file: string;
-            /** Mapping */
-            mapping?: string | null;
-            /** Supplierid */
-            supplierId: number;
-        };
         /** Body_uploadFile */
         Body_uploadFile: {
             /** File */
@@ -1446,104 +869,61 @@ export interface components {
         BudgetLineIn: {
             /** Amountcents */
             amountCents: number;
-            /** Categoryid */
-            categoryId?: number | null;
+            /** Family */
+            family?: string | null;
+            /** Locationid */
+            locationId?: number | null;
             /** Notes */
             notes?: string | null;
-            /** Zoneid */
-            zoneId?: number | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "global" | "location" | "zone" | "family" | "supplier";
+            /** Supplierid */
+            supplierId?: number | null;
+            /** Zone */
+            zone?: string | null;
         };
         /** BudgetLineRead */
         BudgetLineRead: {
             /** Amountcents */
             amountCents: number;
-            /** Categoryid */
-            categoryId: number | null;
             /** Createdat */
             createdAt: string;
+            /** Family */
+            family: string | null;
             /** Id */
             id: number;
+            /** Locationid */
+            locationId: number | null;
             /** Notes */
             notes: string | null;
             /** Projectid */
             projectId: number;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "global" | "location" | "zone" | "family" | "supplier";
+            /** Supplierid */
+            supplierId: number | null;
             /** Updatedat */
             updatedAt: string;
-            /** Zoneid */
-            zoneId: number | null;
+            /** Zone */
+            zone: string | null;
         };
         /** BudgetLinesPut */
         BudgetLinesPut: {
             /** Lines */
             lines: components["schemas"]["BudgetLineIn"][];
         };
-        /**
-         * BudgetRowRead
-         * @description One row of the Budget tab: per zone (D8.3 default) or per level-1 category; D8.4 alert level.
-         */
-        BudgetRowRead: {
-            /**
-             * Alert
-             * @enum {string}
-             */
-            alert: "none" | "warning" | "over";
-            /** Approvedcents */
-            approvedCents: number;
-            /** Budgetcents */
-            budgetCents: number | null;
-            /** Categoryid */
-            categoryId: number | null;
-            /** Engagedcents */
-            engagedCents: number;
-            /** Label */
-            label: string;
-            /** Multiplier */
-            multiplier: number;
-            /** Remainingcents */
-            remainingCents: number | null;
-            /** Specifiedcents */
-            specifiedCents: number;
-            /** Zoneid */
-            zoneId: number | null;
-        };
-        /** BudgetSummaryRead */
-        BudgetSummaryRead: {
-            /**
-             * Alert
-             * @enum {string}
-             */
-            alert: "none" | "warning" | "over";
-            /** Approvedcents */
-            approvedCents: number;
-            /** Bycategory */
-            byCategory: components["schemas"]["BudgetRowRead"][];
-            /** Byzone */
-            byZone: components["schemas"]["BudgetRowRead"][];
-            /** Contingencybp */
-            contingencyBp: number;
-            /** Contingencycents */
-            contingencyCents: number;
-            /** Engagedcents */
-            engagedCents: number;
-            /** Globalcents */
-            globalCents: number | null;
-            /** Invoicedcents */
-            invoicedCents: number;
-            /** Paidcents */
-            paidCents: number;
-            /** Remainingcents */
-            remainingCents: number | null;
-            /** Specifiedcents */
-            specifiedCents: number;
-        };
         /** CategoryCreate */
         CategoryCreate: {
             /** Code */
-            code?: string | null;
+            code: string;
             /** Name */
             name: string;
-            /** Parentid */
-            parentId?: number | null;
             /**
              * Sortorder
              * @default 0
@@ -1555,15 +935,13 @@ export interface components {
             /** Archivedat */
             archivedAt: string | null;
             /** Code */
-            code: string | null;
+            code: string;
             /** Createdat */
             createdAt: string;
             /** Id */
             id: number;
             /** Name */
             name: string;
-            /** Parentid */
-            parentId: number | null;
             /** Sortorder */
             sortOrder: number;
             /** Updatedat */
@@ -1571,7 +949,7 @@ export interface components {
         };
         /**
          * CategoryUpdate
-         * @description Name and order only: code and parent are immutable (item codes depend on them, D6a.9).
+         * @description Name and order only: the code is immutable (item codes depend on it).
          */
         CategoryUpdate: {
             /** Name */
@@ -1681,92 +1059,6 @@ export interface components {
             /** Siren */
             siren?: string | null;
         };
-        /** DashboardProjectRead */
-        DashboardProjectRead: {
-            /**
-             * Alert
-             * @enum {string}
-             */
-            alert: "none" | "warning" | "over";
-            /** Approvedcents */
-            approvedCents: number;
-            /** Budgetcents */
-            budgetCents: number | null;
-            /** Clientname */
-            clientName: string;
-            /** Code */
-            code: string;
-            /** Draftlines */
-            draftLines: number;
-            /** Dueon */
-            dueOn: string | null;
-            /** Name */
-            name: string;
-            /** Onholdlines */
-            onHoldLines: number;
-            /** Overduelines */
-            overdueLines: number;
-            /** Projectid */
-            projectId: number;
-            /** Remainingcents */
-            remainingCents: number | null;
-            /** Specifiedcents */
-            specifiedCents: number;
-            /** Status */
-            status: string;
-        };
-        /** DeliveryCreate */
-        DeliveryCreate: {
-            /** Lines */
-            lines: components["schemas"]["DeliveryLineIn"][];
-            /** Notes */
-            notes?: string | null;
-            /** Receivedon */
-            receivedOn: string;
-            /** Reference */
-            reference?: string | null;
-        };
-        /** DeliveryLineIn */
-        DeliveryLineIn: {
-            /** Purchaseorderlineid */
-            purchaseOrderLineId: number;
-            /** Qtymilli */
-            qtyMilli: number;
-            /** Remarks */
-            remarks?: string | null;
-        };
-        /** DeliveryLineRead */
-        DeliveryLineRead: {
-            /** Id */
-            id: number;
-            /** Itemcode */
-            itemCode: string;
-            /** Purchaseorderlineid */
-            purchaseOrderLineId: number;
-            /** Qtymilli */
-            qtyMilli: number;
-            /** Remarks */
-            remarks: string | null;
-        };
-        /** DeliveryRead */
-        DeliveryRead: {
-            /** Createdat */
-            createdAt: string;
-            /** Id */
-            id: number;
-            /** Lines */
-            lines: components["schemas"]["DeliveryLineRead"][];
-            /** Notes */
-            notes: string | null;
-            /** Purchaseorderid */
-            purchaseOrderId: number;
-            /** Receivedon */
-            receivedOn: string;
-            /** Reference */
-            reference: string | null;
-            /** Updatedat */
-            updatedAt: string;
-        };
         /** EventRead */
         EventRead: {
             /** Changedat */
@@ -1835,188 +1127,6 @@ export interface components {
             /** Schemarevision */
             schemaRevision: string | null;
         };
-        /** ImportBatchRead */
-        ImportBatchRead: {
-            /** Fileid */
-            fileId: number;
-            /** Id */
-            id: number;
-            /** Importedat */
-            importedAt: string;
-            /** Originalname */
-            originalName: string;
-            /** Rowscreated */
-            rowsCreated: number;
-            /** Rowsdiscontinued */
-            rowsDiscontinued: number;
-            /** Rowsskipped */
-            rowsSkipped: number;
-            /** Rowstotal */
-            rowsTotal: number;
-            /** Rowsunchanged */
-            rowsUnchanged: number;
-            /** Rowsupdated */
-            rowsUpdated: number;
-            /** Supplierid */
-            supplierId: number;
-        };
-        /** ImportCommitRead */
-        ImportCommitRead: {
-            batch: components["schemas"]["ImportBatchRead"];
-            counts: components["schemas"]["ImportCounts"];
-            /** Createdproductids */
-            createdProductIds: number[];
-            /** Updatedproductids */
-            updatedProductIds: number[];
-        };
-        /** ImportCounts */
-        ImportCounts: {
-            /** Create */
-            create: number;
-            /**
-             * Discontinued
-             * @default 0
-             */
-            discontinued: number;
-            /** Skip */
-            skip: number;
-            /** Total */
-            total: number;
-            /** Unchanged */
-            unchanged: number;
-            /** Update */
-            update: number;
-        };
-        /** ImportMapping */
-        ImportMapping: {
-            /** Columns */
-            columns: {
-                [key: string]: string;
-            };
-            /** Currency */
-            currency?: string | null;
-            /** Defaultcategoryid */
-            defaultCategoryId?: number | null;
-            /**
-             * Taxmode
-             * @enum {string}
-             */
-            taxMode: "ht" | "ttc";
-            /** Vatbp */
-            vatBp?: number | null;
-        };
-        /** ImportPreviewRead */
-        ImportPreviewRead: {
-            /** Columns */
-            columns: string[];
-            counts: components["schemas"]["ImportCounts"];
-            /** Filename */
-            filename: string;
-            mapping: components["schemas"]["ImportMapping"];
-            /**
-             * Mappingsource
-             * @enum {string}
-             */
-            mappingSource: "given" | "saved" | "guessed";
-            /** Missingsupplierrefs */
-            missingSupplierRefs: string[];
-            /** Rows */
-            rows: components["schemas"]["PlanRowRead"][];
-            /** Sample */
-            sample: {
-                [key: string]: string;
-            }[];
-            /** Supplierid */
-            supplierId: number;
-        };
-        /** InvoiceCreate */
-        InvoiceCreate: {
-            /** Amounthtcents */
-            amountHtCents: number;
-            /** Dueon */
-            dueOn?: string | null;
-            /** Invoicedon */
-            invoicedOn: string;
-            /**
-             * Kind
-             * @default balance
-             * @enum {string}
-             */
-            kind: "deposit" | "balance" | "other";
-            /** Notes */
-            notes?: string | null;
-            /** Reference */
-            reference: string;
-            /**
-             * Vatcents
-             * @default 0
-             */
-            vatCents: number;
-        };
-        /** InvoicePay */
-        InvoicePay: {
-            /** Paidon */
-            paidOn: string;
-            /** Paymentref */
-            paymentRef?: string | null;
-        };
-        /** InvoiceRead */
-        InvoiceRead: {
-            /** Amounthtcents */
-            amountHtCents: number;
-            /** Amounthteurcents */
-            amountHtEurCents: number;
-            /** Createdat */
-            createdAt: string;
-            /** Dueon */
-            dueOn: string | null;
-            /** Id */
-            id: number;
-            /** Invoicedon */
-            invoicedOn: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "deposit" | "balance" | "other";
-            /** Notes */
-            notes: string | null;
-            /** Paidon */
-            paidOn: string | null;
-            /** Paymentref */
-            paymentRef: string | null;
-            /** Purchaseorderid */
-            purchaseOrderId: number;
-            /** Reference */
-            reference: string;
-            /** Ttccents */
-            ttcCents: number;
-            /** Updatedat */
-            updatedAt: string;
-            /** Vatcents */
-            vatCents: number;
-        };
-        /** InvoiceUpdate */
-        InvoiceUpdate: {
-            /** Amounthtcents */
-            amountHtCents?: number | null;
-            /** Dueon */
-            dueOn?: string | null;
-            /** Invoicedon */
-            invoicedOn?: string | null;
-            /** Kind */
-            kind?: ("deposit" | "balance" | "other") | null;
-            /** Notes */
-            notes?: string | null;
-            /** Paidon */
-            paidOn?: string | null;
-            /** Paymentref */
-            paymentRef?: string | null;
-            /** Reference */
-            reference?: string | null;
-            /** Vatcents */
-            vatCents?: number | null;
-        };
         /** ItemFileAttach */
         ItemFileAttach: {
             /** Caption */
@@ -2030,10 +1140,10 @@ export interface components {
             isPrimary: boolean;
             /**
              * Kind
-             * @default other
+             * @default image
              * @enum {string}
              */
-            kind: "image" | "quote" | "approval" | "drawing" | "other";
+            kind: "image" | "drawing" | "other";
             /**
              * Sortorder
              * @default 0
@@ -2054,7 +1164,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "image" | "quote" | "approval" | "drawing" | "other";
+            kind: "image" | "drawing" | "other";
             /** Mimetype */
             mimeType: string;
             /** Originalname */
@@ -2073,84 +1183,96 @@ export interface components {
             /** Isprimary */
             isPrimary?: boolean | null;
             /** Kind */
-            kind?: ("image" | "quote" | "approval" | "drawing" | "other") | null;
+            kind?: ("image" | "drawing" | "other") | null;
             /** Sortorder */
             sortOrder?: number | null;
         };
         /**
-         * ItemQuoteRead
-         * @description One row of the comparison of `GET /project-items/{id}/quotes`.
+         * LineAmountsRead
+         * @description Amounts of one article, computed by `money.py`, never stored.
          */
-        ItemQuoteRead: {
-            /** Currency */
-            currency: string;
-            /** Declined */
-            declined: boolean;
-            /** Description */
-            description: string | null;
-            /** Discountbp */
-            discountBp: number;
-            /** Fxratemicro */
-            fxRateMicro: number;
-            /** Leadtimeweeks */
-            leadTimeWeeks: number | null;
-            /** Netunitcents */
-            netUnitCents: number;
-            /** Netuniteurcents */
-            netUnitEurCents: number;
-            /** Quoteid */
-            quoteId: number;
-            /** Quotelineid */
-            quoteLineId: number;
-            /** Quotedon */
-            quotedOn: string | null;
-            /** Reference */
-            reference: string;
-            /** Retained */
-            retained: boolean;
-            /** Supplierid */
-            supplierId: number;
-            /** Suppliername */
-            supplierName: string;
-            /** Unitcostcents */
-            unitCostCents: number;
-            /** Validuntil */
-            validUntil: string | null;
-        };
-        /** LineAmountsRead */
         LineAmountsRead: {
-            /** Amountcounted */
-            amountCounted: boolean;
-            /** Approvedcents */
-            approvedCents: number | null;
             /** Counted */
             counted: boolean;
             /** Itemcode */
             itemCode: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
+            /** Kind */
+            kind: string;
             /** Netunitcents */
             netUnitCents: number;
             /** Netuniteurcents */
             netUnitEurCents: number;
-            /** Orderby */
-            orderBy: string | null;
-            /** Orderoverdue */
-            orderOverdue: boolean;
             /** Projectitemid */
             projectItemId: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
+            /** Status */
+            status: string;
             /** Totalhtcents */
             totalHtCents: number;
             /** Totalqtymilli */
             totalQtyMilli: number;
+        };
+        /** LocationCreate */
+        LocationCreate: {
+            /** Code */
+            code: string;
+            /** Level */
+            level?: string | null;
+            /**
+             * Multiplier
+             * @default 1
+             */
+            multiplier: number;
+            /** Name */
+            name: string;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Zone */
+            zone?: string | null;
+        };
+        /** LocationRead */
+        LocationRead: {
+            /** Archivedat */
+            archivedAt: string | null;
+            /** Code */
+            code: string;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Level */
+            level: string | null;
+            /** Multiplier */
+            multiplier: number;
+            /** Name */
+            name: string;
+            /** Projectid */
+            projectId: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+            /** Zone */
+            zone: string | null;
+        };
+        /** LocationReorder */
+        LocationReorder: {
+            /** Locationids */
+            locationIds: number[];
+        };
+        /** LocationUpdate */
+        LocationUpdate: {
+            /** Code */
+            code?: string | null;
+            /** Level */
+            level?: string | null;
+            /** Multiplier */
+            multiplier?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+            /** Zone */
+            zone?: string | null;
         };
         /** ManufacturerCreate */
         ManufacturerCreate: {
@@ -2210,8 +1332,8 @@ export interface components {
         };
         /** PlacementCreate */
         PlacementCreate: {
-            /** Notes */
-            notes?: string | null;
+            /** Locationid */
+            locationId?: number | null;
             /**
              * Qtymilli
              * @default 1000
@@ -2222,8 +1344,6 @@ export interface components {
              * @default 0
              */
             sortOrder: number;
-            /** Zoneid */
-            zoneId?: number | null;
         };
         /** PlacementRead */
         PlacementRead: {
@@ -2231,8 +1351,8 @@ export interface components {
             createdAt: string;
             /** Id */
             id: number;
-            /** Notes */
-            notes: string | null;
+            /** Locationid */
+            locationId: number | null;
             /** Projectitemid */
             projectItemId: number;
             /** Qtymilli */
@@ -2241,309 +1361,43 @@ export interface components {
             sortOrder: number;
             /** Updatedat */
             updatedAt: string;
-            /** Zoneid */
-            zoneId: number | null;
         };
         /** PlacementUpdate */
         PlacementUpdate: {
-            /** Notes */
-            notes?: string | null;
+            /** Locationid */
+            locationId?: number | null;
             /** Qtymilli */
             qtyMilli?: number | null;
             /** Sortorder */
             sortOrder?: number | null;
-            /** Zoneid */
-            zoneId?: number | null;
-        };
-        /** PlanRowRead */
-        PlanRowRead: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "create" | "update" | "unchanged" | "skip";
-            /** Finish */
-            finish: string | null;
-            /** Gtin */
-            gtin: string | null;
-            /** Leadtimeweeks */
-            leadTimeWeeks: number | null;
-            /** Manufacturername */
-            manufacturerName: string | null;
-            /** Manufacturerref */
-            manufacturerRef: string | null;
-            /** Matchedby */
-            matchedBy: string | null;
-            /** Name */
-            name: string | null;
-            /** Newpricecents */
-            newPriceCents: number | null;
-            /** Oldpricecents */
-            oldPriceCents: number | null;
-            /** Productid */
-            productId: number | null;
-            /** Reason */
-            reason: string | null;
-            /** Rowindex */
-            rowIndex: number;
-            /** Supplierref */
-            supplierRef: string | null;
-        };
-        /** PoCreate */
-        PoCreate: {
-            /** Expecteddeliveryon */
-            expectedDeliveryOn?: string | null;
-            /** Fxratemicro */
-            fxRateMicro?: number | null;
-            /**
-             * Itemids
-             * @default []
-             */
-            itemIds: number[];
-            /** Notes */
-            notes?: string | null;
-            /** Supplierid */
-            supplierId: number;
-        };
-        /** PoFileAttach */
-        PoFileAttach: {
-            /** Caption */
-            caption?: string | null;
-            /** Fileid */
-            fileId: number;
-        };
-        /** PoFileRead */
-        PoFileRead: {
-            /** Caption */
-            caption: string | null;
-            /** Ext */
-            ext: string;
-            /** Fileid */
-            fileId: number;
-            /** Mimetype */
-            mimeType: string;
-            /** Originalname */
-            originalName: string;
-            /** Sha256 */
-            sha256: string;
-            /** Sizebytes */
-            sizeBytes: number;
-        };
-        /** PoLineRead */
-        PoLineRead: {
-            /** Description */
-            description: string;
-            /** Discountbp */
-            discountBp: number;
-            /** Id */
-            id: number;
-            /** Itemcode */
-            itemCode: string;
-            /** Itemstatus */
-            itemStatus: string;
-            /** Netunitcents */
-            netUnitCents: number;
-            /** Netuniteurcents */
-            netUnitEurCents: number;
-            /** Projectitemid */
-            projectItemId: number;
-            /** Purchaseorderid */
-            purchaseOrderId: number;
-            /** Qtymilli */
-            qtyMilli: number;
-            /** Receivedqtymilli */
-            receivedQtyMilli: number;
-            /** Sortorder */
-            sortOrder: number;
-            /** Totalcents */
-            totalCents: number;
-            /** Totaleurcents */
-            totalEurCents: number;
-            /** Unitcostcents */
-            unitCostCents: number;
-            /** Vatratebp */
-            vatRateBp: number;
-        };
-        /** PoLineUpdate */
-        PoLineUpdate: {
-            /** Description */
-            description?: string | null;
-            /** Discountbp */
-            discountBp?: number | null;
-            /** Qtymilli */
-            qtyMilli?: number | null;
-            /** Sortorder */
-            sortOrder?: number | null;
-            /** Unitcostcents */
-            unitCostCents?: number | null;
-            /** Vatratebp */
-            vatRateBp?: number | null;
-        };
-        /** PoLinesAdd */
-        PoLinesAdd: {
-            /** Itemids */
-            itemIds: number[];
-        };
-        /** PoRead */
-        PoRead: {
-            /** Createdat */
-            createdAt: string;
-            /** Currency */
-            currency: string;
-            /** Deliveriescount */
-            deliveriesCount: number;
-            /** Deliveryaddress */
-            deliveryAddress: string | null;
-            /** Deliverycontact */
-            deliveryContact: string | null;
-            /** Expecteddeliveryon */
-            expectedDeliveryOn: string | null;
-            /** Files */
-            files: components["schemas"]["PoFileRead"][];
-            /** Fxratemicro */
-            fxRateMicro: number;
-            /** Id */
-            id: number;
-            /** Internalnotes */
-            internalNotes: string | null;
-            /** Invoicedhtcents */
-            invoicedHtCents: number;
-            /** Issuedon */
-            issuedOn: string | null;
-            /** Lines */
-            lines: components["schemas"]["PoLineRead"][];
-            /** Notes */
-            notes: string | null;
-            /** Number */
-            number: string;
-            /** Paidhtcents */
-            paidHtCents: number;
-            /** Paymentterms */
-            paymentTerms: string | null;
-            /** Projectid */
-            projectId: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "draft" | "issued" | "acknowledged" | "partially_delivered" | "closed" | "cancelled";
-            /** Supplierid */
-            supplierId: number;
-            /** Suppliername */
-            supplierName: string;
-            /** Supplierref */
-            supplierRef: string | null;
-            /** Totalcents */
-            totalCents: number;
-            /** Totaleurcents */
-            totalEurCents: number;
-            /** Ttceurcents */
-            ttcEurCents: number;
-            /** Updatedat */
-            updatedAt: string;
-            /** Vatbyratebp */
-            vatByRateBp: {
-                [key: string]: number;
-            };
-            /** Vatcents */
-            vatCents: number;
-        };
-        /** PoStatusChange */
-        PoStatusChange: {
-            /** Note */
-            note?: string | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "acknowledged" | "closed" | "cancelled";
-        };
-        /** PoUpdate */
-        PoUpdate: {
-            /** Deliveryaddress */
-            deliveryAddress?: string | null;
-            /** Deliverycontact */
-            deliveryContact?: string | null;
-            /** Expecteddeliveryon */
-            expectedDeliveryOn?: string | null;
-            /** Internalnotes */
-            internalNotes?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Paymentterms */
-            paymentTerms?: string | null;
-            /** Supplierref */
-            supplierRef?: string | null;
         };
         /** ProductCreate */
         ProductCreate: {
             /** Categoryid */
             categoryId: number;
-            /** Color */
-            color?: string | null;
-            /** Depthmm */
-            depthMm?: number | null;
-            /** Description */
-            description?: string | null;
-            /** Diametermm */
-            diameterMm?: number | null;
-            /** Discontinuedon */
-            discontinuedOn?: string | null;
-            /** Finish */
-            finish?: string | null;
-            /** Gtin */
-            gtin?: string | null;
-            /** Heightmm */
-            heightMm?: number | null;
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
-            /** Listpricecents */
-            listPriceCents?: number | null;
             /**
-             * Listpricecurrency
+             * Currency
              * @default EUR
              */
-            listPriceCurrency: string;
-            /** Listpriceon */
-            listPriceOn?: string | null;
-            /**
-             * Listpricetaxmode
-             * @default ht
-             * @enum {string}
-             */
-            listPriceTaxMode: "ht" | "ttc";
-            /** Listpricevatbp */
-            listPriceVatBp?: number | null;
+            currency: string;
+            /** Dimensions */
+            dimensions?: string | null;
+            /** Finish */
+            finish?: string | null;
+            /** Listpricecents */
+            listPriceCents?: number | null;
             /** Manufacturerid */
             manufacturerId?: number | null;
-            /** Manufacturerref */
-            manufacturerRef?: string | null;
-            /** Materials */
-            materials?: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes?: string | null;
-            /**
-             * Sourcekind
-             * @default manual
-             * @enum {string}
-             */
-            sourceKind: "manual" | "url" | "import";
+            /** Reference */
+            reference?: string | null;
             /** Sourceurl */
             sourceUrl?: string | null;
             /** Supplierid */
             supplierId?: number | null;
-            /** Supplierref */
-            supplierRef?: string | null;
-            /**
-             * Unit
-             * @default piece
-             * @enum {string}
-             */
-            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
-            /** Widthmm */
-            widthMm?: number | null;
         };
         /** ProductFileAttach */
         ProductFileAttach: {
@@ -2615,128 +1469,59 @@ export interface components {
             archivedAt: string | null;
             /** Categoryid */
             categoryId: number;
-            /** Color */
-            color: string | null;
             /** Createdat */
             createdAt: string;
-            /** Depthmm */
-            depthMm: number | null;
-            /** Description */
-            description: string | null;
-            /** Diametermm */
-            diameterMm: number | null;
-            /** Discontinuedon */
-            discontinuedOn: string | null;
+            /** Currency */
+            currency: string;
+            /** Dimensions */
+            dimensions: string | null;
             /** Files */
             files: components["schemas"]["ProductFileRead"][];
             /** Finish */
             finish: string | null;
-            /** Gtin */
-            gtin: string | null;
-            /** Heightmm */
-            heightMm: number | null;
             /** Id */
             id: number;
-            /** Leadtimeweeks */
-            leadTimeWeeks: number | null;
             /** Listpricecents */
             listPriceCents: number | null;
-            /** Listpricecurrency */
-            listPriceCurrency: string;
-            /** Listpriceon */
-            listPriceOn: string | null;
-            /**
-             * Listpricetaxmode
-             * @enum {string}
-             */
-            listPriceTaxMode: "ht" | "ttc";
-            /** Listpricevatbp */
-            listPriceVatBp: number | null;
             /** Manufacturerid */
             manufacturerId: number | null;
-            /** Manufacturerref */
-            manufacturerRef: string | null;
-            /** Materials */
-            materials: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes: string | null;
-            /**
-             * Sourcekind
-             * @enum {string}
-             */
-            sourceKind: "manual" | "url" | "import";
+            /** Reference */
+            reference: string | null;
             /** Sourceurl */
             sourceUrl: string | null;
             /** Supplierid */
             supplierId: number | null;
-            /** Supplierref */
-            supplierRef: string | null;
-            /**
-             * Unit
-             * @enum {string}
-             */
-            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
             /** Updatedat */
             updatedAt: string;
-            /** Widthmm */
-            widthMm: number | null;
         };
         /** ProductUpdate */
         ProductUpdate: {
             /** Categoryid */
             categoryId?: number | null;
-            /** Color */
-            color?: string | null;
-            /** Depthmm */
-            depthMm?: number | null;
-            /** Description */
-            description?: string | null;
-            /** Diametermm */
-            diameterMm?: number | null;
-            /** Discontinuedon */
-            discontinuedOn?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Dimensions */
+            dimensions?: string | null;
             /** Finish */
             finish?: string | null;
-            /** Gtin */
-            gtin?: string | null;
-            /** Heightmm */
-            heightMm?: number | null;
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
             /** Listpricecents */
             listPriceCents?: number | null;
-            /** Listpricecurrency */
-            listPriceCurrency?: string | null;
-            /** Listpriceon */
-            listPriceOn?: string | null;
-            /** Listpricetaxmode */
-            listPriceTaxMode?: ("ht" | "ttc") | null;
-            /** Listpricevatbp */
-            listPriceVatBp?: number | null;
             /** Manufacturerid */
             manufacturerId?: number | null;
-            /** Manufacturerref */
-            manufacturerRef?: string | null;
-            /** Materials */
-            materials?: string | null;
             /** Name */
             name?: string | null;
             /** Notes */
             notes?: string | null;
-            /** Sourcekind */
-            sourceKind?: ("manual" | "url" | "import") | null;
+            /** Reference */
+            reference?: string | null;
             /** Sourceurl */
             sourceUrl?: string | null;
             /** Supplierid */
             supplierId?: number | null;
-            /** Supplierref */
-            supplierRef?: string | null;
-            /** Unit */
-            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
-            /** Widthmm */
-            widthMm?: number | null;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -2744,14 +1529,6 @@ export interface components {
             clientId: number;
             /** Code */
             code?: string | null;
-            /** Contingencybp */
-            contingencyBp?: number | null;
-            /** Defaultvatbp */
-            defaultVatBp?: number | null;
-            /** Deliveryaddress */
-            deliveryAddress?: string | null;
-            /** Deliverycontact */
-            deliveryContact?: string | null;
             /** Dueon */
             dueOn?: string | null;
             /** Globalbudgetcents */
@@ -2762,8 +1539,6 @@ export interface components {
             notes?: string | null;
             /** Siteaddress */
             siteAddress?: string | null;
-            /** Starton */
-            startOn?: string | null;
         };
         /** ProjectFileRead */
         ProjectFileRead: {
@@ -2779,251 +1554,230 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "schedule_xlsx" | "book_pdf";
+            kind: "sheets_pdf" | "list_pdf";
             /** Originalname */
             originalName: string;
             /** Projectid */
             projectId: number;
             /** Sizebytes */
             sizeBytes: number;
-            /**
-             * Variant
-             * @enum {string}
-             */
-            variant: "internal" | "client";
         };
-        /** ProjectItemCreate */
+        /**
+         * ProjectItemCreate
+         * @description From a catalogue product (`productId`: every absent field is copied) or free. A free
+         *     article is added to the catalogue unless `addToCatalogue` is false (ADR-0013).
+         */
         ProjectItemCreate: {
+            /**
+             * Addtocatalogue
+             * @default true
+             */
+            addToCatalogue: boolean;
             /** Categoryid */
             categoryId?: number | null;
-            /** Clientdescription */
-            clientDescription?: string | null;
-            /** Color */
-            color?: string | null;
+            /** Comments */
+            comments?: string | null;
             /** Currency */
             currency?: string | null;
-            /** Depthmm */
-            depthMm?: number | null;
-            /** Diametermm */
-            diameterMm?: number | null;
+            /** Dimensions */
+            dimensions?: string | null;
             /** Discountbp */
             discountBp?: number | null;
-            /** Expecteddeliveryon */
-            expectedDeliveryOn?: string | null;
+            /** Family */
+            family?: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
             /** Finish */
             finish?: string | null;
             /** Fxratemicro */
             fxRateMicro?: number | null;
-            /** Heightmm */
-            heightMm?: number | null;
-            /** Internalnotes */
-            internalNotes?: string | null;
             /** Itemcode */
             itemCode?: string | null;
             /**
              * Kind
-             * @default ffe
+             * @default product
              * @enum {string}
              */
-            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
-            /** Location */
-            location?: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
-            /** Materials */
-            materials?: string | null;
+            kind: "product" | "fee";
+            /** Manufacturerid */
+            manufacturerId?: number | null;
             /** Name */
             name?: string | null;
             /** Placements */
             placements?: components["schemas"]["PlacementCreate"][] | null;
             /** Productid */
             productId?: number | null;
+            /** Quoteindice */
+            quoteIndice?: string | null;
             /** Quoteref */
             quoteRef?: string | null;
-            /** Quotevaliduntil */
-            quoteValidUntil?: string | null;
-            /** Quotedon */
-            quotedOn?: string | null;
-            /** Requiredonsite */
-            requiredOnSite?: string | null;
+            /** Quoteurl */
+            quoteUrl?: string | null;
+            /** Reference */
+            reference?: string | null;
             /**
              * Sortorder
              * @default 0
              */
             sortOrder: number;
+            /** Sourceurl */
+            sourceUrl?: string | null;
             /** Supplierid */
             supplierId?: number | null;
-            /** Unit */
-            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
             /** Unitcostcents */
             unitCostCents?: number | null;
-            /** Vatratebp */
-            vatRateBp?: number | null;
-            /** Widthmm */
-            widthMm?: number | null;
+            /** Usage */
+            usage?: ("indoor" | "outdoor") | null;
         };
         /** ProjectItemRead */
         ProjectItemRead: {
-            /** Approvedat */
-            approvedAt: string | null;
-            /** Approvedtotalqtymilli */
-            approvedTotalQtyMilli: number | null;
-            /** Approvedunitnetcents */
-            approvedUnitNetCents: number | null;
             /** Categoryid */
-            categoryId: number;
-            /** Clientdescription */
-            clientDescription: string | null;
-            /** Color */
-            color: string | null;
+            categoryId: number | null;
+            /** Comments */
+            comments: string | null;
             /** Createdat */
             createdAt: string;
             /** Currency */
             currency: string;
-            /** Depthmm */
-            depthMm: number | null;
-            /** Diametermm */
-            diameterMm: number | null;
+            /** Dimensions */
+            dimensions: string | null;
             /** Discountbp */
             discountBp: number;
-            /** Expecteddeliveryon */
-            expectedDeliveryOn: string | null;
+            /** Family */
+            family: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
             /** Files */
             files: components["schemas"]["ItemFileRead"][];
             /** Finish */
             finish: string | null;
             /** Fxratemicro */
             fxRateMicro: number;
-            /** Heightmm */
-            heightMm: number | null;
             /** Id */
             id: number;
             /** Indice */
             indice: string | null;
-            /** Internalnotes */
-            internalNotes: string | null;
             /** Itemcode */
             itemCode: string;
             /**
              * Kind
              * @enum {string}
              */
-            kind: "ffe" | "ose" | "custom" | "existing" | "fee";
-            /** Leadtimeweeks */
-            leadTimeWeeks: number | null;
-            /** Location */
-            location: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
-            /** Materials */
-            materials: string | null;
+            kind: "product" | "fee";
+            /** Manufacturerid */
+            manufacturerId: number | null;
             /** Name */
             name: string;
-            /** Onhold */
-            onHold: boolean;
-            /** Orderref */
-            orderRef: string | null;
             /** Placements */
             placements: components["schemas"]["PlacementRead"][];
             /** Productid */
             productId: number | null;
             /** Projectid */
             projectId: number;
+            /** Quoteindice */
+            quoteIndice: string | null;
             /** Quoteref */
             quoteRef: string | null;
-            /** Quotevaliduntil */
-            quoteValidUntil: string | null;
-            /** Quotedon */
-            quotedOn: string | null;
-            /** Replacedbyid */
-            replacedById: number | null;
-            /** Requiredonsite */
-            requiredOnSite: string | null;
+            /** Quoteurl */
+            quoteUrl: string | null;
+            /** Reference */
+            reference: string | null;
             /** Sortorder */
             sortOrder: number;
+            /** Sourceurl */
+            sourceUrl: string | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
+            status: "to_quote" | "quoted" | "to_review" | "approved" | "deposit" | "purchased" | "cancelled";
             /** Supplierid */
             supplierId: number | null;
-            /**
-             * Unit
-             * @enum {string}
-             */
-            unit: "piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll";
             /** Unitcostcents */
             unitCostCents: number;
             /** Updatedat */
             updatedAt: string;
-            /** Vatratebp */
-            vatRateBp: number;
-            /** Widthmm */
-            widthMm: number | null;
+            /** Usage */
+            usage: ("indoor" | "outdoor") | null;
         };
-        /** ProjectItemUpdate */
+        /**
+         * ProjectItemUpdate
+         * @description Absent = unchanged. `status` never here (POST …/status), placements have their own routes.
+         */
         ProjectItemUpdate: {
             /** Categoryid */
             categoryId?: number | null;
-            /** Clientdescription */
-            clientDescription?: string | null;
-            /** Color */
-            color?: string | null;
+            /** Comments */
+            comments?: string | null;
             /** Currency */
             currency?: string | null;
-            /** Depthmm */
-            depthMm?: number | null;
-            /** Diametermm */
-            diameterMm?: number | null;
+            /** Dimensions */
+            dimensions?: string | null;
             /** Discountbp */
             discountBp?: number | null;
-            /** Expecteddeliveryon */
-            expectedDeliveryOn?: string | null;
+            /** Family */
+            family?: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
             /** Finish */
             finish?: string | null;
             /** Fxratemicro */
             fxRateMicro?: number | null;
-            /** Heightmm */
-            heightMm?: number | null;
-            /** Internalnotes */
-            internalNotes?: string | null;
             /** Itemcode */
             itemCode?: string | null;
-            /** Kind */
-            kind?: ("ffe" | "ose" | "custom" | "existing" | "fee") | null;
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
-            /** Location */
-            location?: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
-            /** Materials */
-            materials?: string | null;
+            /** Manufacturerid */
+            manufacturerId?: number | null;
             /** Name */
             name?: string | null;
-            /** Onhold */
-            onHold?: boolean | null;
-            /** Orderref */
-            orderRef?: string | null;
             /** Productid */
             productId?: number | null;
+            /** Quoteindice */
+            quoteIndice?: string | null;
             /** Quoteref */
             quoteRef?: string | null;
-            /** Quotevaliduntil */
-            quoteValidUntil?: string | null;
-            /** Quotedon */
-            quotedOn?: string | null;
-            /** Requiredonsite */
-            requiredOnSite?: string | null;
+            /** Quoteurl */
+            quoteUrl?: string | null;
+            /** Reference */
+            reference?: string | null;
             /** Sortorder */
             sortOrder?: number | null;
+            /** Sourceurl */
+            sourceUrl?: string | null;
             /** Supplierid */
             supplierId?: number | null;
-            /** Unit */
-            unit?: ("piece" | "pair" | "set" | "lot" | "m" | "m2" | "roll") | null;
             /** Unitcostcents */
             unitCostCents?: number | null;
-            /** Vatratebp */
-            vatRateBp?: number | null;
-            /** Widthmm */
-            widthMm?: number | null;
+            /** Usage */
+            usage?: ("indoor" | "outdoor") | null;
+        };
+        /**
+         * ProjectListRead
+         * @description A row of the projects list: the project plus its budget figures (computed, never stored).
+         */
+        ProjectListRead: {
+            /** Budgetcents */
+            budgetCents: number | null;
+            /** Clientid */
+            clientId: number;
+            /** Code */
+            code: string;
+            /** Createdat */
+            createdAt: string;
+            /** Dueon */
+            dueOn: string | null;
+            /** Id */
+            id: number;
+            /** Itemcount */
+            itemCount: number;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /** Siteaddress */
+            siteAddress: string | null;
+            /** Specifiedcents */
+            specifiedCents: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "prospect" | "active" | "delivered" | "closed" | "cancelled";
+            /** Updatedat */
+            updatedAt: string;
         };
         /** ProjectRead */
         ProjectRead: {
@@ -3031,16 +1785,8 @@ export interface components {
             clientId: number;
             /** Code */
             code: string;
-            /** Contingencybp */
-            contingencyBp: number;
             /** Createdat */
             createdAt: string;
-            /** Defaultvatbp */
-            defaultVatBp: number;
-            /** Deliveryaddress */
-            deliveryAddress: string | null;
-            /** Deliverycontact */
-            deliveryContact: string | null;
             /** Dueon */
             dueOn: string | null;
             /** Id */
@@ -3051,8 +1797,6 @@ export interface components {
             notes: string | null;
             /** Siteaddress */
             siteAddress: string | null;
-            /** Starton */
-            startOn: string | null;
             /**
              * Status
              * @enum {string}
@@ -3071,27 +1815,37 @@ export interface components {
         };
         /** ProjectSummaryRead */
         ProjectSummaryRead: {
+            /**
+             * Alert
+             * @enum {string}
+             */
+            alert: "none" | "warning" | "over";
             /** Approvedcents */
             approvedCents: number;
-            budget?: components["schemas"]["BudgetSummaryRead"] | null;
+            /** Budgetcents */
+            budgetCents: number | null;
+            /** Byfamily */
+            byFamily: components["schemas"]["SummaryRowRead"][];
+            /** Bylocation */
+            byLocation: components["schemas"]["SummaryRowRead"][];
+            /** Bystatus */
+            byStatus: components["schemas"]["StatusShareRead"][];
+            /** Bysupplier */
+            bySupplier: components["schemas"]["SummaryRowRead"][];
+            /** Bytype */
+            byType: components["schemas"]["SummaryRowRead"][];
+            /** Byzone */
+            byZone: components["schemas"]["SummaryRowRead"][];
             /** Lines */
             lines: components["schemas"]["LineAmountsRead"][];
-            /** Osecents */
-            oseCents: number;
             /** Projectid */
             projectId: number;
+            /** Quotedcents */
+            quotedCents: number;
+            /** Remainingcents */
+            remainingCents: number | null;
             /** Specifiedcents */
             specifiedCents: number;
-            /** Ttccents */
-            ttcCents: number;
-            /** Vatbyratebp */
-            vatByRateBp: {
-                [key: string]: number;
-            };
-            /** Vatcents */
-            vatCents: number;
-            /** Zones */
-            zones: components["schemas"]["ZoneAmountsRead"][];
         };
         /** ProjectUpdate */
         ProjectUpdate: {
@@ -3099,14 +1853,6 @@ export interface components {
             clientId?: number | null;
             /** Code */
             code?: string | null;
-            /** Contingencybp */
-            contingencyBp?: number | null;
-            /** Defaultvatbp */
-            defaultVatBp?: number | null;
-            /** Deliveryaddress */
-            deliveryAddress?: string | null;
-            /** Deliverycontact */
-            deliveryContact?: string | null;
             /** Dueon */
             dueOn?: string | null;
             /** Name */
@@ -3115,186 +1861,6 @@ export interface components {
             notes?: string | null;
             /** Siteaddress */
             siteAddress?: string | null;
-            /** Starton */
-            startOn?: string | null;
-        };
-        /** QuoteCreate */
-        QuoteCreate: {
-            /** Currency */
-            currency?: string | null;
-            /** Fxratemicro */
-            fxRateMicro?: number | null;
-            /**
-             * Lines
-             * @default []
-             */
-            lines: components["schemas"]["QuoteLineCreate"][];
-            /** Notes */
-            notes?: string | null;
-            /** Quotedon */
-            quotedOn?: string | null;
-            /** Reference */
-            reference: string;
-            /** Supplierid */
-            supplierId: number;
-            /** Validuntil */
-            validUntil?: string | null;
-        };
-        /** QuoteFileAttach */
-        QuoteFileAttach: {
-            /** Caption */
-            caption?: string | null;
-            /** Fileid */
-            fileId: number;
-        };
-        /** QuoteFileRead */
-        QuoteFileRead: {
-            /** Caption */
-            caption: string | null;
-            /** Ext */
-            ext: string;
-            /** Fileid */
-            fileId: number;
-            /** Mimetype */
-            mimeType: string;
-            /** Originalname */
-            originalName: string;
-            /** Sha256 */
-            sha256: string;
-            /** Sizebytes */
-            sizeBytes: number;
-        };
-        /** QuoteLineCreate */
-        QuoteLineCreate: {
-            /** Description */
-            description?: string | null;
-            /**
-             * Discountbp
-             * @default 0
-             */
-            discountBp: number;
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
-            /** Notes */
-            notes?: string | null;
-            /** Projectitemid */
-            projectItemId: number;
-            /** Unitcostcents */
-            unitCostCents: number;
-        };
-        /** QuoteLineRead */
-        QuoteLineRead: {
-            /** Createdat */
-            createdAt: string;
-            /** Description */
-            description: string | null;
-            /** Discountbp */
-            discountBp: number;
-            /** Id */
-            id: number;
-            /** Itemcode */
-            itemCode: string;
-            /** Itemname */
-            itemName: string;
-            /** Leadtimeweeks */
-            leadTimeWeeks: number | null;
-            /** Netunitcents */
-            netUnitCents: number;
-            /** Netuniteurcents */
-            netUnitEurCents: number;
-            /** Notes */
-            notes: string | null;
-            /** Projectitemid */
-            projectItemId: number;
-            /** Quoteid */
-            quoteId: number;
-            /** Retainedat */
-            retainedAt: string | null;
-            /** Unitcostcents */
-            unitCostCents: number;
-            /** Updatedat */
-            updatedAt: string;
-        };
-        /** QuoteLineUpdate */
-        QuoteLineUpdate: {
-            /** Description */
-            description?: string | null;
-            /** Discountbp */
-            discountBp?: number | null;
-            /** Leadtimeweeks */
-            leadTimeWeeks?: number | null;
-            /** Notes */
-            notes?: string | null;
-            /** Unitcostcents */
-            unitCostCents?: number | null;
-        };
-        /** QuoteRead */
-        QuoteRead: {
-            /** Createdat */
-            createdAt: string;
-            /** Currency */
-            currency: string;
-            /** Declinedat */
-            declinedAt: string | null;
-            /** Files */
-            files: components["schemas"]["QuoteFileRead"][];
-            /** Fxratemicro */
-            fxRateMicro: number;
-            /** Id */
-            id: number;
-            /** Lines */
-            lines: components["schemas"]["QuoteLineRead"][];
-            /** Notes */
-            notes: string | null;
-            /** Projectid */
-            projectId: number;
-            /** Quotedon */
-            quotedOn: string | null;
-            /** Reference */
-            reference: string;
-            /** Retainedcount */
-            retainedCount: number;
-            /** Supplierid */
-            supplierId: number;
-            /** Suppliername */
-            supplierName: string;
-            /** Updatedat */
-            updatedAt: string;
-            /** Validuntil */
-            validUntil: string | null;
-        };
-        /** QuoteUpdate */
-        QuoteUpdate: {
-            /** Fxratemicro */
-            fxRateMicro?: number | null;
-            /** Notes */
-            notes?: string | null;
-            /** Quotedon */
-            quotedOn?: string | null;
-            /** Reference */
-            reference?: string | null;
-            /** Validuntil */
-            validUntil?: string | null;
-        };
-        /**
-         * ReplaceProduct
-         * @description « Remplacer le produit » from `approved`: a new line takes the code, the old one is `replaced`.
-         */
-        ReplaceProduct: {
-            /** Currency */
-            currency?: string | null;
-            /** Discountbp */
-            discountBp?: number | null;
-            /** Fxratemicro */
-            fxRateMicro?: number | null;
-            /** Note */
-            note?: string | null;
-            /** Productid */
-            productId: number;
-            /** Supplierid */
-            supplierId?: number | null;
-            /** Unitcostcents */
-            unitCostCents?: number | null;
         };
         /** SettingRead */
         SettingRead: {
@@ -3306,18 +1872,10 @@ export interface components {
             agencyName: string;
             /** Agencyphone */
             agencyPhone: string | null;
-            /** Agencysiret */
-            agencySiret: string | null;
-            /** Agencyvatnumber */
-            agencyVatNumber: string | null;
             /** Basecurrency */
             baseCurrency: string;
             /** Createdat */
             createdAt: string;
-            /** Defaultcontingencybp */
-            defaultContingencyBp: number;
-            /** Defaultvatbp */
-            defaultVatBp: number;
             /** Id */
             id: number;
             /** Projectcodeprefix */
@@ -3337,14 +1895,6 @@ export interface components {
             agencyName?: string | null;
             /** Agencyphone */
             agencyPhone?: string | null;
-            /** Agencysiret */
-            agencySiret?: string | null;
-            /** Agencyvatnumber */
-            agencyVatNumber?: string | null;
-            /** Defaultcontingencybp */
-            defaultContingencyBp?: number | null;
-            /** Defaultvatbp */
-            defaultVatBp?: number | null;
             /** Projectcodeprefix */
             projectCodePrefix?: string | null;
         };
@@ -3356,23 +1906,48 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced";
+            status: "to_quote" | "quoted" | "to_review" | "approved" | "deposit" | "purchased" | "cancelled";
+        };
+        /** StatusShareRead */
+        StatusShareRead: {
+            /** Amountcents */
+            amountCents: number;
+            /** Count */
+            count: number;
+            /** Sharebp */
+            shareBp: number;
+            /** Status */
+            status: string;
+        };
+        /**
+         * SummaryRowRead
+         * @description One row of a compilation (by location, zone, family, type or supplier).
+         */
+        SummaryRowRead: {
+            /**
+             * Alert
+             * @enum {string}
+             */
+            alert: "none" | "warning" | "over";
+            /** Approvedcents */
+            approvedCents: number;
+            /** Budgetcents */
+            budgetCents: number | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Quotedcents */
+            quotedCents: number;
+            /** Remainingcents */
+            remainingCents: number | null;
+            /** Specifiedcents */
+            specifiedCents: number;
         };
         /** SupplierCreate */
         SupplierCreate: {
-            /** Addressline1 */
-            addressLine1?: string | null;
-            /** Addressline2 */
-            addressLine2?: string | null;
-            /** City */
-            city?: string | null;
             /** Contactname */
             contactName?: string | null;
-            /**
-             * Countrycode
-             * @default FR
-             */
-            countryCode: string;
             /**
              * Currency
              * @default EUR
@@ -3385,41 +1960,21 @@ export interface components {
             defaultDiscountBp: number;
             /** Email */
             email?: string | null;
-            /** Legalname */
-            legalName?: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes?: string | null;
-            /** Paymentterms */
-            paymentTerms?: string | null;
             /** Phone */
             phone?: string | null;
-            /** Postalcode */
-            postalCode?: string | null;
-            /** Siren */
-            siren?: string | null;
-            /** Siret */
-            siret?: string | null;
-            /** Vatnumber */
-            vatNumber?: string | null;
             /** Website */
             website?: string | null;
         };
         /** SupplierRead */
         SupplierRead: {
-            /** Addressline1 */
-            addressLine1: string | null;
-            /** Addressline2 */
-            addressLine2: string | null;
             /** Archivedat */
             archivedAt: string | null;
-            /** City */
-            city: string | null;
             /** Contactname */
             contactName: string | null;
-            /** Countrycode */
-            countryCode: string;
             /** Createdat */
             createdAt: string;
             /** Currency */
@@ -3430,65 +1985,33 @@ export interface components {
             email: string | null;
             /** Id */
             id: number;
-            /** Legalname */
-            legalName: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes: string | null;
-            /** Paymentterms */
-            paymentTerms: string | null;
             /** Phone */
             phone: string | null;
-            /** Postalcode */
-            postalCode: string | null;
-            /** Siren */
-            siren: string | null;
-            /** Siret */
-            siret: string | null;
             /** Updatedat */
             updatedAt: string;
-            /** Vatnumber */
-            vatNumber: string | null;
             /** Website */
             website: string | null;
         };
         /** SupplierUpdate */
         SupplierUpdate: {
-            /** Addressline1 */
-            addressLine1?: string | null;
-            /** Addressline2 */
-            addressLine2?: string | null;
-            /** City */
-            city?: string | null;
             /** Contactname */
             contactName?: string | null;
-            /** Countrycode */
-            countryCode?: string | null;
             /** Currency */
             currency?: string | null;
             /** Defaultdiscountbp */
             defaultDiscountBp?: number | null;
             /** Email */
             email?: string | null;
-            /** Legalname */
-            legalName?: string | null;
             /** Name */
             name?: string | null;
             /** Notes */
             notes?: string | null;
-            /** Paymentterms */
-            paymentTerms?: string | null;
             /** Phone */
             phone?: string | null;
-            /** Postalcode */
-            postalCode?: string | null;
-            /** Siren */
-            siren?: string | null;
-            /** Siret */
-            siret?: string | null;
-            /** Vatnumber */
-            vatNumber?: string | null;
             /** Website */
             website?: string | null;
         };
@@ -3504,82 +2027,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-        };
-        /** ZoneAmountsRead */
-        ZoneAmountsRead: {
-            /** Multiplier */
-            multiplier: number;
-            /** Specifiedcents */
-            specifiedCents: number;
-            /** Zonecode */
-            zoneCode: string | null;
-            /** Zoneid */
-            zoneId: number | null;
-            /** Zonename */
-            zoneName: string;
-        };
-        /** ZoneCreate */
-        ZoneCreate: {
-            /** Code */
-            code: string;
-            /** Kind */
-            kind?: string | null;
-            /**
-             * Multiplier
-             * @default 1
-             */
-            multiplier: number;
-            /** Name */
-            name: string;
-            /** Notes */
-            notes?: string | null;
-            /** Sortorder */
-            sortOrder?: number | null;
-        };
-        /** ZoneRead */
-        ZoneRead: {
-            /** Archivedat */
-            archivedAt: string | null;
-            /** Code */
-            code: string;
-            /** Createdat */
-            createdAt: string;
-            /** Id */
-            id: number;
-            /** Kind */
-            kind: string | null;
-            /** Multiplier */
-            multiplier: number;
-            /** Name */
-            name: string;
-            /** Notes */
-            notes: string | null;
-            /** Projectid */
-            projectId: number;
-            /** Sortorder */
-            sortOrder: number;
-            /** Updatedat */
-            updatedAt: string;
-        };
-        /** ZoneReorder */
-        ZoneReorder: {
-            /** Zoneids */
-            zoneIds: number[];
-        };
-        /** ZoneUpdate */
-        ZoneUpdate: {
-            /** Code */
-            code?: string | null;
-            /** Kind */
-            kind?: string | null;
-            /** Multiplier */
-            multiplier?: number | null;
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Sortorder */
-            sortOrder?: number | null;
         };
     };
     responses: never;
@@ -3977,57 +2424,6 @@ export interface operations {
             };
         };
     };
-    getDashboard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardProjectRead"][];
-                };
-            };
-        };
-    };
-    deleteDelivery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                delivery_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     uploadFile: {
         parameters: {
             query?: never;
@@ -4119,140 +2515,43 @@ export interface operations {
             };
         };
     };
-    listProductImportBatches: {
-        parameters: {
-            query?: {
-                supplierId?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportBatchRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    commitProductImport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_commitProductImport"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportCommitRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getProductImportMapping: {
-        parameters: {
-            query: {
-                supplierId: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportMapping"] | null;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    previewProductImport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_previewProductImport"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportPreviewRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deleteInvoice: {
+    getLocation: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                invoice_id: number;
+                location_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: number;
             };
             cookie?: never;
         };
@@ -4276,18 +2575,18 @@ export interface operations {
             };
         };
     };
-    updateInvoice: {
+    updateLocation: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                invoice_id: number;
+                location_id: number;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceUpdate"];
+                "application/json": components["schemas"]["LocationUpdate"];
             };
         };
         responses: {
@@ -4297,7 +2596,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceRead"];
+                    "application/json": components["schemas"]["LocationRead"];
                 };
             };
             /** @description Validation Error */
@@ -4311,20 +2610,16 @@ export interface operations {
             };
         };
     };
-    payInvoice: {
+    archiveLocation: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                invoice_id: number;
+                location_id: number;
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InvoicePay"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -4332,7 +2627,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceRead"];
+                    "application/json": components["schemas"]["LocationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchiveLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationRead"];
                 };
             };
             /** @description Validation Error */
@@ -5176,103 +3502,6 @@ export interface operations {
             };
         };
     };
-    listProjectItemQuotes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ItemQuoteRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    refreshProjectItemFromCatalogue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    replaceProjectItemProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReplaceProduct"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     changeProjectItemStatus: {
         parameters: {
             query?: never;
@@ -5326,7 +3555,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProjectRead"][];
+                    "application/json": components["schemas"]["ProjectListRead"][];
                 };
             };
             /** @description Validation Error */
@@ -5439,37 +3668,6 @@ export interface operations {
             };
         };
     };
-    listProjectAlerts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AlertRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     listBudgetLines: {
         parameters: {
             query?: never;
@@ -5567,7 +3765,7 @@ export interface operations {
             };
         };
     };
-    exportBook: {
+    exportList: {
         parameters: {
             query?: never;
             header?: never;
@@ -5598,10 +3796,41 @@ export interface operations {
             };
         };
     };
-    exportSchedule: {
+    exportSheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listLocations: {
         parameters: {
             query?: {
-                variant?: "internal" | "client";
+                includeArchived?: boolean;
             };
             header?: never;
             path: {
@@ -5617,7 +3846,77 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                    "application/json": components["schemas"]["LocationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorderLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationReorder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationRead"][];
                 };
             };
             /** @description Validation Error */
@@ -5634,11 +3933,11 @@ export interface operations {
     listProjectItems: {
         parameters: {
             query?: {
-                zoneId?: number | null;
-                status?: ("draft" | "specified" | "quoted" | "approved" | "ordered" | "delivered" | "installed" | "cancelled" | "replaced") | null;
+                locationId?: number | null;
+                status?: ("to_quote" | "quoted" | "to_review" | "approved" | "deposit" | "purchased" | "cancelled") | null;
                 categoryId?: number | null;
                 supplierId?: number | null;
-                kind?: ("ffe" | "ose" | "custom" | "existing" | "fee") | null;
+                kind?: ("product" | "fee") | null;
                 q?: string | null;
             };
             header?: never;
@@ -5704,138 +4003,6 @@ export interface operations {
             };
         };
     };
-    listPurchaseOrders: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createPurchaseOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listQuotes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     changeProjectStatus: {
         parameters: {
             query?: never;
@@ -5873,7 +4040,13 @@ export interface operations {
     };
     getProjectSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                locationId?: number | null;
+                zone?: string | null;
+                family?: string | null;
+                categoryId?: number | null;
+                supplierId?: number | null;
+            };
             header?: never;
             path: {
                 project_id: number;
@@ -5889,926 +4062,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectSummaryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listZones: {
-        parameters: {
-            query?: {
-                includeArchived?: boolean;
-            };
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ZoneCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reorderZones: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ZoneReorder"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deletePurchaseOrderLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                line_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updatePurchaseOrderLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                line_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoLineUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getPurchaseOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deletePurchaseOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updatePurchaseOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listDeliveries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createDelivery: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeliveryCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    attachPurchaseOrderFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoFileAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    detachPurchaseOrderFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-                file_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listInvoices: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InvoiceRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createInvoice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InvoiceCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InvoiceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    issuePurchaseOrder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    addPurchaseOrderLines: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoLinesAdd"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    exportPurchaseOrderPdf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/pdf": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    changePurchaseOrderStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                po_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PoStatusChange"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PoRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deleteQuoteLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                line_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateQuoteLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                line_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteLineUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retainQuoteLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                line_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deleteQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    declineQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    attachQuoteFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteFileAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    detachQuoteFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-                file_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    addQuoteLine: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                quote_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteLineCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteRead"];
                 };
             };
             /** @description Validation Error */
@@ -7088,163 +4341,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackupRead"];
-                };
-            };
-        };
-    };
-    getZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                zone_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deleteZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                zone_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                zone_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ZoneUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    archiveZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                zone_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    unarchiveZone: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                zone_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ZoneRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

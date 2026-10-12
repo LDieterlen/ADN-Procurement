@@ -23,9 +23,9 @@ export function DataTable<T>({
     <table className="w-full border-collapse text-sm">
       {caption && <caption className="sr-only">{caption}</caption>}
       <thead>
-        <tr className="border-b border-neutral-300 text-left text-xs uppercase tracking-wide text-neutral-500">
+        <tr className="border-b border-neutral-300 text-left text-sm text-neutral-900">
           {columns.map((column) => (
-            <th key={column.key} scope="col" className={`px-3 py-2 font-medium ${column.className ?? ''}`}>
+            <th key={column.key} scope="col" className={`px-3 py-2.5 font-medium ${column.className ?? ''}`}>
               {column.header}
             </th>
           ))}
@@ -39,7 +39,7 @@ export function DataTable<T>({
             className={`border-b border-neutral-200 ${onRowClick ? 'cursor-pointer hover:bg-neutral-50' : ''}`}
           >
             {columns.map((column) => (
-              <td key={column.key} className={`px-3 py-2 ${column.className ?? ''}`}>
+              <td key={column.key} className={`px-3 py-3 ${column.className ?? ''}`}>
                 {column.render(row)}
               </td>
             ))}

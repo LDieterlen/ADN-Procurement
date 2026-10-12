@@ -1,11 +1,11 @@
-// Photo and drawing of a line (ADR-0012): the main photo prints on the prescription sheet, the drawing under it.
+// Photo and drawing of an article (ADR-0012): the main photo prints on the spec sheet, the drawing under it.
 import { useRef } from 'react'
 import { isApiError } from '../../api/errors'
 import { fileContentUrl, useUploadFile } from '../../api/queries/product'
 import { useAttachItemFile, useDetachItemFile, useUpdateItemFile, type ProjectItemRead } from '../../api/queries/projectItem'
 import { useToast } from '../../components/ui/Toast'
 
-const KIND_LABELS = { image: 'Photo', drawing: 'Dessin', quote: 'Devis', approval: 'Validation', other: 'Autre' } as const
+const KIND_LABELS = { image: 'Photo', drawing: 'Dessin', other: 'Autre' } as const
 
 export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly: boolean }) {
   const upload = useUploadFile()
@@ -33,9 +33,8 @@ export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly:
   }
 
   return (
-    <section className="space-y-2 border-t border-neutral-200 pt-3" aria-label="Photo et dessin">
+    <div className="space-y-2">
       <div className="flex items-center gap-3 text-sm">
-        <h3 className="font-medium">Photo et dessin</h3>
         {!readOnly && (
           <>
             <button type="button" className="underline" onClick={() => photoInput.current?.click()} disabled={upload.isPending}>
@@ -64,11 +63,11 @@ export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly:
         )}
       </div>
       {item.files.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2" aria-label="Fichiers de la ligne">
+        <ul className="grid grid-cols-4 gap-3" aria-label="Fichiers de l'article">
           {item.files.map((file) => (
             <li key={file.fileId} className="space-y-1 rounded border border-neutral-200 p-2 text-xs">
               {file.mimeType.startsWith('image/') ? (
-                <img src={fileContentUrl(file.fileId)} alt={file.caption ?? file.originalName} className="h-24 w-full rounded object-contain" />
+                <img src={fileContentUrl(file.fileId)} alt={file.caption ?? file.originalName} className="h-32 w-full rounded object-contain" />
               ) : (
                 <a
                   href={fileContentUrl(file.fileId)}
@@ -108,6 +107,6 @@ export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly:
           ))}
         </ul>
       )}
-    </section>
+    </div>
   )
 }

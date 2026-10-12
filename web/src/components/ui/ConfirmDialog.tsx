@@ -8,7 +8,7 @@ export function ConfirmDialog({ open, title, children, actions }: { open: boolea
   if (!open) return null
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="dialog-title" className="w-full max-w-md rounded bg-white p-5 shadow-lg">
+      <div role="dialog" aria-modal="true" aria-labelledby="dialog-title" className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
         <h2 id="dialog-title" className="text-lg font-semibold text-neutral-900">
           {title}
         </h2>

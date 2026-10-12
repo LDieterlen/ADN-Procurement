@@ -1,20 +1,21 @@
-// TanStack Query hooks for /projects and the zones nested under a project.
+// TanStack Query hooks for /projects and the locations nested under a project.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
 import type { components } from '../schema.d.ts'
 import { call } from './client'
 
 export type ProjectRead = components['schemas']['ProjectRead']
+export type ProjectListRead = components['schemas']['ProjectListRead']
 export type ProjectCreate = components['schemas']['ProjectCreate']
 export type ProjectUpdate = components['schemas']['ProjectUpdate']
 export type ProjectStatus = ProjectRead['status']
-export type ZoneRead = components['schemas']['ZoneRead']
-export type ZoneCreate = components['schemas']['ZoneCreate']
-export type ZoneUpdate = components['schemas']['ZoneUpdate']
+export type LocationRead = components['schemas']['LocationRead']
+export type LocationCreate = components['schemas']['LocationCreate']
+export type LocationUpdate = components['schemas']['LocationUpdate']
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   prospect: 'Prospect',
-  active: 'Actif',
+  active: 'En cours',
   delivered: 'Livré',
   closed: 'Clos',
   cancelled: 'Annulé',
@@ -25,7 +26,7 @@ export const projectKeys = {
   all: ['projects'] as const,
   list: (status: ProjectStatus | null) => ['projects', 'list', { status }] as const,
   one: (id: number) => ['projects', 'one', id] as const,
-  zones: (id: number, includeArchived: boolean) => ['projects', 'zones', id, { includeArchived }] as const,
+  locations: (id: number, includeArchived: boolean) => ['projects', 'locations', id, { includeArchived }] as const,
 }
 
 export function useProjects(status: ProjectStatus | null) {
@@ -71,63 +72,67 @@ export function useChangeProjectStatus() {
   })
 }
 
-// --- zones ---------------------------------------------------------------------------------
+// --- locations -----------------------------------------------------------------------------
 
-export function useZones(projectId: number | undefined, includeArchived: boolean) {
+export function locationLabel(location: LocationRead): string {
+  return `${location.code} — ${location.name}${location.multiplier > 1 ? ` (×${location.multiplier})` : ''}`
+}
+
+export function useLocations(projectId: number | undefined, includeArchived: boolean) {
   return useQuery({
-    queryKey: projectKeys.zones(projectId ?? 0, includeArchived),
-    queryFn: () => call(api.GET('/api/v1/projects/{project_id}/zones', { params: { path: { project_id: projectId ?? 0 }, query: { includeArchived } } })),
+    queryKey: projectKeys.locations(projectId ?? 0, includeArchived),
+    queryFn: () => call(api.GET('/api/v1/projects/{project_id}/locations', { params: { path: { project_id: projectId ?? 0 }, query: { includeArchived } } })),
     enabled: projectId !== undefined,
   })
 }
 
-export function useCreateZone() {
+export function useCreateLocation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: number; data: ZoneCreate }) =>
-      call(api.POST('/api/v1/projects/{project_id}/zones', { params: { path: { project_id: projectId } }, body: data })),
+    mutationFn: ({ projectId, data }: { projectId: number; data: LocationCreate }) =>
+      call(api.POST('/api/v1/projects/{project_id}/locations', { params: { path: { project_id: projectId } }, body: data })),
     onSuccess: invalidate,
   })
 }
 
-export function useUpdateZone() {
+export function useUpdateLocation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ZoneUpdate }) =>
-      call(api.PATCH('/api/v1/zones/{zone_id}', { params: { path: { zone_id: id } }, body: data })),
+    mutationFn: ({ id, data }: { id: number; data: LocationUpdate }) =>
+      call(api.PATCH('/api/v1/locations/{location_id}', { params: { path: { location_id: id } }, body: data })),
     onSuccess: invalidate,
   })
 }
 
-export function useDeleteZone() {
+export function useDeleteLocation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: number) => call(api.DELETE('/api/v1/zones/{zone_id}', { params: { path: { zone_id: id } } })).then(() => undefined),
+    mutationFn: (id: number) => call(api.DELETE('/api/v1/locations/{location_id}', { params: { path: { location_id: id } } })).then(() => undefined),
     onSuccess: invalidate,
   })
 }
 
-export function useArchiveZone() {
+export function useArchiveLocation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: number) => call(api.POST('/api/v1/zones/{zone_id}/archive', { params: { path: { zone_id: id } } })),
+    mutationFn: (id: number) => call(api.POST('/api/v1/locations/{location_id}/archive', { params: { path: { location_id: id } } })),
     onSuccess: invalidate,
   })
 }
 
-export function useUnarchiveZone() {
+export function useUnarchiveLocation() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: number) => call(api.POST('/api/v1/zones/{zone_id}/unarchive', { params: { path: { zone_id: id } } })),
+    mutationFn: (id: number) => call(api.POST('/api/v1/locations/{location_id}/unarchive', { params: { path: { location_id: id } } })),
     onSuccess: invalidate,
   })
 }
 
-export function useReorderZones() {
+export function useReorderLocations() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ projectId, zoneIds }: { projectId: number; zoneIds: number[] }) =>
-      call(api.POST('/api/v1/projects/{project_id}/zones/reorder', { params: { path: { project_id: projectId } }, body: { zoneIds } })),
+    mutationFn: ({ projectId, locationIds }: { projectId: number; locationIds: number[] }) =>
+      call(api.POST('/api/v1/projects/{project_id}/locations/reorder', { params: { path: { project_id: projectId } }, body: { locationIds } })),
     onSuccess: invalidate,
   })
 }

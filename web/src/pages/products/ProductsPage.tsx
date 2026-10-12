@@ -7,6 +7,8 @@ import { useSuppliers } from '../../api/queries/supplier'
 import { centsToText } from '../../components/forms/MoneyField'
 import { DataTable, type Column } from '../../components/tables/DataTable'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/Card'
+import { Pill } from '../../components/ui/Pill'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pagination } from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
@@ -52,23 +54,18 @@ export function ProductsPage() {
       },
     },
     { key: 'name', header: 'Nom', render: (p) => <span className="font-medium">{p.name}</span> },
-    { key: 'category', header: 'Catégorie', render: (p) => categoryName(p.categoryId) },
-    { key: 'ref', header: 'Réf. fabricant', render: (p) => p.manufacturerRef ?? '' },
+    { key: 'category', header: 'Type', render: (p) => categoryName(p.categoryId) },
+    { key: 'ref', header: 'Référence', render: (p) => p.reference ?? '' },
     {
       key: 'price',
-      header: 'Prix catalogue',
+      header: 'Prix HT',
       className: 'text-right',
-      render: (p) => (p.listPriceCents === null ? '' : `${centsToText(p.listPriceCents)} ${p.listPriceCurrency} ${p.listPriceTaxMode.toUpperCase()}`),
+      render: (p) => (p.listPriceCents === null ? '' : `${centsToText(p.listPriceCents)} ${p.currency}`),
     },
     {
       key: 'status',
       header: '',
-      render: (p) => (
-        <span className="flex gap-1">
-          {p.discontinuedOn && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">Arrêté</span>}
-          {p.archivedAt && <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs">Archivé</span>}
-        </span>
-      ),
+      render: (p) => (p.archivedAt ? <Pill>Archivé</Pill> : null),
     },
   ]
 
@@ -95,12 +92,15 @@ export function ProductsPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Produits</h1>
-        <Link to="/products/new">
-          <Button variant="primary">Nouveau produit</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Produits"
+        subtitle="Le catalogue : chaque article libre y entre par défaut"
+        actions={
+          <Link to="/products/new">
+            <Button variant="primary">Nouveau produit</Button>
+          </Link>
+        }
+      />
       <div className="flex flex-wrap items-center gap-4">
         <input
           type="search"
@@ -113,7 +113,7 @@ export function ProductsPage() {
           aria-label="Rechercher"
           className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
         />
-        {filterSelect('Catégorie', categoryId, setCategoryId, categories.data ?? [])}
+        {filterSelect('Type', categoryId, setCategoryId, categories.data ?? [])}
         {filterSelect('Fabricant', manufacturerId, setManufacturerId, manufacturers.data?.items ?? [])}
         {filterSelect('Fournisseur', supplierId, setSupplierId, suppliers.data?.items ?? [])}
         <label className="flex items-center gap-1.5 text-sm text-neutral-700">

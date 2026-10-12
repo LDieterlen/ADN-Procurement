@@ -66,3 +66,11 @@ class ProjectRead(BaseSchema):
     notes: str | None
     created_at: str
     updated_at: str
+
+
+class ProjectListRead(ProjectRead):
+    """A row of the projects list: the project plus its budget figures (computed, never stored)."""
+
+    budget_cents: int | None
+    specified_cents: int
+    item_count: int

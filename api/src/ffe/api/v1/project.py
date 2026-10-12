@@ -7,11 +7,13 @@ from fastapi import APIRouter, Path, Query
 from ffe.deps import DepsDep, SessionDep
 from ffe.schemas.project import (
     ProjectCreate,
+    ProjectListRead,
     ProjectRead,
     ProjectStatus,
     ProjectStatusChange,
     ProjectUpdate,
 )
+from ffe.services import budget as budget_service
 from ffe.services import project as service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -24,10 +26,21 @@ def list_projects(
     session: SessionDep,
     status: ProjectStatus | None = None,
     client_id: Annotated[int | None, Query(alias="clientId", ge=1)] = None,
-) -> list[ProjectRead]:
-    return [
-        ProjectRead.model_validate(p) for p in service.list_projects(session, status, client_id)
-    ]
+) -> list[ProjectListRead]:
+    rows: list[ProjectListRead] = []
+    for project in service.list_projects(session, status, client_id):
+        summary = budget_service.summary(session, project.id)
+        rows.append(
+            ProjectListRead.model_validate(
+                {
+                    **ProjectRead.model_validate(project).model_dump(),
+                    "budget_cents": summary["budget_cents"],
+                    "specified_cents": summary["specified_cents"],
+                    "item_count": sum(1 for line in summary["lines"] if line["counted"]),
+                }
+            )
+        )
+    return rows
 
 
 @router.post("", status_code=201, operation_id="createProject")

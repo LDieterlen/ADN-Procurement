@@ -3486,6 +3486,115 @@
         "title": "ProjectItemUpdate",
         "type": "object"
       },
+      "ProjectListRead": {
+        "description": "A row of the projects list: the project plus its budget figures (computed, never stored).",
+        "properties": {
+          "budgetCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budgetcents"
+          },
+          "clientId": {
+            "title": "Clientid",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "dueOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dueon"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCount": {
+            "title": "Itemcount",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "siteAddress": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Siteaddress"
+          },
+          "specifiedCents": {
+            "title": "Specifiedcents",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "prospect",
+              "active",
+              "delivered",
+              "closed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "clientId",
+          "status",
+          "siteAddress",
+          "dueOn",
+          "notes",
+          "createdAt",
+          "updatedAt",
+          "budgetCents",
+          "specifiedCents",
+          "itemCount"
+        ],
+        "title": "ProjectListRead",
+        "type": "object"
+      },
       "ProjectRead": {
         "properties": {
           "clientId": {
@@ -6741,7 +6850,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ProjectRead"
+                    "$ref": "#/components/schemas/ProjectListRead"
                   },
                   "title": "Response Listprojects",
                   "type": "array"

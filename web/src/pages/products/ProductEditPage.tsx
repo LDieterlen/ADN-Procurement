@@ -19,6 +19,8 @@ import {
 } from '../../api/queries/product'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/Card'
+import { Pill } from '../../components/ui/Pill'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
@@ -63,7 +65,7 @@ export function ProductFiles({ product }: { product: ProductRead }) {
 
   return (
     <section className="max-w-4xl space-y-3">
-      <h2 className="text-lg font-semibold">Photos et fichiers</h2>
+      <h2 className="text-base font-semibold">Photos et fichiers</h2>
       <div
         onDragOver={(event) => {
           event.preventDefault()
@@ -214,32 +216,37 @@ export function ProductEditPage() {
   }
   const product = existing.data
   const archived = product?.archivedAt != null
-  const toOptions = (rows: { id: number; name: string; code?: string | null; parentId?: number | null }[] | undefined) =>
-    (rows ?? []).map((r) => ({ id: r.id, label: r.parentId != null ? `  ↳ ${r.name}` : r.code ? `${r.code} — ${r.name}` : r.name }))
+  const toOptions = (rows: { id: number; name: string; code?: string | null }[] | undefined) =>
+    (rows ?? []).map((r) => ({ id: r.id, label: r.code ? `${r.code} — ${r.name}` : r.name }))
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          {product ? product.name : 'Nouveau produit'}
-          {archived && <span className="ml-3 rounded bg-neutral-200 px-2 py-0.5 align-middle text-xs">Archivé</span>}
-        </h1>
-        <div className="flex gap-2">
-          <Link to="/products">
-            <Button variant="ghost">Retour</Button>
+      <PageHeader
+        title={product ? product.name : 'Nouveau produit'}
+        subtitle={archived ? <Pill>Archivé</Pill> : undefined}
+        crumbs={
+          <Link to="/products" className="hover:underline">
+            Produits
           </Link>
-          {product && !archived && (
-            <Button variant="danger" onClick={confirmArchive}>
-              Archiver
-            </Button>
-          )}
-          {product && archived && (
-            <Button variant="primary" disabled={unarchive.isPending} onClick={() => void unarchive.mutateAsync(product.id)}>
-              Restaurer
-            </Button>
-          )}
-        </div>
-      </div>
+        }
+        actions={
+          <>
+            <Link to="/products">
+              <Button variant="ghost">Retour</Button>
+            </Link>
+            {product && !archived && (
+              <Button variant="danger" onClick={confirmArchive}>
+                Archiver
+              </Button>
+            )}
+            {product && archived && (
+              <Button variant="primary" disabled={unarchive.isPending} onClick={() => void unarchive.mutateAsync(product.id)}>
+                Restaurer
+              </Button>
+            )}
+          </>
+        }
+      />
       {archived ? (
         <p className="text-sm text-neutral-600">Produit archivé : restaurer pour modifier.</p>
       ) : (

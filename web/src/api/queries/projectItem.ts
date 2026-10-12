@@ -1,4 +1,4 @@
-// TanStack Query hooks for project lines, placements, status, journal and the project summary.
+// TanStack Query hooks for the articles of a project: list, sheet, placements, status, journal, files.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
 import type { components } from '../schema.d.ts'
@@ -12,39 +12,44 @@ export type PlacementRead = components['schemas']['PlacementRead']
 export type PlacementCreate = components['schemas']['PlacementCreate']
 export type PlacementUpdate = components['schemas']['PlacementUpdate']
 export type StatusChange = components['schemas']['StatusChange']
-export type ReplaceProduct = components['schemas']['ReplaceProduct']
 export type EventRead = components['schemas']['EventRead']
-export type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
-export type LineAmountsRead = components['schemas']['LineAmountsRead']
 export type ItemFileAttach = components['schemas']['ItemFileAttach']
 export type ItemFileUpdate = components['schemas']['ItemFileUpdate']
 export type ItemFileRead = components['schemas']['ItemFileRead']
-export type ItemLocation = NonNullable<ProjectItemRead['location']>
-
-export const ITEM_LOCATION_LABELS: Record<ItemLocation, string> = { floor: 'Sol', wall: 'Mur', ceiling: 'Plafond', door: 'Porte', other: 'Autre' }
 export type ItemStatus = ProjectItemRead['status']
 export type ItemKind = ProjectItemRead['kind']
+export type ItemFamily = NonNullable<ProjectItemRead['family']>
+export type ItemUsage = NonNullable<ProjectItemRead['usage']>
 
 export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
-  draft: 'Brouillon',
-  specified: 'Spécifié',
-  quoted: 'Chiffré',
+  to_quote: 'À chiffrer',
+  quoted: 'Devisé',
+  to_review: 'À revoir',
   approved: 'Validé',
-  ordered: 'Commandé',
-  delivered: 'Livré',
-  installed: 'Installé',
+  deposit: 'Acompte',
+  purchased: 'Acheté',
   cancelled: 'Annulé',
-  replaced: 'Remplacé',
 }
-export const ITEM_KIND_LABELS: Record<ItemKind, string> = { ffe: 'FF&E', ose: 'OS&E', custom: 'Sur mesure', existing: 'Existant', fee: 'Frais' }
+export const ITEM_STATUSES = Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]
+/** Statuses shown as a filled pill (the client has committed). */
+export const ENGAGED_STATUSES: ItemStatus[] = ['approved', 'deposit', 'purchased']
+export const ITEM_FAMILY_LABELS: Record<ItemFamily, string> = {
+  custom: 'Pièce sur-mesure',
+  joinery: 'Agencement',
+  ose: 'OS&E',
+  edition: "Pièce d'édition",
+  gallery: 'Pièce de galerie',
+  artwork: 'Artwork',
+  textile: 'Confection',
+}
+export const ITEM_USAGE_LABELS: Record<ItemUsage, string> = { indoor: 'Intérieur', outdoor: 'Extérieur' }
 
-export type ItemFilters = { status: ItemStatus | null; kind: ItemKind | null; supplierId: number | null; q: string }
+export type ItemFilters = { status: ItemStatus | null; supplierId: number | null; q: string }
 
 export const itemKeys = {
   list: (projectId: number, filters?: ItemFilters) => ['projects', 'items', projectId, filters ?? null] as const,
   one: (id: number) => ['project-items', 'one', id] as const,
   events: (id: number) => ['project-items', 'events', id] as const,
-  summary: (projectId: number) => ['projects', 'summary', projectId] as const,
 }
 
 export function useProjectItems(projectId: number | undefined, filters?: ItemFilters) {
@@ -55,25 +60,10 @@ export function useProjectItems(projectId: number | undefined, filters?: ItemFil
         api.GET('/api/v1/projects/{project_id}/project-items', {
           params: {
             path: { project_id: projectId ?? 0 },
-            query: filters
-              ? {
-                  status: filters.status ?? undefined,
-                  kind: filters.kind ?? undefined,
-                  supplierId: filters.supplierId ?? undefined,
-                  q: filters.q.trim() || undefined,
-                }
-              : undefined,
+            query: filters ? { status: filters.status ?? undefined, supplierId: filters.supplierId ?? undefined, q: filters.q.trim() || undefined } : undefined,
           },
         }),
       ),
-    enabled: projectId !== undefined,
-  })
-}
-
-export function useProjectSummary(projectId: number | undefined) {
-  return useQuery({
-    queryKey: itemKeys.summary(projectId ?? 0),
-    queryFn: () => call(api.GET('/api/v1/projects/{project_id}/summary', { params: { path: { project_id: projectId ?? 0 } } })),
     enabled: projectId !== undefined,
   })
 }
@@ -94,8 +84,8 @@ export function useItemEvents(id: number | undefined) {
   })
 }
 
-/** Every line mutation invalidates the project's lines, summary and the line itself. */
-function useInvalidateLines() {
+/** Every article mutation invalidates the project's articles, summary and the article itself. */
+function useInvalidateItems() {
   const queryClient = useQueryClient()
   return () => {
     void queryClient.invalidateQueries({ queryKey: ['projects', 'items'] })
@@ -106,7 +96,7 @@ function useInvalidateLines() {
 }
 
 export function useCreateItem() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ projectId, data }: { projectId: number; data: ProjectItemCreate }) =>
       call(api.POST('/api/v1/projects/{project_id}/project-items', { params: { path: { project_id: projectId } }, body: data })),
@@ -115,7 +105,7 @@ export function useCreateItem() {
 }
 
 export function useUpdateItem() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: ProjectItemUpdate }) =>
       call(api.PATCH('/api/v1/project-items/{item_id}', { params: { path: { item_id: id } }, body: data })),
@@ -124,7 +114,7 @@ export function useUpdateItem() {
 }
 
 export function useDeleteItem() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: (id: number) => call(api.DELETE('/api/v1/project-items/{item_id}', { params: { path: { item_id: id } } })).then(() => undefined),
     onSuccess: invalidate,
@@ -132,7 +122,7 @@ export function useDeleteItem() {
 }
 
 export function useChangeItemStatus() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: StatusChange }) =>
       call(api.POST('/api/v1/project-items/{item_id}/status', { params: { path: { item_id: id } }, body: data })),
@@ -140,25 +130,8 @@ export function useChangeItemStatus() {
   })
 }
 
-export function useReplaceItemProduct() {
-  const invalidate = useInvalidateLines()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ReplaceProduct }) =>
-      call(api.POST('/api/v1/project-items/{item_id}/replace', { params: { path: { item_id: id } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-export function useRefreshItem() {
-  const invalidate = useInvalidateLines()
-  return useMutation({
-    mutationFn: (id: number) => call(api.POST('/api/v1/project-items/{item_id}/refresh', { params: { path: { item_id: id } } })),
-    onSuccess: invalidate,
-  })
-}
-
 export function useAddPlacement() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ itemId, data }: { itemId: number; data: PlacementCreate }) =>
       call(api.POST('/api/v1/project-items/{item_id}/placements', { params: { path: { item_id: itemId } }, body: data })),
@@ -167,7 +140,7 @@ export function useAddPlacement() {
 }
 
 export function useUpdatePlacement() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: PlacementUpdate }) =>
       call(api.PATCH('/api/v1/placements/{placement_id}', { params: { path: { placement_id: id } }, body: data })),
@@ -176,17 +149,15 @@ export function useUpdatePlacement() {
 }
 
 export function useDeletePlacement() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: (id: number) => call(api.DELETE('/api/v1/placements/{placement_id}', { params: { path: { placement_id: id } } })),
     onSuccess: invalidate,
   })
 }
 
-// --- étape 11c : photo et dessin d'une ligne (routes existantes depuis 7a) -----------------------
-
 export function useAttachItemFile() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ itemId, data }: { itemId: number; data: ItemFileAttach }) =>
       call(api.POST('/api/v1/project-items/{item_id}/files', { params: { path: { item_id: itemId } }, body: data })),
@@ -195,7 +166,7 @@ export function useAttachItemFile() {
 }
 
 export function useUpdateItemFile() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ itemId, fileId, data }: { itemId: number; fileId: number; data: ItemFileUpdate }) =>
       call(api.PATCH('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } }, body: data })),
@@ -204,7 +175,7 @@ export function useUpdateItemFile() {
 }
 
 export function useDetachItemFile() {
-  const invalidate = useInvalidateLines()
+  const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ itemId, fileId }: { itemId: number; fileId: number }) =>
       call(api.DELETE('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } } })),

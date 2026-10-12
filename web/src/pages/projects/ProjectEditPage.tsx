@@ -1,35 +1,18 @@
-// Create (/projects/new) and the project page with tabs (/projects/:id): Infos, Zones (Lignes and Budget later).
+// Create (/projects/new) and edit (/projects/:id/edit) a project; a client can be created in place.
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
-import { isApiError } from '../../api/errors'
 import { useClients } from '../../api/queries/client'
-import {
-  CLOSED_STATUSES,
-  PROJECT_STATUS_LABELS,
-  useChangeProjectStatus,
-  useCreateProject,
-  useProject,
-  useUpdateProject,
-  type ProjectStatus,
-} from '../../api/queries/project'
+import { useCreateProject, useProject, useUpdateProject } from '../../api/queries/project'
 import { Button } from '../../components/ui/Button'
+import { Card, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
-import { ProjectForm, toPayload, toUpdatePayload, type ProjectFormValues } from './ProjectForm'
-import { StatusBadge } from './ProjectsPage'
-import { useAdvancedMode } from '../../components/useAdvancedMode'
-import { BudgetStrip } from './BudgetStrip'
-import { BudgetTab } from './BudgetTab'
-import { ItemsTab } from './ItemsTab'
-import { OrdersTab } from './OrdersTab'
-import { QuotesTab } from './QuotesTab'
-import { ZonesTab } from './ZonesTab'
+import { NewClientModal } from './InlineCreate'
+import { fromProject, ProjectForm, toPayload, toUpdatePayload, type ProjectFormValues } from './ProjectForm'
 
-type Tab = 'items' | 'zones' | 'budget' | 'infos' | 'quotes' | 'orders'
-const BASE_TABS: Tab[] = ['items', 'zones', 'budget', 'infos']
-const ADVANCED_TABS: Tab[] = ['items', 'zones', 'quotes', 'orders', 'budget', 'infos']
-const TAB_LABELS: Record<Tab, string> = { items: 'Prescription', zones: 'Zones', budget: 'Budget', infos: 'Infos', quotes: 'Devis', orders: 'Commandes' }
+const EMPTY: ProjectFormValues = { name: '', code: '', clientId: null, siteAddress: '', dueOn: null, notes: '', globalBudgetCents: null }
 
 export function ProjectEditPage() {
   const params = useParams<{ id: string }>()
@@ -39,48 +22,25 @@ export function ProjectEditPage() {
   const clients = useClients('', false)
   const create = useCreateProject()
   const update = useUpdateProject()
-  const changeStatus = useChangeProjectStatus()
   const errors = useSubmitErrors('projet')
-  const [tab, setTab] = useState<Tab>('items')
-  const advanced = useAdvancedMode()
+  const [newClient, setNewClient] = useState(false)
+  const form = useForm<ProjectFormValues>({ defaultValues: EMPTY })
 
   async function submit(values: ProjectFormValues) {
     errors.reset()
     try {
       if (id === undefined) {
         const created = await create.mutateAsync(toPayload(values))
-        errors.toast.show({ kind: 'success', message: `Projet ${created.code} créé ; ajouter ses produits.` })
+        errors.toast.show({ kind: 'success', message: `Projet ${created.code} créé ; ajouter ses localisations et ses articles.` })
         navigate(`/projects/${created.id}`)
       } else {
         await update.mutateAsync({ id, data: toUpdatePayload(values) })
         errors.toast.show({ kind: 'success', message: 'Projet enregistré.' })
+        navigate(`/projects/${id}`)
       }
     } catch (error) {
       errors.handle(error, { resubmitForced: () => undefined, openExisting: () => undefined, restore: () => undefined })
     }
-  }
-
-  function askStatus(status: ProjectStatus) {
-    if (id === undefined) return
-    const closing = CLOSED_STATUSES.includes(status)
-    errors.setDialog({
-      title: `Passer le projet en « ${PROJECT_STATUS_LABELS[status]} » ?`,
-      message: closing
-        ? 'Le projet et ses zones passent en lecture seule ; le client pourra être archivé.'
-        : 'Le statut est libre : il se change à tout moment.',
-      actions: [
-        {
-          label: 'Confirmer',
-          variant: closing ? 'danger' : 'primary',
-          onClick: () =>
-            void changeStatus
-              .mutateAsync({ id, status })
-              .then(() => errors.setDialog(null))
-              .catch((error: unknown) => errors.setBanner(isApiError(error) ? error.message : String(error))),
-        },
-        { label: 'Annuler', onClick: () => errors.setDialog(null) },
-      ],
-    })
   }
 
   if (id !== undefined && existing.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
@@ -94,86 +54,57 @@ export function ProjectEditPage() {
     )
   }
   const project = existing.data
-  const readOnly = project ? CLOSED_STATUSES.includes(project.status) : false
+  if (project && form.getValues('name') === '' && !form.formState.isDirty) form.reset(fromProject(project))
   const clientOptions = (clients.data ?? []).map((c) => ({ id: c.id, label: c.name }))
   if (project && !clientOptions.some((c) => c.id === project.clientId)) clientOptions.push({ id: project.clientId, label: `Client n° ${project.clientId}` })
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-3 text-2xl font-semibold">
-          {project ? (
-            <>
-              <span className="font-mono text-base text-neutral-500">{project.code}</span>
-              {project.name}
-              <StatusBadge status={project.status} />
-            </>
-          ) : (
-            'Nouveau projet'
-          )}
-        </h1>
-        <div className="flex items-center gap-2">
-          <Link to="/projects">
+    <section>
+      <PageHeader
+        title={project ? `Modifier ${project.name}` : 'Nouveau projet'}
+        crumbs={
+          <>
+            <Link to="/projects" className="hover:underline">
+              Projets
+            </Link>
+            {project && (
+              <>
+                {' / '}
+                <Link to={`/projects/${project.id}`} className="hover:underline">
+                  {project.name}
+                </Link>
+              </>
+            )}
+          </>
+        }
+        actions={
+          <Link to={project ? `/projects/${project.id}` : '/projects'}>
             <Button variant="ghost">Retour</Button>
           </Link>
-          {project && (
-            <label className="flex items-center gap-1 text-sm">
-              Statut
-              <select
-                value={project.status}
-                onChange={(event) => askStatus(event.target.value as ProjectStatus)}
-                className="rounded border border-neutral-300 bg-white px-2 py-1 text-sm"
-                aria-label="Changer le statut"
-              >
-                {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {PROJECT_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
-      </div>
-      {errors.banner && !project && null}
-      {project && (
-        <nav className="flex gap-1 border-b border-neutral-200" aria-label="Onglets du projet">
-          {(advanced ? ADVANCED_TABS : BASE_TABS).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`px-3 py-1.5 text-sm ${tab === t ? 'border-b-2 border-neutral-900 font-medium' : 'text-neutral-600'}`}
-              aria-current={tab === t ? 'page' : undefined}
-            >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
-        </nav>
-      )}
-      {project && <BudgetStrip projectId={project.id} readOnly={readOnly} />}
-      {readOnly && (
-        <p className="text-sm text-neutral-600">
-          Projet {PROJECT_STATUS_LABELS[project!.status].toLowerCase()} : lecture seule, changer le statut pour modifier.
-        </p>
-      )}
-      {(!project || tab === 'infos') && !readOnly && (
+        }
+      />
+      <Card>
         <ProjectForm
-          key={project?.updatedAt ?? 'new'}
+          form={form}
           initial={project}
           clients={clientOptions}
+          onCreateClient={() => setNewClient(true)}
           onSubmit={submit}
           submitting={create.isPending || update.isPending}
-          submitLabel={project ? 'Enregistrer' : 'Créer'}
+          submitLabel={project ? 'Enregistrer' : 'Créer le projet'}
           banner={errors.banner}
           serverErrors={errors.serverErrors}
         />
-      )}
-      {project && tab === 'zones' && <ZonesTab projectId={project.id} readOnly={readOnly} />}
-      {project && tab === 'items' && <ItemsTab projectId={project.id} readOnly={readOnly} />}
-      {project && tab === 'quotes' && <QuotesTab projectId={project.id} readOnly={readOnly} />}
-      {project && tab === 'orders' && <OrdersTab projectId={project.id} readOnly={readOnly} />}
-      {project && tab === 'budget' && <BudgetTab projectId={project.id} readOnly={readOnly} />}
+      </Card>
+      <NewClientModal
+        open={newClient}
+        onClose={() => setNewClient(false)}
+        onCreated={(clientId) => {
+          setNewClient(false)
+          form.setValue('clientId', clientId, { shouldDirty: true })
+          errors.toast.show({ kind: 'success', message: 'Client créé.' })
+        }}
+      />
       <ConfirmDialog open={errors.dialog !== null} title={errors.dialog?.title ?? ''} actions={errors.dialog?.actions ?? []}>
         {errors.dialog?.message}
       </ConfirmDialog>

@@ -10,8 +10,8 @@ let api: FakeApi
 beforeEach(() => {
   api = installFakeApi({
     suppliers: [
-      { name: 'Tom Dixon', legalName: 'Tom Dixon Limited', countryCode: 'GB', currency: 'GBP', defaultDiscountBp: 1500 },
-      { name: 'Flos', countryCode: 'IT' },
+      { name: 'Tom Dixon', contactName: 'Djamel Sabeur', currency: 'GBP', defaultDiscountBp: 1500 },
+      { name: 'Flos' },
       ...Array.from({ length: 60 }, (_, i) => ({ name: `Fournisseur ${String(i).padStart(2, '0')}` })),
     ],
   })
@@ -32,22 +32,19 @@ describe('fournisseurs', () => {
     expect(screen.getByText('GBP')).toBeTruthy()
   })
 
-  test('création avec le bloc Identité légale replié puis déplié', async () => {
+  test('création : nom, représentant, devise et remise', async () => {
     const user = userEvent.setup()
     renderApp('/suppliers/new')
-    await screen.findByLabelText('Nom')
-    expect(screen.queryByLabelText('SIRET')).toBeNull()
-    await user.click(screen.getByRole('button', { name: /Identité légale/ }))
-    await user.type(screen.getByLabelText('Nom'), 'Vitra')
-    await user.type(screen.getByLabelText('SIREN'), '123456789')
-    await user.selectOptions(screen.getByLabelText('Devise de facturation'), 'CHF')
+    await user.type(await screen.findByLabelText('Nom'), 'Vitra')
+    await user.type(screen.getByLabelText('Représentant'), 'Anna Rossi')
+    await user.selectOptions(screen.getByLabelText('Devise'), 'CHF')
     await user.clear(screen.getByLabelText('Remise habituelle'))
     await user.type(screen.getByLabelText('Remise habituelle'), '12,5')
     await user.click(screen.getByRole('button', { name: 'Créer' }))
     await screen.findByRole('heading', { name: 'Fournisseurs' })
     const created = api.suppliers.at(-1)
     expect(created?.name).toBe('Vitra')
-    expect(created?.siren).toBe('123456789')
+    expect(created?.contactName).toBe('Anna Rossi')
     expect(created?.currency).toBe('CHF')
     expect(created?.defaultDiscountBp).toBe(1250)
   })
@@ -60,6 +57,6 @@ describe('fournisseurs', () => {
     await screen.findByRole('dialog')
     await user.click(screen.getByRole('button', { name: "Ouvrir l'existant" }))
     expect(await screen.findByRole('heading', { name: 'Tom Dixon' })).toBeTruthy()
-    expect((screen.getByLabelText('Raison sociale') as HTMLInputElement).value).toBe('Tom Dixon Limited') // legal block opened: data present
+    expect((screen.getByLabelText('Représentant') as HTMLInputElement).value).toBe('Djamel Sabeur')
   })
 })

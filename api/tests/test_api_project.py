@@ -102,8 +102,10 @@ def test_list_filters_by_client_and_orders_by_code_desc(
 ) -> None:
     a = make_project(session, clock, name="A")
     b = make_project(session, clock, name="B")
-    codes = [p["code"] for p in client.get(URL).json()]
-    assert codes == ["2026-002", "2026-001"]
+    rows = client.get(URL).json()
+    assert [p["code"] for p in rows] == ["2026-002", "2026-001"]
+    assert rows[0]["budgetCents"] is None and rows[0]["specifiedCents"] == 0
+    assert rows[0]["itemCount"] == 0
     assert [p["id"] for p in client.get(URL, params={"clientId": b.client_id}).json()] == [b.id]
     assert client.get(f"{URL}/{a.id}").json()["name"] == "A"
     assert client.get(f"{URL}/99").status_code == 404
