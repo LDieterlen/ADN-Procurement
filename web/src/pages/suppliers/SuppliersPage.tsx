@@ -12,6 +12,7 @@ const LIMIT = 50
 
 const COLUMNS: Column<SupplierRead>[] = [
   { key: 'name', header: 'Nom', render: (s) => <span className="font-medium">{s.name}</span> },
+  { key: 'specialty', header: 'Savoir-faire', render: (s) => s.specialty ?? '' },
   { key: 'currency', header: 'Devise', render: (s) => s.currency },
   { key: 'discount', header: 'Remise', render: (s) => (s.defaultDiscountBp ? `${bpToText(s.defaultDiscountBp)} %` : ''), className: 'text-right' },
   { key: 'contact', header: 'Représentant', render: (s) => s.contactName ?? '' },

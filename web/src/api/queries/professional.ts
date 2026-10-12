@@ -1,75 +1,75 @@
-// TanStack Query hooks for /manufacturers (paginated catalogue list).
+// TanStack Query hooks for /professionals (paginated catalogue list).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
 import type { components } from '../schema.d.ts'
 import { call } from './client'
 import type { ListParams } from './supplier'
 
-export type ManufacturerRead = components['schemas']['ManufacturerRead']
-export type ManufacturerCreate = components['schemas']['ManufacturerCreate']
-export type ManufacturerUpdate = components['schemas']['ManufacturerUpdate']
+export type ProfessionalRead = components['schemas']['ProfessionalRead']
+export type ProfessionalCreate = components['schemas']['ProfessionalCreate']
+export type ProfessionalUpdate = components['schemas']['ProfessionalUpdate']
 
-export const manufacturerKeys = {
-  all: ['manufacturers'] as const,
-  list: (params: ListParams) => ['manufacturers', 'list', params] as const,
-  one: (id: number) => ['manufacturers', 'one', id] as const,
+export const professionalKeys = {
+  all: ['professionals'] as const,
+  list: (params: ListParams) => ['professionals', 'list', params] as const,
+  one: (id: number) => ['professionals', 'one', id] as const,
 }
 
-export function useManufacturers(params: ListParams) {
+export function useProfessionals(params: ListParams) {
   return useQuery({
-    queryKey: manufacturerKeys.list(params),
+    queryKey: professionalKeys.list(params),
     queryFn: () =>
       call(
-        api.GET('/api/v1/manufacturers', {
+        api.GET('/api/v1/professionals', {
           params: { query: { q: params.q.trim() || undefined, includeArchived: params.includeArchived, limit: params.limit, offset: params.offset } },
         }),
       ),
   })
 }
 
-export function useManufacturer(id: number | undefined) {
+export function useProfessional(id: number | undefined) {
   return useQuery({
-    queryKey: manufacturerKeys.one(id ?? 0),
-    queryFn: () => call(api.GET('/api/v1/manufacturers/{manufacturer_id}', { params: { path: { manufacturer_id: id ?? 0 } } })),
+    queryKey: professionalKeys.one(id ?? 0),
+    queryFn: () => call(api.GET('/api/v1/professionals/{professional_id}', { params: { path: { professional_id: id ?? 0 } } })),
     enabled: id !== undefined,
   })
 }
 
 function useInvalidate() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: manufacturerKeys.all })
+  return () => queryClient.invalidateQueries({ queryKey: professionalKeys.all })
 }
 
-export function useCreateManufacturer() {
+export function useCreateProfessional() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ data, force }: { data: ManufacturerCreate; force?: boolean }) =>
-      call(api.POST('/api/v1/manufacturers', { body: data, params: { query: { force: force ?? false } } })),
+    mutationFn: ({ data, force }: { data: ProfessionalCreate; force?: boolean }) =>
+      call(api.POST('/api/v1/professionals', { body: data, params: { query: { force: force ?? false } } })),
     onSuccess: invalidate,
   })
 }
 
-export function useUpdateManufacturer() {
+export function useUpdateProfessional() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ManufacturerUpdate }) =>
-      call(api.PATCH('/api/v1/manufacturers/{manufacturer_id}', { params: { path: { manufacturer_id: id } }, body: data })),
+    mutationFn: ({ id, data }: { id: number; data: ProfessionalUpdate }) =>
+      call(api.PATCH('/api/v1/professionals/{professional_id}', { params: { path: { professional_id: id } }, body: data })),
     onSuccess: invalidate,
   })
 }
 
-export function useArchiveManufacturer() {
+export function useArchiveProfessional() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: number) => call(api.POST('/api/v1/manufacturers/{manufacturer_id}/archive', { params: { path: { manufacturer_id: id } } })),
+    mutationFn: (id: number) => call(api.POST('/api/v1/professionals/{professional_id}/archive', { params: { path: { professional_id: id } } })),
     onSuccess: invalidate,
   })
 }
 
-export function useUnarchiveManufacturer() {
+export function useUnarchiveProfessional() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: number) => call(api.POST('/api/v1/manufacturers/{manufacturer_id}/unarchive', { params: { path: { manufacturer_id: id } } })),
+    mutationFn: (id: number) => call(api.POST('/api/v1/professionals/{professional_id}/unarchive', { params: { path: { professional_id: id } } })),
     onSuccess: invalidate,
   })
 }

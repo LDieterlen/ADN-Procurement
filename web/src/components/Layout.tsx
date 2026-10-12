@@ -7,7 +7,7 @@ const LINKS: { to: string; label: string }[] = [
   { to: '/clients', label: 'Clients' },
   { to: '/products', label: 'Produits' },
   { to: '/suppliers', label: 'Fournisseurs' },
-  { to: '/manufacturers', label: 'Fabricants' },
+  { to: '/professionals', label: 'Professionnels' },
   { to: '/categories', label: 'Types' },
   { to: '/settings', label: 'Réglages' },
 ]

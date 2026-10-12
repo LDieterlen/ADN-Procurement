@@ -100,7 +100,7 @@ describe('page Nouvel article', () => {
     expect((screen.getByLabelText('Fournisseur') as HTMLSelectElement).value).toBe(String(api.suppliers.at(-1)?.id))
   })
 
-  test('coller une adresse : la fiche est pré-remplie, le fabricant créé, la photo jointe à la création', async () => {
+  test('coller une adresse : la fiche est pré-remplie, le fournisseur créé, la photo jointe à la création', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/new')
     const box = await screen.findByRole('region', { name: 'Coller une adresse' })

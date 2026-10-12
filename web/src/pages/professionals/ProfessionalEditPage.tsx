@@ -1,39 +1,39 @@
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
-import { useArchiveManufacturer, useCreateManufacturer, useManufacturer, useUnarchiveManufacturer, useUpdateManufacturer } from '../../api/queries/manufacturer'
+import { useArchiveProfessional, useCreateProfessional, useProfessional, useUnarchiveProfessional, useUpdateProfessional } from '../../api/queries/professional'
 import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
-import { ManufacturerForm, toPayload, type ManufacturerFormValues } from './ManufacturerForm'
+import { ProfessionalForm, toPayload, type ProfessionalFormValues } from './ProfessionalForm'
 
-export function ManufacturerEditPage() {
+export function ProfessionalEditPage() {
   const params = useParams<{ id: string }>()
   const id = params.id ? Number(params.id) : undefined
   const navigate = useNavigate()
-  const existing = useManufacturer(id)
-  const create = useCreateManufacturer()
-  const update = useUpdateManufacturer()
-  const archive = useArchiveManufacturer()
-  const unarchive = useUnarchiveManufacturer()
-  const errors = useSubmitErrors('fabricant')
+  const existing = useProfessional(id)
+  const create = useCreateProfessional()
+  const update = useUpdateProfessional()
+  const archive = useArchiveProfessional()
+  const unarchive = useUnarchiveProfessional()
+  const errors = useSubmitErrors('professionnel')
 
-  async function submit(values: ManufacturerFormValues, force = false) {
+  async function submit(values: ProfessionalFormValues, force = false) {
     errors.reset()
     try {
       if (id === undefined) {
         const created = await create.mutateAsync({ data: toPayload(values), force })
-        errors.toast.show({ kind: 'success', message: `Fabricant « ${created.name} » créé.` })
+        errors.toast.show({ kind: 'success', message: `Professionnel « ${created.name} » créé.` })
       } else {
         await update.mutateAsync({ id, data: toPayload(values) })
-        errors.toast.show({ kind: 'success', message: 'Fabricant enregistré.' })
+        errors.toast.show({ kind: 'success', message: 'Professionnel enregistré.' })
       }
-      navigate('/manufacturers')
+      navigate('/professionals')
     } catch (error) {
       errors.handle(error, {
         resubmitForced: () => void submit(values, true),
-        openExisting: (existingId) => navigate(`/manufacturers/${existingId}`),
-        restore: (archivedId) => void unarchive.mutateAsync(archivedId).then(() => navigate(`/manufacturers/${archivedId}`)),
+        openExisting: (existingId) => navigate(`/professionals/${existingId}`),
+        restore: (archivedId) => void unarchive.mutateAsync(archivedId).then(() => navigate(`/professionals/${archivedId}`)),
       })
     }
   }
@@ -41,7 +41,7 @@ export function ManufacturerEditPage() {
   function confirmArchive() {
     if (id === undefined) return
     errors.setDialog({
-      title: 'Archiver ce fabricant ?',
+      title: 'Archiver ce professionnel ?',
       message: 'Il disparaît des sélecteurs mais reste consultable.',
       actions: [
         {
@@ -62,44 +62,44 @@ export function ManufacturerEditPage() {
   if (id !== undefined && existing.isError) {
     return (
       <EmptyState title={existing.error.message}>
-        <Link to="/manufacturers" className="underline">
+        <Link to="/professionals" className="underline">
           Retour à la liste
         </Link>
       </EmptyState>
     )
   }
-  const manufacturer = existing.data
-  const archived = manufacturer?.archivedAt != null
+  const professional = existing.data
+  const archived = professional?.archivedAt != null
 
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">
-          {manufacturer ? manufacturer.name : 'Nouveau fabricant'}
+          {professional ? professional.name : 'Nouveau professionnel'}
           {archived && <span className="ml-3 rounded bg-neutral-200 px-2 py-0.5 align-middle text-xs">Archivé</span>}
         </h1>
         <div className="flex gap-2">
-          <Link to="/manufacturers">
+          <Link to="/professionals">
             <Button variant="ghost">Retour</Button>
           </Link>
-          {manufacturer && !archived && (
+          {professional && !archived && (
             <Button variant="danger" onClick={confirmArchive}>
               Archiver
             </Button>
           )}
-          {manufacturer && archived && (
-            <Button variant="primary" disabled={unarchive.isPending} onClick={() => void unarchive.mutateAsync(manufacturer.id)}>
+          {professional && archived && (
+            <Button variant="primary" disabled={unarchive.isPending} onClick={() => void unarchive.mutateAsync(professional.id)}>
               Restaurer
             </Button>
           )}
         </div>
       </div>
       {archived ? (
-        <p className="text-sm text-neutral-600">Fabricant archivé : restaurer pour modifier.</p>
+        <p className="text-sm text-neutral-600">Professionnel archivé : restaurer pour modifier.</p>
       ) : (
-        <ManufacturerForm
-          key={manufacturer?.updatedAt ?? 'new'}
-          initial={manufacturer}
+        <ProfessionalForm
+          key={professional?.updatedAt ?? 'new'}
+          initial={professional}
           onSubmit={(values) => submit(values)}
           submitting={create.isPending || update.isPending}
           banner={errors.banner}

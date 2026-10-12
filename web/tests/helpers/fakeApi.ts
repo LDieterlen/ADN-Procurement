@@ -6,7 +6,7 @@ import type { components } from '../../src/api/schema.d.ts'
 
 type ClientRead = components['schemas']['ClientRead']
 type SupplierRead = components['schemas']['SupplierRead']
-type ManufacturerRead = components['schemas']['ManufacturerRead']
+type ProfessionalRead = components['schemas']['ProfessionalRead']
 type CategoryRead = components['schemas']['CategoryRead']
 type ProductRead = components['schemas']['ProductRead']
 type ProductFileRead = components['schemas']['ProductFileRead']
@@ -40,7 +40,7 @@ const RANK: Record<string, number> = { to_quote: 0, quoted: 1, to_review: 1, app
 export type FakeApi = {
   clients: ClientRead[]
   suppliers: SupplierRead[]
-  manufacturers: ManufacturerRead[]
+  professionals: ProfessionalRead[]
   categories: CategoryRead[]
   products: ProductRead[]
   files: FileRead[]
@@ -101,9 +101,14 @@ export function supplierRow(s: Partial<SupplierRead>, id: number): SupplierRead 
   return {
     id,
     name: 'Fournisseur',
+    specialty: null,
     contactName: null,
     email: null,
     phone: null,
+    mobile: null,
+    contact2Name: null,
+    contact2Phone: null,
+    contact2Email: null,
     website: null,
     currency: 'EUR',
     defaultDiscountBp: 0,
@@ -113,8 +118,24 @@ export function supplierRow(s: Partial<SupplierRead>, id: number): SupplierRead 
   }
 }
 
-export function manufacturerRow(m: Partial<ManufacturerRead>, id: number): ManufacturerRead {
-  return { id, name: 'Fabricant', website: null, notes: null, ...base, ...m }
+export function professionalRow(m: Partial<ProfessionalRead>, id: number): ProfessionalRead {
+  return {
+    id,
+    name: 'Professionnel',
+    kind: 'manufacturer',
+    specialty: null,
+    contactName: null,
+    phone: null,
+    mobile: null,
+    email: null,
+    contact2Name: null,
+    contact2Phone: null,
+    contact2Email: null,
+    website: null,
+    notes: null,
+    ...base,
+    ...m,
+  }
 }
 
 export function categoryRow(c: Partial<CategoryRead>, id: number): CategoryRead {
@@ -1015,7 +1036,7 @@ export function installFakeApi(
   seed: {
     clients?: Partial<ClientRead>[]
     suppliers?: Partial<SupplierRead>[]
-    manufacturers?: Partial<ManufacturerRead>[]
+    professionals?: Partial<ProfessionalRead>[]
     categories?: Partial<CategoryRead>[]
     products?: Partial<ProductRead>[]
     projects?: Partial<ProjectRead>[]
@@ -1028,7 +1049,7 @@ export function installFakeApi(
   const state: FakeApi = {
     clients: (seed.clients ?? []).map((c, i) => clientRow(c, i + 1)),
     suppliers: (seed.suppliers ?? []).map((s, i) => supplierRow(s, i + 1)),
-    manufacturers: (seed.manufacturers ?? []).map((m, i) => manufacturerRow(m, i + 1)),
+    professionals: (seed.professionals ?? []).map((m, i) => professionalRow(m, i + 1)),
     categories: (seed.categories ?? []).map((c, i) => categoryRow(c, i + 1)),
     products: (seed.products ?? []).map((p, i) => productRow(p, i + 1)),
     files: [],
@@ -1133,7 +1154,7 @@ export function installFakeApi(
         at: '2026-10-10T08:00:00Z',
       })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|manufacturers|categories|products|files|projects|locations|project-items|placements)(?:\/(.+))?$/.exec(
+    const route = /^\/api\/v1\/(clients|suppliers|professionals|categories|products|files|projects|locations|project-items|placements)(?:\/(.+))?$/.exec(
       url.pathname,
     )
     if (route) {
@@ -1141,7 +1162,7 @@ export function installFakeApi(
       let response: Response | undefined
       if (collection === 'clients') response = handleNamed(state.clients, clientRow, false, url, method, rest, body)
       if (collection === 'suppliers') response = handleNamed(state.suppliers, supplierRow, true, url, method, rest, body, ['name', 'contactName'])
-      if (collection === 'manufacturers') response = handleNamed(state.manufacturers, manufacturerRow, true, url, method, rest, body)
+      if (collection === 'professionals') response = handleNamed(state.professionals, professionalRow, true, url, method, rest, body)
       if (collection === 'categories') response = handleCategories(state.categories, url, method, rest, body)
       if (collection === 'products') response = handleProducts(state, url, method, rest, body)
       if (collection === 'files') response = await handleFiles(state, request, method, rest)

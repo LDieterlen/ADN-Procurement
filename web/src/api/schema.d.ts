@@ -282,76 +282,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/manufacturers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Manufacturers */
-        get: operations["listManufacturers"];
-        put?: never;
-        /** Create Manufacturer */
-        post: operations["createManufacturer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/manufacturers/{manufacturer_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Manufacturer */
-        get: operations["getManufacturer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update Manufacturer */
-        patch: operations["updateManufacturer"];
-        trace?: never;
-    };
-    "/api/v1/manufacturers/{manufacturer_id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Archive Manufacturer */
-        post: operations["archiveManufacturer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/manufacturers/{manufacturer_id}/unarchive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Unarchive Manufacturer */
-        post: operations["unarchiveManufacturer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/placements/{placement_id}": {
         parameters: {
             query?: never;
@@ -469,6 +399,76 @@ export interface paths {
         put?: never;
         /** Unarchive Product */
         post: operations["unarchiveProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/professionals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Professionals */
+        get: operations["listProfessionals"];
+        put?: never;
+        /** Create Professional */
+        post: operations["createProfessional"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/professionals/{professional_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Professional */
+        get: operations["getProfessional"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Professional */
+        patch: operations["updateProfessional"];
+        trace?: never;
+    };
+    "/api/v1/professionals/{professional_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Professional */
+        post: operations["archiveProfessional"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/professionals/{professional_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Professional */
+        post: operations["unarchiveProfessional"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1339,52 +1339,17 @@ export interface components {
             /** Zone */
             zone?: string | null;
         };
-        /** ManufacturerCreate */
-        ManufacturerCreate: {
-            /** Name */
-            name: string;
-            /** Notes */
-            notes?: string | null;
-            /** Website */
-            website?: string | null;
-        };
-        /** ManufacturerRead */
-        ManufacturerRead: {
-            /** Archivedat */
-            archivedAt: string | null;
-            /** Createdat */
-            createdAt: string;
-            /** Id */
-            id: number;
-            /** Name */
-            name: string;
-            /** Notes */
-            notes: string | null;
-            /** Updatedat */
-            updatedAt: string;
-            /** Website */
-            website: string | null;
-        };
-        /** ManufacturerUpdate */
-        ManufacturerUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Website */
-            website?: string | null;
-        };
-        /** Page[ManufacturerRead] */
-        Page_ManufacturerRead_: {
-            /** Items */
-            items: components["schemas"]["ManufacturerRead"][];
-            /** Total */
-            total: number;
-        };
         /** Page[ProductRead] */
         Page_ProductRead_: {
             /** Items */
             items: components["schemas"]["ProductRead"][];
+            /** Total */
+            total: number;
+        };
+        /** Page[ProfessionalRead] */
+        Page_ProfessionalRead_: {
+            /** Items */
+            items: components["schemas"]["ProfessionalRead"][];
             /** Total */
             total: number;
         };
@@ -1591,6 +1556,102 @@ export interface components {
             sourceUrl?: string | null;
             /** Supplierid */
             supplierId?: number | null;
+        };
+        /** ProfessionalCreate */
+        ProfessionalCreate: {
+            /** Contact2Email */
+            contact2Email?: string | null;
+            /** Contact2Name */
+            contact2Name?: string | null;
+            /** Contact2Phone */
+            contact2Phone?: string | null;
+            /** Contactname */
+            contactName?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Kind
+             * @default manufacturer
+             * @enum {string}
+             */
+            kind: "manufacturer" | "distributor" | "publisher" | "artisan";
+            /** Mobile */
+            mobile?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Specialty */
+            specialty?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** ProfessionalRead */
+        ProfessionalRead: {
+            /** Archivedat */
+            archivedAt: string | null;
+            /** Contact2Email */
+            contact2Email: string | null;
+            /** Contact2Name */
+            contact2Name: string | null;
+            /** Contact2Phone */
+            contact2Phone: string | null;
+            /** Contactname */
+            contactName: string | null;
+            /** Createdat */
+            createdAt: string;
+            /** Email */
+            email: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "manufacturer" | "distributor" | "publisher" | "artisan";
+            /** Mobile */
+            mobile: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Specialty */
+            specialty: string | null;
+            /** Updatedat */
+            updatedAt: string;
+            /** Website */
+            website: string | null;
+        };
+        /** ProfessionalUpdate */
+        ProfessionalUpdate: {
+            /** Contact2Email */
+            contact2Email?: string | null;
+            /** Contact2Name */
+            contact2Name?: string | null;
+            /** Contact2Phone */
+            contact2Phone?: string | null;
+            /** Contactname */
+            contactName?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Kind */
+            kind?: ("manufacturer" | "distributor" | "publisher" | "artisan") | null;
+            /** Mobile */
+            mobile?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Specialty */
+            specialty?: string | null;
+            /** Website */
+            website?: string | null;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -2011,6 +2072,12 @@ export interface components {
         };
         /** SupplierCreate */
         SupplierCreate: {
+            /** Contact2Email */
+            contact2Email?: string | null;
+            /** Contact2Name */
+            contact2Name?: string | null;
+            /** Contact2Phone */
+            contact2Phone?: string | null;
             /** Contactname */
             contactName?: string | null;
             /**
@@ -2025,12 +2092,16 @@ export interface components {
             defaultDiscountBp: number;
             /** Email */
             email?: string | null;
+            /** Mobile */
+            mobile?: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes?: string | null;
             /** Phone */
             phone?: string | null;
+            /** Specialty */
+            specialty?: string | null;
             /** Website */
             website?: string | null;
         };
@@ -2038,6 +2109,12 @@ export interface components {
         SupplierRead: {
             /** Archivedat */
             archivedAt: string | null;
+            /** Contact2Email */
+            contact2Email: string | null;
+            /** Contact2Name */
+            contact2Name: string | null;
+            /** Contact2Phone */
+            contact2Phone: string | null;
             /** Contactname */
             contactName: string | null;
             /** Createdat */
@@ -2050,12 +2127,16 @@ export interface components {
             email: string | null;
             /** Id */
             id: number;
+            /** Mobile */
+            mobile: string | null;
             /** Name */
             name: string;
             /** Notes */
             notes: string | null;
             /** Phone */
             phone: string | null;
+            /** Specialty */
+            specialty: string | null;
             /** Updatedat */
             updatedAt: string;
             /** Website */
@@ -2063,6 +2144,12 @@ export interface components {
         };
         /** SupplierUpdate */
         SupplierUpdate: {
+            /** Contact2Email */
+            contact2Email?: string | null;
+            /** Contact2Name */
+            contact2Name?: string | null;
+            /** Contact2Phone */
+            contact2Phone?: string | null;
             /** Contactname */
             contactName?: string | null;
             /** Currency */
@@ -2071,12 +2158,16 @@ export interface components {
             defaultDiscountBp?: number | null;
             /** Email */
             email?: string | null;
+            /** Mobile */
+            mobile?: string | null;
             /** Name */
             name?: string | null;
             /** Notes */
             notes?: string | null;
             /** Phone */
             phone?: string | null;
+            /** Specialty */
+            specialty?: string | null;
             /** Website */
             website?: string | null;
         };
@@ -2801,203 +2892,6 @@ export interface operations {
             };
         };
     };
-    listManufacturers: {
-        parameters: {
-            query?: {
-                q?: string | null;
-                includeArchived?: boolean;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_ManufacturerRead_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createManufacturer: {
-        parameters: {
-            query?: {
-                force?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManufacturerCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManufacturerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getManufacturer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                manufacturer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManufacturerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateManufacturer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                manufacturer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManufacturerUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManufacturerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    archiveManufacturer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                manufacturer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManufacturerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    unarchiveManufacturer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                manufacturer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManufacturerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     deletePlacement: {
         parameters: {
             query?: never;
@@ -3353,6 +3247,203 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProfessionals: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                includeArchived?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ProfessionalRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createProfessional: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfessionalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfessionalUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archiveProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchiveProfessional: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                professional_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessionalRead"];
                 };
             };
             /** @description Validation Error */

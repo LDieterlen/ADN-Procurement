@@ -8,44 +8,56 @@ import { renderApp } from '../../../tests/helpers/render'
 let api: FakeApi
 
 beforeEach(() => {
-  api = installFakeApi({ manufacturers: [{ name: 'Flos', website: 'https://flos.com' }, { name: 'Vitra' }] })
+  api = installFakeApi({
+    professionals: [
+      { name: 'Jouffre', website: 'https://flos.com', specialty: 'Confection' },
+      { name: 'Dedar', kind: 'publisher' },
+    ],
+  })
 })
 afterEach(() => api.restore())
 
-describe('fabricants', () => {
+describe('professionnels', () => {
   test('liste, recherche et ouverture de la fiche', async () => {
     const user = userEvent.setup()
-    renderApp('/manufacturers')
-    await screen.findByRole('table', { name: 'Liste des fabricants' })
+    renderApp('/professionals')
+    await screen.findByRole('table', { name: 'Liste des professionnels' })
     expect(screen.getByText('https://flos.com')).toBeTruthy()
-    await user.type(screen.getByLabelText('Rechercher'), 'vit')
-    await screen.findByText('Vitra')
-    expect(screen.queryByText('Flos')).toBeNull()
-    await user.click(screen.getByText('Vitra'))
-    expect(await screen.findByRole('heading', { name: 'Vitra' })).toBeTruthy()
+    expect(screen.getByText('Confection')).toBeTruthy()
+    expect(screen.getByText('Éditeur')).toBeTruthy()
+    await user.type(screen.getByLabelText('Rechercher'), 'ded')
+    await screen.findByText('Dedar')
+    expect(screen.queryByText('Jouffre')).toBeNull()
+    await user.click(screen.getByText('Dedar'))
+    expect(await screen.findByRole('heading', { name: 'Dedar' })).toBeTruthy()
+    expect((screen.getByLabelText('Prestation') as HTMLSelectElement).value).toBe('publisher')
   })
 
   test('création et archivage avec confirmation', async () => {
     const user = userEvent.setup()
-    renderApp('/manufacturers/new')
+    renderApp('/professionals/new')
     await user.type(await screen.findByLabelText('Nom'), 'Hay')
+    await user.selectOptions(screen.getByLabelText('Prestation'), 'artisan')
+    await user.type(screen.getByLabelText('Savoir-faire'), 'Céramiste')
     await user.click(screen.getByRole('button', { name: 'Créer' }))
-    await screen.findByRole('heading', { name: 'Fabricants' })
-    expect(api.manufacturers.at(-1)?.name).toBe('Hay')
+    await screen.findByRole('heading', { name: 'Professionnels' })
+    expect(api.professionals.at(-1)?.name).toBe('Hay')
+    expect(api.professionals.at(-1)?.kind).toBe('artisan')
+    expect(api.professionals.at(-1)?.specialty).toBe('Céramiste')
     await user.click(await screen.findByText('Hay'))
     await user.click(await screen.findByRole('button', { name: 'Archiver' }))
     const dialog = await screen.findByRole('dialog')
     await user.click(dialog.querySelector('button')!)
-    expect(await screen.findByText('Fabricant archivé : restaurer pour modifier.')).toBeTruthy()
-    expect(api.manufacturers.at(-1)?.archivedAt).not.toBeNull()
+    expect(await screen.findByText('Professionnel archivé : restaurer pour modifier.')).toBeTruthy()
+    expect(api.professionals.at(-1)?.archivedAt).not.toBeNull()
   })
 
   test('un nom vide est refusé par l’API et affiché sous le champ', async () => {
     const user = userEvent.setup()
-    renderApp('/manufacturers/new')
+    renderApp('/professionals/new')
     await screen.findByLabelText('Nom')
     await user.click(screen.getByRole('button', { name: 'Créer' }))
     expect(await screen.findByText('Champ obligatoire.')).toBeTruthy()
-    expect(api.manufacturers).toHaveLength(2)
+    expect(api.professionals).toHaveLength(2)
   })
 })
