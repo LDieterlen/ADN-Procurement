@@ -134,7 +134,7 @@ beforeEach(() => {
 afterEach(() => api.restore())
 
 async function openOrders(user: ReturnType<typeof userEvent.setup>) {
-  renderApp('/projects/1')
+  renderApp('/projects/1', { advanced: true })
   await user.click(await screen.findByRole('button', { name: 'Commandes' }))
   return screen.findByRole('article', { name: 'Bon de commande PO-2026-001' })
 }

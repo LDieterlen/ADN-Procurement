@@ -29,6 +29,7 @@ describe('zones du projet', () => {
   test('liste ordonnée avec multiplicateur, ajout avec code dupliqué refusé', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1')
+    await user.click(await screen.findByRole('button', { name: 'Zones' }))
     await screen.findByRole('table', { name: 'Zones du projet' })
     expect(names()).toEqual(['Lobby', 'Chambre type A'])
     expect(screen.getByText('×12')).toBeTruthy()
@@ -49,6 +50,7 @@ describe('zones du projet', () => {
   test('réordonner, archiver, supprimer', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1')
+    await user.click(await screen.findByRole('button', { name: 'Zones' }))
     await screen.findByRole('table', { name: 'Zones du projet' })
     await user.click(screen.getByRole('button', { name: 'Descendre Lobby' }))
     await screen.findByText('Chambre type A')

@@ -12,6 +12,7 @@ import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import { setAdvancedMode, useAdvancedMode } from '../../components/useAdvancedMode'
 
 type SettingsFormValues = {
   agencyName: string
@@ -125,6 +126,7 @@ export function SettingsPage() {
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   const [lastBackup, setLastBackup] = useState<BackupRead | null>(null)
+  const advanced = useAdvancedMode()
 
   async function submit(values: SettingsFormValues) {
     setServerErrors([])
@@ -170,6 +172,15 @@ export function SettingsPage() {
           serverErrors={serverErrors}
         />
       )}
+
+      <section className="max-w-3xl space-y-2 rounded border border-neutral-200 p-4" aria-label="Affichage">
+        <h2 className="text-sm font-medium text-neutral-600">Affichage</h2>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={advanced} onChange={(e) => setAdvancedMode(e.target.checked)} aria-label="Mode avancé" />
+          Mode avancé : devis, commandes, réceptions et factures, import de tarifs, tableau de bord, détail du budget
+        </label>
+        <p className="text-xs text-neutral-500">Préférence de ce navigateur ; la prescription reste le parcours par défaut.</p>
+      </section>
 
       <section className="max-w-3xl space-y-3 rounded border border-neutral-200 p-4" aria-label="Sauvegardes">
         <h2 className="text-sm font-medium text-neutral-600">Sauvegardes</h2>

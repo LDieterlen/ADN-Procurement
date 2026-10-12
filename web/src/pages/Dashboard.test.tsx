@@ -44,8 +44,8 @@ beforeEach(() => {
 afterEach(() => api.restore())
 
 describe('tableau de bord', () => {
-  test('la page d’accueil liste les projets ouverts avec budget, prescrit, reste et alerte', async () => {
-    renderApp('/')
+  test('le tableau de bord (mode avancé) liste les projets ouverts avec budget, prescrit, reste et alerte', async () => {
+    renderApp('/dashboard', { advanced: true })
     const table = await screen.findByRole('table', { name: 'Projets en cours' })
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows).toHaveLength(1)
@@ -57,7 +57,7 @@ describe('tableau de bord', () => {
 
   test('cliquer une ligne ouvre le projet', async () => {
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/dashboard', { advanced: true })
     const table = await screen.findByRole('table', { name: 'Projets en cours' })
     await user.click(within(table).getByText('Rénovation'))
     expect(await screen.findByRole('button', { name: 'Budget' })).toBeTruthy()

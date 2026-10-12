@@ -349,9 +349,21 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     if (!(payload.name ?? '').trim()) return validation('name', 'Champ obligatoire.')
     if (!payload.clientId) return validation('clientId', 'Champ obligatoire.')
     const id = state.projects.length + 1
+    const { globalBudgetCents, ...projectPayload } = payload as typeof payload & { globalBudgetCents?: number | null }
+    if (typeof globalBudgetCents === 'number')
+      state.budgets.push({
+        id: state.budgets.length + 100,
+        projectId: id,
+        zoneId: null,
+        categoryId: null,
+        amountCents: globalBudgetCents,
+        notes: null,
+        createdAt: NOW,
+        updatedAt: NOW,
+      })
     const created = projectRow(
       {
-        ...payload,
+        ...projectPayload,
         code: payload.code ?? `2026-${String(id).padStart(3, '0')}`,
         defaultVatBp: payload.defaultVatBp ?? 2000,
         contingencyBp: payload.contingencyBp ?? 1000,

@@ -64,4 +64,15 @@ describe('page Réglages', () => {
     await user.click(within(section).getByRole('button', { name: 'Sauvegarder maintenant' }))
     expect(await screen.findByText(/copie Windows absente/)).toBeTruthy()
   })
+
+  test('le mode avancé se bascule dans Réglages et révèle le tableau de bord', async () => {
+    const user = userEvent.setup()
+    renderApp('/settings')
+    expect(screen.queryByRole('link', { name: 'Tableau de bord' })).toBeNull()
+    await user.click(await screen.findByLabelText('Mode avancé'))
+    expect(await screen.findByRole('link', { name: 'Tableau de bord' })).toBeTruthy()
+    expect(localStorage.getItem('ffe.advanced')).toBe('1')
+    await user.click(screen.getByLabelText('Mode avancé'))
+    expect(screen.queryByRole('link', { name: 'Tableau de bord' })).toBeNull()
+  })
 })

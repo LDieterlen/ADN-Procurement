@@ -27,7 +27,7 @@ afterEach(() => api.restore())
 
 async function openLines(user: ReturnType<typeof userEvent.setup>) {
   renderApp('/projects/1')
-  await user.click(await screen.findByRole('button', { name: 'Lignes' }))
+  await user.click(await screen.findByRole('button', { name: 'Prescription' }))
 }
 
 describe('onglet Lignes', () => {

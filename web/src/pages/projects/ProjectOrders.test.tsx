@@ -79,7 +79,7 @@ beforeEach(() => {
 afterEach(() => api.restore())
 
 async function openOrders(user: ReturnType<typeof userEvent.setup>) {
-  renderApp('/projects/1')
+  renderApp('/projects/1', { advanced: true })
   await user.click(await screen.findByRole('button', { name: 'Commandes' }))
 }
 

@@ -29,7 +29,7 @@ describe('exports xlsx', () => {
       sizeBytes: 8000,
     })
     renderApp('/projects/1')
-    await user.click(await screen.findByRole('button', { name: 'Lignes' }))
+    await user.click(await screen.findByRole('button', { name: 'Prescription' }))
     const internal = await screen.findByRole('link', { name: 'Schedule xlsx (interne)' })
     expect(internal.getAttribute('href')).toBe('/api/v1/projects/1/exports/schedule.xlsx?variant=internal')
     expect(screen.getByRole('link', { name: 'Schedule xlsx (client)' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/schedule.xlsx?variant=client')

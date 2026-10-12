@@ -21,7 +21,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<DashboardPage />} />
+        <Route index element={<ProjectsPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/new" element={<ProjectEditPage />} />
         <Route path="/projects/:id" element={<ProjectEditPage />} />

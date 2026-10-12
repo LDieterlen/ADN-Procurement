@@ -52,7 +52,7 @@ beforeEach(() => {
 afterEach(() => api.restore())
 
 async function openQuotes(user: ReturnType<typeof userEvent.setup>) {
-  renderApp('/projects/1')
+  renderApp('/projects/1', { advanced: true })
   await user.click(await screen.findByRole('button', { name: 'Devis' }))
 }
 
@@ -137,7 +137,7 @@ describe('onglet Devis', () => {
     expect(api.events.map((e) => e.kind)).toEqual(['quote', 'status'])
     expect(api.events[0]?.note).toBe('Devis FL-1 (Flos SpA) retenu.')
     // Comparison in the line panel shows it as retained.
-    await user.click(screen.getByRole('button', { name: 'Lignes' }))
+    await user.click(screen.getByRole('button', { name: 'Prescription' }))
     const table = await screen.findByRole('table', { name: 'Lignes du projet' })
     await user.click(within(table).getByRole('row', { name: 'LUM-001 dans CHA' }))
     const panel = await screen.findByRole('dialog', { name: 'Fiche de la ligne' })

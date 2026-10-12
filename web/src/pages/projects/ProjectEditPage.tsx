@@ -16,15 +16,20 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
-import { ProjectForm, toPayload, type ProjectFormValues } from './ProjectForm'
+import { ProjectForm, toPayload, toUpdatePayload, type ProjectFormValues } from './ProjectForm'
 import { StatusBadge } from './ProjectsPage'
+import { useAdvancedMode } from '../../components/useAdvancedMode'
+import { BudgetStrip } from './BudgetStrip'
 import { BudgetTab } from './BudgetTab'
 import { ItemsTab } from './ItemsTab'
 import { OrdersTab } from './OrdersTab'
 import { QuotesTab } from './QuotesTab'
 import { ZonesTab } from './ZonesTab'
 
-type Tab = 'infos' | 'zones' | 'items' | 'quotes' | 'orders' | 'budget'
+type Tab = 'items' | 'zones' | 'budget' | 'infos' | 'quotes' | 'orders'
+const BASE_TABS: Tab[] = ['items', 'zones', 'budget', 'infos']
+const ADVANCED_TABS: Tab[] = ['items', 'zones', 'quotes', 'orders', 'budget', 'infos']
+const TAB_LABELS: Record<Tab, string> = { items: 'Prescription', zones: 'Zones', budget: 'Budget', infos: 'Infos', quotes: 'Devis', orders: 'Commandes' }
 
 export function ProjectEditPage() {
   const params = useParams<{ id: string }>()
@@ -36,17 +41,18 @@ export function ProjectEditPage() {
   const update = useUpdateProject()
   const changeStatus = useChangeProjectStatus()
   const errors = useSubmitErrors('projet')
-  const [tab, setTab] = useState<Tab>('zones')
+  const [tab, setTab] = useState<Tab>('items')
+  const advanced = useAdvancedMode()
 
   async function submit(values: ProjectFormValues) {
     errors.reset()
     try {
       if (id === undefined) {
         const created = await create.mutateAsync(toPayload(values))
-        errors.toast.show({ kind: 'success', message: `Projet ${created.code} créé ; ajouter ses zones.` })
+        errors.toast.show({ kind: 'success', message: `Projet ${created.code} créé ; ajouter ses produits.` })
         navigate(`/projects/${created.id}`)
       } else {
-        await update.mutateAsync({ id, data: toPayload(values) })
+        await update.mutateAsync({ id, data: toUpdatePayload(values) })
         errors.toast.show({ kind: 'success', message: 'Projet enregistré.' })
       }
     } catch (error) {
@@ -132,7 +138,7 @@ export function ProjectEditPage() {
       {errors.banner && !project && null}
       {project && (
         <nav className="flex gap-1 border-b border-neutral-200" aria-label="Onglets du projet">
-          {(['infos', 'zones', 'items', 'quotes', 'orders', 'budget'] as Tab[]).map((t) => (
+          {(advanced ? ADVANCED_TABS : BASE_TABS).map((t) => (
             <button
               key={t}
               type="button"
@@ -140,21 +146,12 @@ export function ProjectEditPage() {
               className={`px-3 py-1.5 text-sm ${tab === t ? 'border-b-2 border-neutral-900 font-medium' : 'text-neutral-600'}`}
               aria-current={tab === t ? 'page' : undefined}
             >
-              {t === 'infos'
-                ? 'Infos'
-                : t === 'zones'
-                  ? 'Zones'
-                  : t === 'items'
-                    ? 'Lignes'
-                    : t === 'quotes'
-                      ? 'Devis'
-                      : t === 'orders'
-                        ? 'Commandes'
-                        : 'Budget'}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </nav>
       )}
+      {project && <BudgetStrip projectId={project.id} readOnly={readOnly} />}
       {readOnly && (
         <p className="text-sm text-neutral-600">
           Projet {PROJECT_STATUS_LABELS[project!.status].toLowerCase()} : lecture seule, changer le statut pour modifier.

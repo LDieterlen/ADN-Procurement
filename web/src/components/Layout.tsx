@@ -1,23 +1,25 @@
 // Shell: sidebar navigation, « BASE DE DEV » badge from /health, page outlet.
 import { NavLink, Outlet } from 'react-router'
 import { useHealth } from '../api/queries/health'
+import { useAdvancedMode } from './useAdvancedMode'
 
-const LINKS = [
-  { to: '/', label: 'Tableau de bord' },
-  { to: '/projects', label: 'Projets' },
+const LINKS: { to: string; label: string; advanced?: boolean }[] = [
+  { to: '/', label: 'Projets' },
   { to: '/clients', label: 'Clients' },
   { to: '/products', label: 'Produits' },
   { to: '/suppliers', label: 'Fournisseurs' },
   { to: '/manufacturers', label: 'Fabricants' },
   { to: '/categories', label: 'Catégories' },
-  { to: '/imports/products', label: 'Import tarifs' },
+  { to: '/dashboard', label: 'Tableau de bord', advanced: true },
+  { to: '/imports/products', label: 'Import tarifs', advanced: true },
   { to: '/settings', label: 'Réglages' },
-  { to: '/health', label: 'Santé' },
+  { to: '/health', label: 'Santé', advanced: true },
 ]
 
 export function Layout() {
   const health = useHealth()
   const isDev = health.data?.isDevDb === true
+  const advanced = useAdvancedMode()
   return (
     <div className="flex min-h-screen bg-neutral-50 font-sans text-neutral-900">
       <aside className="flex w-52 flex-col border-r border-neutral-200 bg-white">
@@ -26,7 +28,7 @@ export function Layout() {
           {isDev && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">BASE DE DEV</span>}
         </div>
         <nav className="flex flex-col gap-0.5 px-2" aria-label="Navigation principale">
-          {LINKS.map((link) => (
+          {LINKS.filter((link) => advanced || !link.advanced).map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

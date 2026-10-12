@@ -2,10 +2,11 @@
 import { useEffect } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import type { ErrorDetail } from '../../api/errors'
-import type { ProjectCreate, ProjectRead } from '../../api/queries/project'
+import type { ProjectCreate, ProjectRead, ProjectUpdate } from '../../api/queries/project'
 import { BpField } from '../../components/forms/BpField'
 import { DateField } from '../../components/forms/DateField'
 import { EntityPicker, type PickerOption } from '../../components/forms/EntityPicker'
+import { MoneyField } from '../../components/forms/MoneyField'
 import { Form } from '../../components/forms/Form'
 import { TextArea } from '../../components/forms/TextArea'
 import { TextInput } from '../../components/forms/TextInput'
@@ -23,6 +24,7 @@ export type ProjectFormValues = {
   startOn: string | null
   dueOn: string | null
   notes: string
+  globalBudgetCents: number | null
 }
 
 const EMPTY: ProjectFormValues = {
@@ -37,6 +39,7 @@ const EMPTY: ProjectFormValues = {
   startOn: null,
   dueOn: null,
   notes: '',
+  globalBudgetCents: null,
 }
 
 export function fromProject(p: ProjectRead): ProjectFormValues {
@@ -52,6 +55,7 @@ export function fromProject(p: ProjectRead): ProjectFormValues {
     startOn: p.startOn,
     dueOn: p.dueOn,
     notes: p.notes ?? '',
+    globalBudgetCents: null,
   }
 }
 
@@ -70,7 +74,15 @@ export function toPayload(v: ProjectFormValues): ProjectCreate {
     startOn: v.startOn,
     dueOn: v.dueOn,
     notes: orNull(v.notes),
+    globalBudgetCents: v.globalBudgetCents,
   }
+}
+
+/** The update route has no budget field: the envelope lives in the Budget tab once created. */
+export function toUpdatePayload(v: ProjectFormValues): ProjectUpdate {
+  const { globalBudgetCents, ...rest } = toPayload(v)
+  void globalBudgetCents
+  return rest
 }
 
 export function ProjectForm({
@@ -101,24 +113,30 @@ export function ProjectForm({
     <Form form={form} onSubmit={onSubmit} banner={banner}>
       <div className="grid max-w-3xl grid-cols-2 gap-4">
         <TextInput name="name" label="Nom" autoFocus />
-        <TextInput name="code" label="Code" hint={initial ? 'Éditable' : 'Vide = généré (AAAA-NNN)'} />
         <EntityPicker name="clientId" label="Client" options={clients} required />
-        <BpField name="defaultVatBp" label="TVA par défaut" hint="Vide = réglage général (20 %)" />
-        <BpField name="contingencyBp" label="Contingence" hint="Sur le budget global ; vide = réglage général (10 %)" />
-        <DateField name="startOn" label="Début" />
-        <DateField name="dueOn" label="Échéance" />
+        {!initial && <MoneyField name="globalBudgetCents" label="Budget global HT (€)" hint="Facultatif ; modifiable ensuite dans le projet" />}
       </div>
-      <fieldset className="max-w-3xl rounded border border-neutral-200 p-4">
-        <legend className="px-1 text-sm font-medium text-neutral-600">Adresses</legend>
-        <div className="grid grid-cols-2 gap-4">
-          <TextInput name="siteAddress" label="Chantier" />
-          <TextInput name="deliveryAddress" label="Livraison" hint="Vide = chantier" />
-          <TextInput name="deliveryContact" label="Contact livraison" />
+      <details open={Boolean(initial)} className="max-w-3xl">
+        <summary className="cursor-pointer text-sm text-neutral-600">Plus d'options</summary>
+        <div className="mt-3 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput name="code" label="Code" hint={initial ? 'Éditable' : 'Vide = généré (AAAA-NNN)'} />
+            <BpField name="defaultVatBp" label="TVA par défaut" hint="Vide = réglage général (20 %)" />
+            <BpField name="contingencyBp" label="Contingence" hint="Sur le budget global ; vide = réglage général (10 %)" />
+            <DateField name="startOn" label="Début" />
+            <DateField name="dueOn" label="Échéance" />
+          </div>
+          <fieldset className="rounded border border-neutral-200 p-4">
+            <legend className="px-1 text-sm font-medium text-neutral-600">Adresses</legend>
+            <div className="grid grid-cols-2 gap-4">
+              <TextInput name="siteAddress" label="Chantier" />
+              <TextInput name="deliveryAddress" label="Livraison" hint="Vide = chantier" />
+              <TextInput name="deliveryContact" label="Contact livraison" />
+            </div>
+          </fieldset>
+          <TextArea name="notes" label="Notes internes" />
         </div>
-      </fieldset>
-      <div className="max-w-3xl">
-        <TextArea name="notes" label="Notes internes" />
-      </div>
+      </details>
       <Button type="submit" variant="primary" disabled={submitting}>
         {submitLabel}
       </Button>

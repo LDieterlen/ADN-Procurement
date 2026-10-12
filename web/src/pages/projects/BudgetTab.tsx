@@ -8,6 +8,7 @@ import { centsToText, textToCents } from '../../components/forms/MoneyField'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import { useAdvancedMode } from '../../components/useAdvancedMode'
 
 type View = 'zone' | 'category'
 const ALERT_CLASSES = { none: 'bg-green-500', warning: 'bg-amber-500', over: 'bg-red-600' } as const
@@ -34,6 +35,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
   const alerts = useProjectAlerts(projectId)
   const put = usePutBudgetLines()
   const toast = useToast()
+  const advanced = useAdvancedMode()
   const [view, setView] = useState<View>('zone')
   const [editing, setEditing] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -129,10 +131,10 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             <th className="px-2 py-1 text-right">Budget HT EUR</th>
             <th className="px-2 py-1 text-right">Contingence ({budget.contingencyBp / 100} %) HT EUR</th>
             <th className="px-2 py-1 text-right">Prescrit HT EUR</th>
-            <th className="px-2 py-1 text-right">Validé HT EUR</th>
-            <th className="px-2 py-1 text-right">Engagé HT EUR</th>
-            <th className="px-2 py-1 text-right">Facturé HT EUR</th>
-            <th className="px-2 py-1 text-right">Payé HT EUR</th>
+            {advanced && <th className="px-2 py-1 text-right">Validé HT EUR</th>}
+            {advanced && <th className="px-2 py-1 text-right">Engagé HT EUR</th>}
+            {advanced && <th className="px-2 py-1 text-right">Facturé HT EUR</th>}
+            {advanced && <th className="px-2 py-1 text-right">Payé HT EUR</th>}
             <th className="px-2 py-1 text-right">Reste HT EUR</th>
             <th className="px-2 py-1">Écart</th>
           </tr>
@@ -143,10 +145,10 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             <td className="px-2 py-1 text-right">{editing ? input(null, null) : budget.globalCents === null ? '—' : centsToText(budget.globalCents)}</td>
             <td className="px-2 py-1 text-right">{centsToText(budget.contingencyCents)}</td>
             <td className="px-2 py-1 text-right">{centsToText(budget.specifiedCents)}</td>
-            <td className="px-2 py-1 text-right">{centsToText(budget.approvedCents)}</td>
-            <td className="px-2 py-1 text-right">{centsToText(budget.engagedCents)}</td>
-            <td className="px-2 py-1 text-right">{centsToText(budget.invoicedCents)}</td>
-            <td className="px-2 py-1 text-right">{centsToText(budget.paidCents)}</td>
+            {advanced && <td className="px-2 py-1 text-right">{centsToText(budget.approvedCents)}</td>}
+            {advanced && <td className="px-2 py-1 text-right">{centsToText(budget.engagedCents)}</td>}
+            {advanced && <td className="px-2 py-1 text-right">{centsToText(budget.invoicedCents)}</td>}
+            {advanced && <td className="px-2 py-1 text-right">{centsToText(budget.paidCents)}</td>}
             <td className={`px-2 py-1 text-right ${budget.remainingCents !== null && budget.remainingCents < 0 ? 'text-red-700' : ''}`}>
               {budget.remainingCents === null ? '—' : centsToText(budget.remainingCents)}
             </td>
@@ -165,8 +167,8 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
             <th className="px-2 py-1 text-right">Budget HT EUR</th>
             {view === 'zone' && <th className="px-2 py-1 text-right">Par clé HT EUR</th>}
             <th className="px-2 py-1 text-right">Prescrit HT EUR</th>
-            <th className="px-2 py-1 text-right">Validé HT EUR</th>
-            <th className="px-2 py-1 text-right">Engagé HT EUR</th>
+            {advanced && <th className="px-2 py-1 text-right">Validé HT EUR</th>}
+            {advanced && <th className="px-2 py-1 text-right">Engagé HT EUR</th>}
             <th className="px-2 py-1 text-right">Reste HT EUR</th>
             <th className="px-2 py-1">Écart</th>
           </tr>
@@ -174,7 +176,7 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-2 py-2 text-neutral-400">
+              <td colSpan={advanced ? 9 : 7} className="px-2 py-2 text-neutral-400">
                 Aucune ligne.
               </td>
             </tr>
@@ -192,8 +194,8 @@ export function BudgetTab({ projectId, readOnly }: { projectId: number; readOnly
                 </td>
               )}
               <td className="px-2 py-1 text-right">{centsToText(row.specifiedCents)}</td>
-              <td className="px-2 py-1 text-right">{centsToText(row.approvedCents)}</td>
-              <td className="px-2 py-1 text-right">{centsToText(row.engagedCents)}</td>
+              {advanced && <td className="px-2 py-1 text-right">{centsToText(row.approvedCents)}</td>}
+              {advanced && <td className="px-2 py-1 text-right">{centsToText(row.engagedCents)}</td>}
               <td className={`px-2 py-1 text-right ${row.remainingCents !== null && row.remainingCents < 0 ? 'text-red-700' : ''}`}>
                 {row.remainingCents === null ? '—' : centsToText(row.remainingCents)}
               </td>

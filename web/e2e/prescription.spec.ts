@@ -27,7 +27,7 @@ test('créer un projet, une zone et une ligne : les totaux viennent du serveur',
   await page.getByRole('button', { name: 'Ajouter' }).click()
   await expect(page.getByRole('table', { name: 'Zones du projet' })).toContainText('Chambre type A')
 
-  await page.getByRole('button', { name: 'Lignes' }).click()
+  await page.getByRole('button', { name: 'Prescription' }).click()
   await page.getByRole('button', { name: 'Ligne libre' }).click()
   await page.getByLabel('Désignation').fill('Applique de chevet')
   await page.getByLabel('Catégorie').selectOption({ label: 'LUM — Luminaires' })
@@ -35,7 +35,7 @@ test('créer un projet, une zone et une ligne : les totaux viennent du serveur',
   await page.getByLabel('Zone', { exact: true }).selectOption({ label: 'CHA — Chambre type A (×12)' })
   await page.getByRole('button', { name: 'Ajouter' }).click()
   const lines = page.getByRole('table', { name: 'Lignes du projet' })
-  await expect(lines.getByRole('row', { name: 'LUM-001 dans CHA' })).toBeVisible()
+  await expect(lines.getByRole('row', { name: 'CHA-LUM-01 dans CHA' })).toBeVisible()
   // 450,00 € × 1 par zone × 12 clés = 5 400,00 € HT ; TVA 20 % = 1 080,00 ; TTC 6 480,00.
   await expect(lines).toContainText('5 400,00')
   await expect(lines).toContainText('TVA 1 080,00 · TTC 6 480,00')
