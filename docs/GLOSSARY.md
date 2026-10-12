@@ -1,55 +1,60 @@
 # Glossaire FR / EN
 
-Référence pour nommer les choses : le **français** dans l'UI, les documents et les commits ; l'**anglais** dans le code, les tables et les colonnes. La colonne « Où ça vit » renvoie au modèle de `docs/DATA_MODEL.md` (brouillon jusqu'à l'étape 2) ; « étape N » signale ce qui n'existe pas encore en base.
+Référence pour nommer les choses : le **français** dans l'UI, les documents et les commits ; l'**anglais** dans le code, les tables et les colonnes. La colonne « Où ça vit » renvoie au modèle de `docs/DATA_MODEL.md` (recentré le 2026-10-12, ADR-0013).
 
 ## Métier
 
 | FR | EN | Définition | Où ça vit |
 |---|---|---|---|
-| Mobilier, agencement et équipement | FF&E (Furniture, Fixtures & Equipment) | Éléments mobiles ou démontables prescrits par l'architecte d'intérieur ; capitalisés par le client. | `project_item.kind = 'ffe'` (défaut) |
-| Petit équipement d'exploitation | OS&E (Operating Supplies & Equipment) | Linge, vaisselle, consommables ; acheté par l'exploitant. Hors périmètre v1 mais marquable. | `project_item.kind = 'ose'` |
-| Procurement / achats FF&E | Procurement | Chaîne spécification → RFQ → devis → PO → suivi → réception → installation. | Toute l'application ; achats à l'étape 10 |
-| Typologie | Typology | Famille d'un article dans les fiches : la catégorie de niveau 1 (Luminaire, Accastillage, Sanitaire…) ; son code forme le milieu du code article. | `category.code` (niveau 1) |
-| Localisation | Location | Où l'article se pose : sol, mur, plafond, porte, autre ; facultatif, imprimé sur la fiche. | `project_item.location` |
-| Indice | Revision index | Lettre de diffusion du PDF de prescriptions (A, B, C…) ; une ligne porte la lettre de la diffusion où elle a changé pour la dernière fois. | `project_file.indice`, `project_item.indice` |
-| Prescription / spécification | Specification / to specify | Choisir et documenter un produit précis pour un emplacement. | `project_item` (statut `specified`) |
-| Tableau FF&E / liste de prescription | FF&E schedule | Tableau synthétique des lignes : code, zone, désignation, qté, prix, fournisseur, délai, statut. | Onglet Lignes (7b) ; export xlsx (F1) |
-| Book / dossier de prescription | Specification book / spec book | Fiches illustrées, une par article, remises au client. | Impression client (7c) ; export PDF (F2) ; `fee` exclu |
+| Mobilier, agencement et équipement | FF&E (Furniture, Fixtures & Equipment) | Éléments mobiles ou démontables prescrits par l'architecte d'intérieur ; capitalisés par le client. | `project_item.kind = 'product'` (défaut) |
+| Petit équipement d'exploitation | OS&E (Operating Supplies & Equipment) | Linge, vaisselle, consommables ; acheté par l'exploitant. | `project_item.family = 'ose'` |
+| Procurement / achats FF&E | Procurement | Chaîne prescription → chiffrage → validation → acompte → achat. | Le statut unique de l'article (ADR-0013) |
+| Type de produit | Product type | Assise, table, tapis, luminaire décoratif… (19 types seedés) ; son code forme le milieu du code FF&E. | `category.code` |
+| Famille | Family | Nature de sourcing : pièce sur-mesure, agencement, OS&E, pièce d'édition, pièce de galerie, artwork, confection ; facultative, axe de budget. | `project_item.family` |
+| Usage | Usage | Intérieur ou extérieur ; facultatif. | `project_item.usage` |
+| Localisation | Location | Lieu de destination dans un projet (lobby, bar, chambre typo A, suite…) avec sa zone, son niveau et son nombre ; un article s'implante dans plusieurs localisations. | `location` (ADR-0013) |
+| Zone | Zone | Regroupement de localisations : Zones communes, Hébergement, Back of house… texte libre, axe de budget. | `location.zone` |
+| Niveau | Level | Étage de la localisation : R0, R+1… | `location.level` |
+| Indice | Revision index | Lettre de diffusion des fiches de prescription (A, B, C…) ; un article porte la lettre de la diffusion où il a changé pour la dernière fois. | `project_file.indice`, `project_item.indice` |
+| Indice de devis | Quote revision | Lettre de la version du devis fournisseur (A, B…), saisie sur l'article. | `project_item.quote_indice` |
+| Prescription / spécification | Specification / to specify | Choisir et documenter un produit précis pour un emplacement. | `project_item` |
+| Listing FF&E | FF&E schedule | Tableau synthétique des articles : code, type, désignation, fabricant, fournisseur, quantité, montant HT, état, indice. | Page projet ; `GET …/exports/list.pdf` |
+| Fiches de prescription / fiche de spec | Specification sheets / spec book | Fiches illustrées, une par article, remises au client ; jamais de prix. | `GET …/exports/sheets.pdf` ; `fee` exclu |
 | Fiche technique | Cut sheet / tear sheet / datasheet | Document fabricant : dimensions, finitions, normes. | `product_file.kind = 'datasheet'` ; `file` |
-| Délai de livraison | Lead time | Durée entre commande et disponibilité, en semaines. | `product.lead_time_weeks`, `project_item.lead_time_weeks` |
-| Date de besoin sur site | Required on site | Date à laquelle l'article doit être livré sur le chantier. | `project_item.required_on_site` |
-| Commander avant le | Order-by date | `required_on_site` − délai − marge (14 jours par défaut) ; calculé, jamais stocké. | `money.py` (7a), colonne calculée (7c) |
+| Délai de livraison | Lead time | Durée entre commande et disponibilité. | Retiré par ADR-0013 ; accroche DATA_MODEL §8 |
+| Date de besoin sur site | Required on site | Date à laquelle l'article doit être livré sur le chantier. | Retiré par ADR-0013 ; accroche DATA_MODEL §8 |
+| Commander avant le | Order-by date | Date limite de commande ; calculée. | Retiré par ADR-0013 |
 | Demande de prix / consultation | RFQ (Request for Quotation) | Demande de devis à un ou plusieurs fournisseurs. | Export PDF (F2) ; aucune table |
-| Devis | Quote / quotation | Offre de prix fournisseur à durée de validité. | `project_item.quote_ref`, `quote_valid_until` ; table `quote` (10a) |
-| Bon de commande | Purchase order (PO) | Engagement contractuel d'achat ; un fournisseur, un projet. | `project_item.order_ref` ; table `purchase_order` (10b) |
-| Réception / livraison | Delivery / receipt | Arrivée des articles, quantités reçues, réserves. | statut `delivered` ; table `delivery` (10c) |
-| Réserves | Punch list / delivery issues | Défauts, manquants, dommages consignés à la réception. | `delivery_line` (10c) |
-| Facture fournisseur | Supplier invoice | Acompte, solde ou facture unique ; échéance, paiement. | table `supplier_invoice` (10c) |
-| Acompte / solde | Deposit / balance | Paiement partiel à la commande, reste avant livraison. | `supplier_invoice.kind` (10c) |
-| Suivi de commande / relance | Expediting | Suivi de production et d'expédition auprès du fournisseur. | Hors v1 ; statuts `in_production`, `shipped` reportés |
-| Chambre témoin | Model room / mock-up room | Chambre prototype pour valider les choix avant série. | Une `zone` ordinaire (`multiplier = 1`) |
-| Type de chambre, par clé | Room type, per key | Unité de chiffrage hôtelier : « chambre type A » ×120. | `zone.multiplier` |
-| Tissu client | COM (Customer's Own Material) | Tissu fourni par l'agence au fabricant, avec métrage. | Texte dans `project_item.finish` / `materials` |
-| Sur mesure | Custom / bespoke | Fabriqué d'après dessin de l'agence, sans fiche catalogue. | `project_item.kind = 'custom'`, `product_id` NULL |
-| Existant / réemploi | Existing | Article déjà possédé ; compté en quantité, exclu des montants. | `project_item.kind = 'existing'` |
-| Frais | Fee | Ligne forfaitaire transport ou installation, par fournisseur ; hors book. | `project_item.kind = 'fee'` (D0.11) |
-| Bon à tirer | BAT / proof | Épreuve (dessin, échantillon, maquette) signée par l'agence ou le client avant fabrication. | `project_item_file.kind = 'approval'` |
-| Accusé de réception de commande | AR / order acknowledgement | Confirmation du fournisseur après commande : quantités, prix, date de livraison promise. | `project_item.expected_delivery_on` ; table `purchase_order` (10b) |
+| Devis | Quote / quotation | Offre de prix du fournisseur ; numéro, indice et lien portés par l'article. | `project_item.quote_ref`, `quote_indice`, `quote_url` |
+| Bon de commande | Purchase order (PO) | Engagement contractuel d'achat. | Retiré par ADR-0013 (tag `v0-complet`) ; statuts `deposit`, `purchased` |
+| Réception / livraison | Delivery / receipt | Arrivée des articles. | Retiré par ADR-0013 |
+| Frais de livraison et d'emballage | Delivery and packing fees | Ligne forfaitaire par fournisseur, comptée dans le budget, absente des fiches. | `project_item.kind = 'fee'` |
+| Facture fournisseur | Supplier invoice | Acompte, solde ou facture unique. | Retiré par ADR-0013 |
+| Acompte | Deposit | Paiement partiel à la commande. | statut `deposit` |
+| Chambre témoin | Model room / mock-up room | Chambre prototype pour valider les choix avant série. | Une `location` ordinaire (`multiplier = 1`) |
+| Type de chambre, par clé | Room type, per key | Unité de chiffrage hôtelier : « chambre typo A » ×24. | `location.multiplier` |
+| Tissu client | COM (Customer's Own Material) | Tissu fourni par l'agence au fabricant, avec métrage. | Texte dans `project_item.finish` |
+| Sur mesure | Custom / bespoke | Fabriqué d'après dessin de l'agence. | `project_item.family = 'custom'` |
+| Dessin | Drawing | Dessin coté de l'agence ou du fabricant, imprimé sous la photo de la fiche. | `project_item_file.kind = 'drawing'` |
+| Représentant | Representative | Contact du fournisseur imprimé sur la fiche de spec (nom, téléphone, e-mail). | `supplier.contact_name`, `phone`, `email` |
+| Validation | Approval | Accord du client sur une fiche ; case « Validation » de la fiche imprimée, statut `approved`. | `project_item.status` |
+| Catalogue | Catalogue | Les produits réutilisables ; un article libre y entre par défaut (case « ne pas ajouter au catalogue » sinon). | `product` ; `ProjectItemCreate.addToCatalogue` |
 
 ## Budget et montants
 
 | FR | EN | Définition | Où ça vit |
 |---|---|---|---|
-| Budget / enveloppe | Budget / allowance | Objectif net HT en EUR posé par projet, zone et/ou catégorie. | `budget_line.amount_cents` (8) |
-| Contingence | Contingency | Réserve pour imprévus, en points de base du budget. | `setting.default_contingency_bp`, `project.contingency_bp` |
-| Prescrit | Specified / estimated | Σ des lignes comptées, enveloppe FF&E ; statuts et kinds comptés : DATA_MODEL §5. | Calculé par `money.py` (8) |
-| Validé client | Approved | Σ `approved_unit_net_cents × approved_total_qty_milli` des lignes comptées de statut `approved` à `installed` ; définition unique : DATA_MODEL §5. | `approved_unit_net_cents`, `approved_total_qty_milli` |
-| Engagé | Committed | Σ montants des PO émis non annulés. | Étape 10b ; aucune colonne en v1 |
-| Facturé / payé | Invoiced / paid | Σ factures fournisseur ; Σ paiements. | Étape 10c |
-| Tarif / prix catalogue | List price | Prix public ou tarif fournisseur avant remise, avec sa devise, son mode HT/TTC et sa date. | `product.list_price_cents`, `list_price_currency`, `list_price_tax_mode`, `list_price_on` |
+| Budget / enveloppe / prévisionnel | Budget / allowance | Objectif net HT en EUR posé pour le projet, une localisation, une zone, une famille ou un fournisseur. | `budget_line` (scope) |
+| Compilation | Breakdown | Totaux par localisation, zone, famille, type ou fournisseur, avec prévisionnel, prescrit, devisé, validé et reste. | `GET /projects/{id}/summary` |
+| Prescrit | Specified / estimated | Σ des articles non annulés. | Calculé par `money.py` |
+| Devisé | Quoted | Σ des articles de statut Devisé, À revoir, Validé, Acompte ou Acheté. | Calculé par `money.py` |
+| Validé | Approved | Σ des articles de statut Validé, Acompte ou Acheté. | Calculé par `money.py` |
+| Part par état | Share by status | Montant et pourcentage de chaque statut dans le prescrit. | `summary.byStatus` |
+| Engagé / facturé / payé | Committed / invoiced / paid | Suivi des commandes et factures. | Retiré par ADR-0013 |
+| Tarif / prix catalogue | List price | Prix HT avant remise, avec sa devise. | `product.list_price_cents`, `product.currency` |
 | Remise professionnelle | Trade discount | Réduction accordée aux prescripteurs, en points de base. | `supplier.default_discount_bp`, `project_item.discount_bp` |
-| Prix net | Net price | `unit_cost × (10000 − discount_bp) / 10000`, arrondi au centime. | Calculé par `money.py` ; jamais stocké sauf snapshot `approved_*` |
-| HT / TTC / TVA | Excl. tax / incl. tax / VAT | Montants saisis et stockés HT ; TTC = HT + TVA par taux, calculé. | `project_item.vat_rate_bp`, `project.default_vat_bp`, `setting.default_vat_bp` |
+| Prix net | Net price | `unit_cost × (10000 − discount_bp) / 10000`, arrondi au centime. | Calculé par `money.py` ; jamais stocké |
+| HT | Excl. tax | Tous les montants sont saisis, stockés et affichés HT ; pas de TVA (accroche DATA_MODEL §8). | colonnes `*_cents` |
 | Devise / taux de change | Currency / FX rate | ISO 4217 par ligne ; 1 unité = `fx_rate_micro` / 1 000 000 EUR, figé par ligne ; totaux en EUR. | `project_item.currency`, `fx_rate_micro` ; `setting.base_currency` |
 | Centime | Cent | Unité de stockage de tout montant (INTEGER). | colonnes `*_cents` |
 | Point de base | Basis point (bp) | 1/100 de pour cent ; 10 000 = 100 % ; tout taux est un INTEGER en bp. | colonnes `*_bp` |
@@ -60,30 +65,26 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 
 | FR | EN | Définition | Où ça vit |
 |---|---|---|---|
-| Projet | Project | Conteneur : client, statut, adresses, défauts TVA/contingence, dates. | `project` (6c) |
-| Zone / pièce | Zone / area / room | Lieu de destination dans un projet ; code unique par projet. | `zone` (6c) |
-| Multiplicateur / clé | Multiplier | Nombre d'exemplaires d'une zone type (défaut 1). | `zone.multiplier` |
-| Ligne (FF&E) | Project item / line | Instance projet d'une spécification : prix, devise, fournisseur, délai, statut figés. Entité pivot. | `project_item` (7a) |
-| Placement | Placement | Ligne × zone × quantité ; une ligne peut avoir plusieurs placements ; zone NULL = « non affecté ». | `project_item_placement` (7a) |
-| Quantité totale | Total quantity | Σ `qty_milli × zone.multiplier` sur les placements ; calculée. | `money.py` |
-| Code article / repère | Item code / tag | `<CAT>-NNN`, unique par projet, sur plans, book et PO. | `project_item.item_code` ; `code_sequence` |
-| Catégorie | Category | Arbre à 2 niveaux ; le niveau 1 porte le code préfixe et l'axe budget. | `category` (6a), seed D0.9 |
-| Catalogue produit | Product catalogue | Fiche réutilisable entre projets ; ne fige rien. | `product` (6b) |
-| Fabricant / marque | Manufacturer / brand | Qui produit (Vitra). Distinct du fournisseur. | `manufacturer` (6a) |
-| Fournisseur | Supplier / vendor | Qui vend et facture ; porte devise et remise par défaut, identité légale. | `supplier` (6a) |
-| Client / donneur d'ordre | Client | Particulier ou société pour qui le projet est mené. | `client` (3) |
-| Référence fabricant | Manufacturer reference / SKU | Numéro de modèle du fabricant. | `product.manufacturer_ref` |
-| Référence fournisseur | Supplier reference | Code de l'article chez le fournisseur. | `product.supplier_ref` |
-| GTIN / EAN | GTIN | Code-barres mondial de l'article, quand il existe. | `product.gtin` |
-| Finition / matière / coloris | Finish / materials / color | Description structurée de l'aspect ; copiée du produit vers la ligne puis figée. | `product.finish`, `materials`, `color` ; idem `project_item` |
-| Unité | Unit | pièce, paire, ensemble, lot, m, m², rouleau. | `product.unit`, `project_item.unit` |
-| Statut | Status | État du cycle de vie d'une ligne : draft, specified, quoted, approved, ordered, delivered, installed, cancelled, replaced. | `project_item.status` (CHECK) |
+| Projet | Project | Conteneur : client, statut, budget global, échéance, adresse du chantier. | `project` |
+| Implantation | Placement | Article × localisation × quantité ; un article peut avoir plusieurs implantations ; localisation NULL = « non affecté ». | `project_item_placement` |
+| Nombre / multiplicateur | Multiplier | Nombre d'exemplaires d'une localisation type (défaut 1). | `location.multiplier` |
+| Article | Project item | Instance projet d'une fiche de prescription : nom, référence, fabricant, fournisseur, dimensions, finitions, prix, devise, statut. Entité pivot. | `project_item` |
+| Quantité totale | Total quantity | Σ `qty_milli × location.multiplier` sur les implantations ; calculée. | `money.py` |
+| Code FF&E | Item code / tag | `<LOC>-<TYPE>-NN` (`CHA-LUD-01`), `FR-NN` pour les frais ; unique par projet, sur plans et fiches. | `project_item.item_code` ; `item_code_sequence` |
+| Fournisseur | Supplier / vendor | Qui vend ; porte le représentant, la devise et la remise par défaut. | `supplier` |
+| Fabricant / marque | Manufacturer / brand | Qui produit (Flos). Distinct du fournisseur. | `manufacturer` |
+| Client / donneur d'ordre | Client | Particulier ou société pour qui le projet est mené. | `client` |
+| Référence | Reference | Numéro de modèle ou code de l'article. | `product.reference`, `project_item.reference` |
+| Dimensions | Dimensions | Texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm ». | `product.dimensions`, `project_item.dimensions` |
+| Finitions | Finish | Description libre de l'aspect ; copiée du produit vers l'article puis figée. | `product.finish`, `project_item.finish` |
+| Lien internet | Web link | Adresse de la fiche produit, imprimée sur la fiche de spec. | `product.source_url`, `project_item.source_url` |
+| Commentaires | Comments | Texte imprimé sur la fiche de prescription. | `project_item.comments` |
+| Statut / état | Status | À chiffrer, Devisé, À revoir, Validé, Acompte, Acheté, Annulé ; libre, journalisé. | `project_item.status` (CHECK) |
 | En attente | On hold | Décision client en suspens ; compté mais signalé. | `project_item.on_hold` |
 | Remplacé | Replaced / substituted | Ligne retirée au profit d'une autre ; historique conservé. | `project_item.status = 'replaced'`, `replaced_by_id` |
 | Option / alternative | Alternative (A/B) | Variantes présentées au client ; une seule retenue. Hors v1. | Reporté : `alternative_of_id` (D0.14) |
-| Snapshot de validation | Approval snapshot | Prix net et quantité totale figés au passage `approved` ; répond à « que voyait le client ? ». | `approved_at`, `approved_unit_net_cents`, `approved_total_qty_milli` |
-| Historique / événement | Event log | Journal en ajout seul des changements de statut et de valeur d'une ligne. | `project_item_event` (7a) |
-| Archivage | Archiving | Masquer sans supprimer ; la suppression physique est bornée (brouillon sans événement, zone vide, placement, ligne de budget). | colonnes `archived_at` ; index `(archived_at, name)` ; les UNIQUE métier s'appliquent aussi aux archivés ; doublon d'un archivé détecté par le service → 409 `archivedId` |
+| Historique / événement | Event log | Journal en ajout seul des changements de statut, de prix, de produit et d'implantation d'un article. | `project_item_event` |
+| Archivage | Archiving | Masquer sans supprimer ; la suppression physique est bornée (article à chiffrer sans événement, localisation vide, implantation, ligne de budget). | colonnes `archived_at` ; index `(archived_at, name)` ; les UNIQUE métier s'appliquent aussi aux archivés ; doublon d'un archivé détecté par le service → 409 `archivedId` |
 | Objet de transfert | DTO (Data Transfer Object) | Forme JSON d'une ressource renvoyée par l'API, sans champ calculé. | schéma Pydantic `XxxRead` (`schemas/`) |
 | Fichier joint | Attachment / file | Photo, fiche technique, devis ; dédoublonné par hash, stocké hors base. | `file.sha256` ; `product_file`, `project_item_file` ; `~/.persist/ffe/files/` |
 | Description client / notes internes | Client description / internal notes | Texte visible dans le book vs texte réservé à l'agence. | `project_item.client_description`, `internal_notes` |

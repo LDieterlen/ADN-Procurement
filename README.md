@@ -29,7 +29,7 @@ Pré-requis : `uv` ≥ 0.12 et Node 24. Toutes les commandes se tapent dans le t
 mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pas sur le montage 9p
 (cd api && uv sync)                                   # dépendances Python
 (cd web && npm ci)                                    # dépendances front
-(cd api && uv run ffe db migrate && uv run ffe db seed)   # base de dev (~/.persist/ffe-dev) + catégories de départ
+(cd api && uv run ffe db migrate && uv run ffe db seed --demo)   # base de dev (~/.persist/ffe-dev) + 19 types de produit + projet d'exemple
 
 # Développement : deux terminaux
 (cd api && uv run ffe serve --reload)   # API sur http://127.0.0.1:8000
@@ -37,7 +37,7 @@ mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pa
 
 # Usage réel (base ~/.persist/ffe) : construire le front, puis servir le tout sur un seul port
 (cd web && npm run build)
-(cd api && uv run ffe db migrate --prod && uv run ffe db seed --prod)   # une fois
+(cd api && uv run ffe db migrate --prod && uv run ffe db seed --prod)   # une fois (sans --demo)
 (cd api && uv run ffe serve --prod)     # interface + API sur http://127.0.0.1:8000
 
 # Base de données (serveur arrêté) ; sans --prod, la base de dev
@@ -48,7 +48,7 @@ mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pa
 
 # Schéma modifié avant la v1 (ADR-0012) : la base de dev se recrée, rien n'y est précieux
 rm -f ~/.persist/ffe-dev/ffe.sqlite ~/.persist/ffe-dev/ffe.sqlite-wal ~/.persist/ffe-dev/ffe.sqlite-shm
-(cd api && uv run ffe db migrate && uv run ffe db seed)
+(cd api && uv run ffe db migrate && uv run ffe db seed --demo)
 
 # Vérifications
 ./check.sh                 # ruff, pyright, pytest, tsc, prettier, vitest : la porte avant tout commit
