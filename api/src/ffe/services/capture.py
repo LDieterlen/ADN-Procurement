@@ -19,7 +19,7 @@ from ffe.services.file import sniff, store_bytes
 
 MAX_BYTES = 3 * 1024 * 1024
 TIMEOUT_S = 10
-USER_AGENT = "FFE/0.1 (outil local de prescription ; lecture d'une page à la demande)"
+USER_AGENT = "Mozilla/5.0 (compatible; FFE/0.1; outil local de prescription, une page a la demande)"
 
 Fetcher = Callable[[str, int], tuple[bytes, str]]  # (url, max_bytes) → (body, content type)
 
