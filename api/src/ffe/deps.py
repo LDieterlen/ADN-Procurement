@@ -14,6 +14,7 @@ from ffe.config import Settings
 from ffe.errors import IntegrityConflictError
 
 Clock = Callable[[], datetime]
+Fetcher = Callable[[str, int], tuple[bytes, str]]  # (url, max bytes) → (body, content type)
 
 
 def utcnow() -> datetime:
@@ -35,6 +36,8 @@ class Deps:
     clock: Clock = utcnow
     on_shutdown: list[Callable[[], None]] = field(default_factory=list[Callable[[], None]])
     status: RuntimeStatus = field(default_factory=RuntimeStatus)
+    # The only outward network access of the application (ADR-0014); tests inject a fake.
+    fetch_url: Fetcher = field(default_factory=lambda: _default_fetcher)
 
 
 def get_deps(request: Request) -> Deps:
@@ -61,3 +64,9 @@ def get_session(deps: Deps = Depends(get_deps)) -> Generator[Session]:
 # Router-side aliases: routers import these and never SQLAlchemy itself (ARCHITECTURE §6).
 DepsDep = Annotated[Deps, Depends(get_deps)]
 SessionDep = Annotated[Session, Depends(get_session)]
+
+
+def _default_fetcher(url: str, max_bytes: int) -> tuple[bytes, str]:
+    from ffe.services.capture import fetch_url
+
+    return fetch_url(url, max_bytes)
