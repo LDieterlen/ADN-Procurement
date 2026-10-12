@@ -14,7 +14,7 @@ Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centai
 | Terme | Définition | Tables |
 |---|---|---|
 | Référentiel | Données partagées entre projets, à durée de vie longue, archivées plutôt que supprimées | `client`, `category`, `manufacturer`, `supplier`, `product`, `file` |
-| Instance projet | Ce qu'un projet fige : spécification, prix, devise, taux de change, fournisseur, délai, statut | `project`, `zone`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `code_sequence` |
+| Instance projet | Ce qu'un projet fige : spécification, prix, devise, taux de change, fournisseur, délai, statut | `project`, `zone`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `item_code_sequence` |
 | Ligne (`project_item`) | **Une spécification** dans un projet : « suspension Tom Dixon Beat Light Fat, laiton, 1 062,50 GBP HT net ». Porte le repère (`LUM-003`), le prix figé, le statut. Jamais la localisation |
 | Placement (`project_item_placement`) | **Un emplacement d'une ligne** : zone + quantité par zone. La même suspension dans le lobby (×2) et dans la chambre type A (×1, zone ×12) = une ligne, deux placements, quantité totale 14 (exemple suivi en §4.11, §4.12 et §6) |
 | Zone | Lieu de destination d'un projet, avec un **multiplicateur** (défaut 1 ; 12 pour « Chambre type A ×12 ») |
@@ -35,7 +35,7 @@ erDiagram
     project ||--o{ zone : "contient"
     project ||--o{ project_item : "liste"
     project ||--o{ budget_line : "enveloppes"
-    project ||--o{ code_sequence : "numerote"
+    project ||--o{ item_code_sequence : "numerote"
     project_item ||--o{ project_item_placement : "placee dans"
     zone ||--o{ project_item_placement : "recoit"
     zone ||--o{ budget_line : "enveloppe zone"
@@ -229,7 +229,7 @@ erDiagram
         TEXT changed_at
         TEXT note
     }
-    code_sequence {
+    item_code_sequence {
         INTEGER project_id PK
         TEXT prefix PK
         INTEGER next_value
@@ -273,7 +273,7 @@ Diagramme réduit aux colonnes structurantes ; les tables §4 font foi. Rendu à
 | Booléens | `INTEGER NOT NULL DEFAULT 0 CHECK (x IN (0, 1))` | Pas de type BOOLEAN en SQLite |
 | Statuts et énumérations | `TEXT` + `CHECK (x IN (...))`, miroir exact d'un `Literal[...]` Pydantic (test d'égalité). Pas de CHECK sur `project_item_event.kind` | Un seul endroit à changer + une migration ; le journal reste ouvert |
 | UNIQUE métier | Jamais de colonne nullable dans un UNIQUE sans `COALESCE` (SQLite considère deux NULL distincts). Index d'expression `UNIQUE (a, COALESCE(b, 0))` ; index partiels `WHERE x IS NOT NULL` | Doublon = toujours une erreur là où la contrainte est dure ; ailleurs index non unique + avertissement UI (409 typé) |
-| FK | `foreign_keys = ON` à chaque connexion ; `ON DELETE RESTRICT` partout sauf **enfants stricts** en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `product_file`, `code_sequence`. Toute FK a un index (SQLite n'en crée pas) | Un référentiel utilisé ne disparaît jamais ; un enfant sans parent n'a pas de sens |
+| FK | `foreign_keys = ON` à chaque connexion ; `ON DELETE RESTRICT` partout sauf **enfants stricts** en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `product_file`, `item_code_sequence`. Toute FK a un index (SQLite n'en crée pas) | Un référentiel utilisé ne disparaît jamais ; un enfant sans parent n'a pas de sens |
 | FK composites | `UNIQUE (id, project_id)` sur `project_item` et `zone` ; placements, budgets et `replaced_by_id` référencent `(x_id, project_id)` | Aucune référence croisée entre projets, même par bug d'UI |
 | Archivage | `archived_at` TEXT NULL sur `client`, `supplier`, `manufacturer`, `category`, `product`, `zone`. Archivé = masqué des sélecteurs, jamais des données existantes. `project` utilise `status` ; `project_item` un statut terminal | On ne perd jamais une ligne vue par un client |
 | Suppression physique bornée | Autorisée seulement pour : `project_item` en `draft` sans événement autre que sa création, `zone` sans placement ni budget, `project_item_placement`, `budget_line`, jointures fichier. Le reste : RESTRICT ou archivage | Règle d'app testée + RESTRICT en filet |
@@ -288,15 +288,15 @@ Vérifié à l'étape 3 (D3.7) : `sqlite_strict=True` émet bien `STRICT` (SQLAl
 
 ## 4. Tables
 
-Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL` (sauf `project_item_event` et `code_sequence` ; `file` sans `updated_at`). `notes TEXT NULL` = texte libre interne sur les référentiels. Types notés tels qu'écrits dans le DDL STRICT. `TS` = TEXT horodatage, `DATE` = TEXT `YYYY-MM-DD`.
+Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL` (sauf `project_item_event` et `item_code_sequence` ; `file` sans `updated_at`). `notes TEXT NULL` = texte libre interne sur les référentiels. Types notés tels qu'écrits dans le DDL STRICT. `TS` = TEXT horodatage, `DATE` = TEXT `YYYY-MM-DD`.
 
 ### 4.1 `setting` — étape 3, complétée par `ADD COLUMN` aux étapes 6a, 6c, 8 et 9 (D2.8)
 
-Réglages de l'installation, une seule ligne. Identité de l'agence pour les futurs exports, défauts hérités par les projets, devise de base. La migration 0001 ne crée que les colonnes utilisées aux étapes 3–4 ; chaque autre colonne arrive, additive, à l'étape indiquée.
+Réglages de l'installation, une seule ligne. Identité de l'agence pour les futurs exports, défauts hérités par les projets, devise de base. La schéma v0 ne crée que les colonnes utilisées aux étapes 3–4 ; chaque autre colonne arrive, additive, à l'étape indiquée.
 
 | Colonne | Étape | Type | Null | Défaut | Contrainte | Commentaire |
 |---|---|---|---|---|---|---|
-| id | 3 | INTEGER | non | — | PK, `CHECK (id = 1)` | une ligne, insérée par la migration 0001 |
+| id | 3 | INTEGER | non | — | PK, `CHECK (id = 1)` | une ligne, insérée par la schéma v0 |
 | default_vat_bp | 3 | INTEGER | non | `2000` | `BETWEEN 0 AND 10000` | hérité par `project.default_vat_bp` |
 | base_currency | 3 | TEXT | non | `'EUR'` | `CHECK (base_currency = 'EUR')` | lever le CHECK = migration future |
 | seed_category_version | 6a | INTEGER | non | `0` | `>= 0` | version du seed appliqué |
@@ -342,7 +342,7 @@ Conteneur de tout le travail ; porte les défauts hérités par les lignes à le
 | site_address | TEXT | oui | | | chantier (≠ adresse client) |
 | delivery_address, delivery_contact | TEXT | oui | | | livraison si ≠ chantier ; NULL = chantier |
 | default_vat_bp | INTEGER | non | `setting` | `BETWEEN 0 AND 10000` | copié de `setting` à la création, hérité par les lignes |
-| contingency_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | **étape 8** (`ADD COLUMN`, migration 0006, D2.6) ; la migration recopie `setting.default_contingency_bp` sur les projets existants ; ensuite copié de `setting` à la création ; appliqué au budget global |
+| contingency_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | **étape 8** (`ADD COLUMN`, schéma v0, D2.6) ; la migration recopie `setting.default_contingency_bp` sur les projets existants ; ensuite copié de `setting` à la création ; appliqué au budget global |
 | start_on, due_on | DATE | oui | | `due_on IS NULL OR start_on IS NULL OR due_on >= start_on` | |
 | notes | TEXT | oui | | | |
 
@@ -417,7 +417,7 @@ Qui vend et facture ; en-tête des futurs BC ; cible de la future recherche d'en
 | currency | TEXT | non | `'EUR'` | `length(currency) = 3` | devise de facturation, copiée sur la ligne à l'affectation |
 | default_discount_bp | INTEGER | non | `0` | `BETWEEN 0 AND 10000` | remise pro habituelle, copiée sur la ligne |
 | payment_terms | TEXT | oui | | | « 30 % à la commande, solde avant livraison » |
-| import_mapping | TEXT | oui | | JSON | étape F4 (migration 0013, ADR-0011) : mapping colonnes → champs du dernier import |
+| import_mapping | TEXT | oui | | JSON | étape F4 (schéma v0, ADR-0011) : mapping colonnes → champs du dernier import |
 | notes | TEXT | oui | | | |
 | archived_at | TS | oui | | | |
 
@@ -470,7 +470,7 @@ Fichier physique dédoublonné. Les propriétaires passent par `product_file` et
 | size_bytes | INTEGER | non | — | `size_bytes >= 0` | limite 20 Mo côté API (défaut étape 6b) |
 | original_name | TEXT | non | — | | |
 | source_url | TEXT | oui | | | provenance d'une image |
-| license_note | TEXT | oui | | | étape F2 (migration 0012, ADR-0010) : droit d'usage, imprimé sous la photo du book |
+| license_note | TEXT | oui | | | étape F2 (schéma v0, ADR-0010) : droit d'usage, imprimé sous la photo du book |
 
 Chemin : `FFE_DATA_DIR/files/<sha256>.<ext>` ; vignette `<sha256>.thumb.jpg` par convention, régénérable, pas de colonne. Pas d'`updated_at` : un fichier est immuable.
 
@@ -526,6 +526,8 @@ Une spécification dans un projet : quoi, en quelle finition, à quel prix figé
 | approved_total_qty_milli | INTEGER | oui | | `>= 0` | Σ placements × multiplicateur à la validation |
 | sort_order | INTEGER | non | `0` | | |
 | internal_notes | TEXT | oui | | | jamais exporté |
+| location | TEXT | oui | | `IN ('floor','wall','ceiling','door','other')` | étape 11 (ADR-0012) : sol, mur, plafond, porte, autre ; facultatif |
+| indice | TEXT | oui | | | étape 11 : lettre de la diffusion du PDF où la ligne a changé pour la dernière fois ; posée par `stamp_indices`, jamais à la main |
 
 Index : `(project_id, sort_order)`, `(project_id, status)`, `(product_id)`, `(supplier_id)`, `(category_id)`, `(replaced_by_id)`.
 
@@ -567,17 +569,18 @@ Politique (maître, ADR-0005) : `created` à la création ; `status` à chaque t
 
 Index : `(project_item_id, changed_at)`.
 
-### 4.14 `code_sequence` — étape 7a
+### 4.14 `item_code_sequence` — étape 11 (ADR-0012)
 
-Numérotation des codes articles par projet et préfixe. Jamais décrémentée.
+Numérotation des codes articles par projet, zone et typologie. Jamais décrémentée.
 
 | Colonne | Type | Null | Défaut | Contrainte | Commentaire |
 |---|---|---|---|---|---|
 | project_id | INTEGER | non | — | PK composite ; FK `project` **CASCADE** | |
-| prefix | TEXT | non | — | PK composite ; `length(prefix) BETWEEN 2 AND 4` | code catégorie niveau 1 |
+| zone_code | TEXT | non | — | PK composite | code de la zone du premier placement, `''` sans zone |
+| prefix | TEXT | non | — | PK composite ; `length(prefix) BETWEEN 2 AND 4` | code catégorie niveau 1 (typologie) |
 | next_value | INTEGER | non | `1` | `next_value >= 1` | prochain numéro à servir |
 
-Pas de `created_at`/`updated_at`. Exemple : `(3, 'LUM', 4)`.
+Pas de `created_at`/`updated_at`. Exemple : `(3, 'CHA', 'LUM', 4)`.
 
 ### 4.15 `project_item_file` — étape 7a
 
@@ -755,8 +758,9 @@ Chaque export émis d'un projet, conservé tel qu'envoyé.
 | kind | TEXT | non | — | `IN ('schedule_xlsx','book_pdf')` | `book_pdf` depuis l'étape F2 |
 | variant | TEXT | non | — | `IN ('internal','client')` | |
 | issued_at | TS | non | — | | |
+| indice | TEXT | oui | | | étape 11 : lettre de diffusion du PDF de prescriptions (A, B, C… = rang de l'émission) |
 
-Pas d'`updated_at`. Exemple : `(3, 41, 'schedule_xlsx', 'client', '2026-10-11T15:02:00Z')`.
+Pas d'`updated_at`. Exemple : `(3, 41, 'book_pdf', 'client', '2026-10-11T15:02:00Z', 'A')`.
 
 ### 4.28 `import_batch` — étape F4 (ADR-0011)
 
@@ -854,15 +858,15 @@ Conversion à la création d'une ligne depuis un produit : si `list_price_tax_mo
 
 ## 7. Codes articles et séquences
 
-- Format unique : `<CAT>-NNN`, `CAT` = code de la catégorie de **niveau 1** (ancêtre) de `category_id`, `NNN` sur 3 chiffres minimum (`LUM-003`, `LUM-1000` au-delà de 999). Éditable à la main tant que la ligne est `draft` ; immuable ensuite (règle d'app). `UNIQUE (project_id, item_code)` attrape toute collision.
+- Format unique (ADR-0012) : `<ZONE>-<TYPO>-NN`, `ZONE` = code (majuscules) de la zone du premier placement à la création (absent → `<TYPO>-NN`), `TYPO` = code de la catégorie de **niveau 1** (ancêtre) de `category_id`, `NN` sur 2 chiffres minimum (`CHA-LUM-03`, `CHA-LUM-100` au-delà de 99). Éditable à la main tant que la ligne est `draft` ; immuable ensuite (règle d'app) ; déplacer la ligne dans une autre zone ne la renumérote pas. `UNIQUE (project_id, item_code)` attrape toute collision.
 - Ligne remplacée : `<code>.R1`, `.R2`… L'ancienne garde son historique ; la nouvelle reprend le code nu.
 - Attribution dans la transaction de création :
   ```sql
-  INSERT INTO code_sequence (project_id, prefix, next_value) VALUES (?1, ?2, 2)
-  ON CONFLICT (project_id, prefix) DO UPDATE SET next_value = next_value + 1
+  INSERT INTO item_code_sequence (project_id, zone_code, prefix, next_value) VALUES (?1, ?2, ?3, 2)
+  ON CONFLICT (project_id, zone_code, prefix) DO UPDATE SET next_value = next_value + 1
   RETURNING next_value - 1;
   ```
-  La séquence n'est jamais décrémentée : annuler ou supprimer `LUM-003` laisse un trou, et c'est voulu (un code vu une fois n'est jamais réattribué). Changer la catégorie d'une ligne `draft` propose un nouveau code ; au-delà, le code reste.
+  La séquence n'est jamais décrémentée : annuler ou supprimer `CHA-LUM-03` laisse un trou, et c'est voulu (un code vu une fois n'est jamais réattribué). Changer la catégorie d'une ligne `draft` propose un nouveau code ; au-delà, le code reste.
 - Codes projet : `<project_code_prefix><YYYY>-NNN`, calculé par `MAX + 1` sur l'année sous protection de `UNIQUE (code)` (mono-utilisateur) ; éditable ; pas de séquence globale (D2.12).
 - Codes zone : saisis à la main, `UNIQUE (project_id, code)`.
 

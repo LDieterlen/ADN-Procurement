@@ -46,6 +46,10 @@ mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pa
 (cd api && uv run ffe db check --files)            # intégrité, comptages, orphelins, sha256 des fichiers
 (cd api && uv run ffe db export-json export.json --with-files)   # copie lisible + fichiers joints
 
+# Schéma modifié avant la v1 (ADR-0012) : la base de dev se recrée, rien n'y est précieux
+rm -f ~/.persist/ffe-dev/ffe.sqlite ~/.persist/ffe-dev/ffe.sqlite-wal ~/.persist/ffe-dev/ffe.sqlite-shm
+(cd api && uv run ffe db migrate && uv run ffe db seed)
+
 # Vérifications
 ./check.sh                 # ruff, pyright, pytest, tsc, prettier, vitest : la porte avant tout commit
 (cd web && npm run e2e)    # deux parcours Playwright sur une API jetable (après `npm run e2e:install`)

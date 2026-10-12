@@ -12,7 +12,7 @@ Outil de procurement FF&E, local, mono-utilisateur. Back Python (`api/`), front 
 - **Cocher ici** : `[x] faite le AAAA-MM-JJ` avec le hash du dernier commit, et copier le compte rendu (≤ 10 lignes) dans `JOURNAL.md`.
 - Les livrables ci-dessous sont transposés d'une conception initiale en TypeScript unique ; les chemins `api/src/ffe/…` des étapes futures (F1 à F6) sont indicatifs et se tranchent à leur étape.
 
-Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client` · 5 front `client` · 6a référentiel · 6b produits · 6c projets/zones · 7a/b/c lignes · 8 budgets · 9 fiabilité · 10a/b/c achats · F1–F6 futures.
+Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client` · 5 front `client` · 6a référentiel · 6b produits · 6c projets/zones · 7a/b/c lignes · 8 budgets · 9 fiabilité · 10a/b/c achats · 11 prescription simple · F1–F6 futures.
 
 ---
 
@@ -169,6 +169,15 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Risques** : trésorerie TTC et TVA d'achat hors périmètre → exporter, ne pas comptabiliser.
 - **État** : [x] faite le 2026-10-11 — commits `feat(db)`, `feat(api)`, `feat(web)`, `docs(repo): étape 10c close` (hashes dans le JOURNAL). D10c.1 et D10c.2 : défauts (ADR-0008). Critère prouvé par `test_api_delivery_invoice.py` : réception 6/12 puis 6/12 + 2/2 → `partially_delivered` puis `closed`, lignes `delivered` ; acompte 3 885 GBP (4 545,45 €) et solde 9 065 GBP → Facturé 15 151,50 €, Payé 4 545,45 € après paiement, Engagé 15 151,56 € inchangé. TVA et TTC des factures enregistrés tels quels, jamais sommés dans le budget.
 
+## Étape 11 — Prescription simple (ADR-0012)
+
+- **Objectif** : revenir à un parcours clair centré sur la prescription : un projet pour un client avec un budget visible en direct, des produits ajoutés sans quitter le projet, un PDF de prescriptions fidèle aux fiches de l'utilisateur ; tout le reste accessible en mode avancé.
+- **Livrables** : 11a (base + API) : schéma repris de zéro (`0001_initial.py` unique jusqu'à la v1), codes `<ZONE>-<TYPO>-NN` par `item_code_sequence`, `location` et `indice` facultatifs, budget global à la création, PDF de prescriptions (liste + fiches, contact fournisseur, indice de diffusion) · 11b (front) : navigation réduite, mode avancé (Réglages), onglets Prescription · Zones · Budget · Infos, bandeau Budget / Prescrit / Reste en direct, création de projet avec budget · 11c (front) : onglet Prescription (Typologie · Code · Désignation · Localisation · Qté · Fournisseur · Statut · Indice), tiroir « Ajouter un produit » avec création en place de produit / fournisseur / fabricant / client, fiche de ligne réorganisée avec photo et dessin, `Modal` et `Drawer` partagés.
+- **Critère de fini** : créer un projet avec budget, y ajouter un produit en créant son fournisseur sans quitter la page, voir le Reste bouger, émettre le PDF (indice A) ; le mode avancé retrouve Devis et Commandes.
+- **Décisions** : D11.1 écrans avancés masqués par défaut ; D11.2 codes zone-typologie ; D11.3 localisation et indice facultatifs ; D11.4 contact du fournisseur sur la fiche ; D11.5 pas de nouvelle migration avant la v1 — toutes prises avec l'utilisateur le 2026-10-12.
+- **Risques** : libellés d'onglets et de colonnes changés = tests front à réécrire ; `.R1` et codes édités à la main hors format.
+- **État** : 11a [x] faite le 2026-10-12 — commits `feat(db)`, `feat(api)`, `docs(repo): étape 11a close` (hashes dans le JOURNAL) ; prouvé par `test_api_project_item.py` (`LOB-LUM-01`, `CHA-LUM-01/02`, `LUM-01` sans zone, localisation), `test_api_pdf.py` (liste + fiches, contact fournisseur, aucun prix, indice vide → A → B sur la seule ligne modifiée), `test_api_project.py` (budget global), `test_migrations.py` (révision unique `0001`) · 11b [ ] · 11c [ ].
+
 ## F1 — Exports xlsx
 
 - **Objectif** : schedule interne / client et récap budget en Excel, totaux identiques à l'écran.
@@ -229,6 +238,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 
 Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, besoin, étape où le reprendre), au lieu d'entrer dans le code. Vidé ou promu en étape lors d'une revue de feuille de route.
 
+- 2026-10-12 — Matrice projet et autres livrables de suivi (après la prescription) : à cadrer avec l'utilisateur quand l'onglet Prescription sera en usage ; logo d'agence dans les PDF (champ fichier dans Réglages).
 - 2026-10-11 — `ffe db restore --with-files` : recopier `FFE_BACKUP_DIR/files/` vers `files/` par la CLI (aujourd'hui manuel, RUNBOOK §5) ; à reprendre avec 10c ou à la première restauration réelle.
 - 2026-10-11 — Réceptions et factures : paiements partiels ou multiples par facture (`payment` additive, ADR-0008 « Repli ») ; alerte « facture échue » dans `GET /projects/{id}/alerts` ; à reprendre après usage.
 - 2026-10-11 — Bons de commande : « Engagé » sur le tableau de bord multi-projets ; export PDF du document (aujourd'hui : impression navigateur) ; à reprendre avec F1–F2.

@@ -9,6 +9,9 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Mobilier, agencement et équipement | FF&E (Furniture, Fixtures & Equipment) | Éléments mobiles ou démontables prescrits par l'architecte d'intérieur ; capitalisés par le client. | `project_item.kind = 'ffe'` (défaut) |
 | Petit équipement d'exploitation | OS&E (Operating Supplies & Equipment) | Linge, vaisselle, consommables ; acheté par l'exploitant. Hors périmètre v1 mais marquable. | `project_item.kind = 'ose'` |
 | Procurement / achats FF&E | Procurement | Chaîne spécification → RFQ → devis → PO → suivi → réception → installation. | Toute l'application ; achats à l'étape 10 |
+| Typologie | Typology | Famille d'un article dans les fiches : la catégorie de niveau 1 (Luminaire, Accastillage, Sanitaire…) ; son code forme le milieu du code article. | `category.code` (niveau 1) |
+| Localisation | Location | Où l'article se pose : sol, mur, plafond, porte, autre ; facultatif, imprimé sur la fiche. | `project_item.location` |
+| Indice | Revision index | Lettre de diffusion du PDF de prescriptions (A, B, C…) ; une ligne porte la lettre de la diffusion où elle a changé pour la dernière fois. | `project_file.indice`, `project_item.indice` |
 | Prescription / spécification | Specification / to specify | Choisir et documenter un produit précis pour un emplacement. | `project_item` (statut `specified`) |
 | Tableau FF&E / liste de prescription | FF&E schedule | Tableau synthétique des lignes : code, zone, désignation, qté, prix, fournisseur, délai, statut. | Onglet Lignes (7b) ; export xlsx (F1) |
 | Book / dossier de prescription | Specification book / spec book | Fiches illustrées, une par article, remises au client. | Impression client (7c) ; export PDF (F2) ; `fee` exclu |
