@@ -438,6 +438,7 @@ def create_item(
         ensure_open(get_project(session, project_id))
         now = stamp(clock)
         values = _resolve_defaults(session, project_id, data, now)
+        product = session.get(Product, values["product_id"]) if values["product_id"] else None
         placements: list[PlacementCreate] = []
         if data.kind == "product":
             placements = data.placements or [PlacementCreate()]
@@ -470,6 +471,20 @@ def create_item(
                     updated_at=now,
                 )
             )
+        if product is not None:
+            # The catalogue photo becomes the article's own (same file, new junction); it may diverge later.
+            for junction in product.files:
+                if junction.is_primary:
+                    item.files.append(
+                        ProjectItemFile(
+                            file_id=junction.file_id,
+                            kind="image",
+                            is_primary=1,
+                            caption=junction.caption,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                    )
         session.add(item)
         session.flush()
         note = (

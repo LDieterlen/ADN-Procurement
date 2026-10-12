@@ -375,6 +375,29 @@ def test_list_filters_and_search(client: TestClient, world: dict[str, Any]) -> N
     assert ids({"q": "lud-02"}) == [b["id"]]
 
 
+def test_catalogue_photo_is_copied_onto_the_article_and_shown_as_fallback(
+    client: TestClient, session: Session, settings: Settings, clock: Clock, world: dict[str, Any]
+) -> None:
+    photo = make_file(session, settings, clock, PNG_BYTES, "beat.png")
+    client.post(
+        f"/api/v1/products/{world['lamp'].id}/files", json={"fileId": photo.id, "isPrimary": True}
+    )
+    item = client.post(base(world), json={"productId": world["lamp"].id, "fxRateMicro": GBP}).json()
+    assert [f["fileId"] for f in item["files"]] == [photo.id] and item["files"][0][
+        "isPrimary"
+    ] is True
+    assert item["catalogueImageFileId"] == photo.id
+    detached = client.delete(f"/api/v1/project-items/{item['id']}/files/{photo.id}").json()
+    assert (
+        detached["files"] == [] and detached["catalogueImageFileId"] == photo.id
+    )  # fallback stays
+    assert (settings.files_dir / photo.filename).exists()  # still referenced by the product
+    free = client.post(
+        base(world), json={"name": "Libre", "categoryId": world["lud"].id, "addToCatalogue": False}
+    ).json()
+    assert free["files"] == [] and free["catalogueImageFileId"] is None
+
+
 def test_files_photo_and_drawing(
     client: TestClient, session: Session, settings: Settings, clock: Clock, world: dict[str, Any]
 ) -> None:

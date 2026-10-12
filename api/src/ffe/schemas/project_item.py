@@ -227,18 +227,26 @@ class ProjectItemRead(BaseSchema):
     updated_at: str
     placements: list[PlacementRead]
     files: list[ItemFileRead]
+    catalogue_image_file_id: (
+        int | None
+    )  # primary photo of the catalogue product, shown when the article has none
 
     @classmethod
     def from_model(cls, item: Any) -> ProjectItemRead:
         base = {
             name: getattr(item, name)
             for name in cls.model_fields
-            if name not in ("placements", "files")
+            if name not in ("placements", "files", "catalogue_image_file_id")
         }
+        product = item.product
+        catalogue_image = (
+            next((f.file_id for f in product.files if f.is_primary), None) if product else None
+        )
         return cls(
             **base,
             placements=[PlacementRead.model_validate(p) for p in item.placements],
             files=[ItemFileRead.from_junction(f) for f in item.files],
+            catalogue_image_file_id=catalogue_image,
         )
 
 

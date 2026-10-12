@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
+from ffe.models.product import Product
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
 
@@ -105,3 +106,5 @@ class ProjectItem(TimestampedMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+    # Read-only: the catalogue product, for its primary photo when the article has none.
+    product: Mapped[Product | None] = relationship(Product, lazy="selectin", viewonly=True)

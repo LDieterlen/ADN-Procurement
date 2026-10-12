@@ -3072,6 +3072,17 @@
       },
       "ProjectItemRead": {
         "properties": {
+          "catalogueImageFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueimagefileid"
+          },
           "categoryId": {
             "anyOf": [
               {
@@ -3360,7 +3371,8 @@
           "createdAt",
           "updatedAt",
           "placements",
-          "files"
+          "files",
+          "catalogueImageFileId"
         ],
         "title": "ProjectItemRead",
         "type": "object"
