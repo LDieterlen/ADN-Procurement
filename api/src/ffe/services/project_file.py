@@ -10,7 +10,7 @@ from ffe.deps import Clock
 from ffe.exports.book_pdf import build_book
 from ffe.exports.po_pdf import build_po_pdf
 from ffe.exports.schedule_xlsx import Variant, build_schedule
-from ffe.models import Project, ProjectFile, PurchaseOrderFile
+from ffe.models import Project, ProjectFile, ProjectItem, PurchaseOrderFile
 from ffe.schemas.project_file import ProjectFileRead
 from ffe.services.base import stamp
 from ffe.services.file import store_bytes
@@ -40,6 +40,7 @@ def to_read(row: ProjectFile) -> ProjectFileRead:
         kind=row.kind,  # type: ignore[arg-type]
         variant=row.variant,  # type: ignore[arg-type]
         issued_at=row.issued_at,
+        indice=row.indice,
         original_name=row.file.original_name,
         size_bytes=row.file.size_bytes,
     )
@@ -81,8 +82,9 @@ def issue_book(
     today = clock().date()
     with session.begin():
         project = get_project(session, project_id)
-        _html, data = build_book(session, files_dir, project_id, today)
-        name = f"{project.code}-book-{today.isoformat()}.pdf"
+        indice = stamp_indices(session, project_id, clock)
+        _html, data = build_book(session, files_dir, project_id, today, indice)
+        name = f"{project.code}-prescriptions-{indice}-{today.isoformat()}.pdf"
         file = store_bytes(
             session, files_dir, data, name, PDF_MIME, "pdf", clock, in_transaction=True
         )
@@ -92,10 +94,27 @@ def issue_book(
             kind="book_pdf",
             variant="client",
             issued_at=stamp(clock),
+            indice=indice,
         )
         session.add(row)
     session.refresh(row)
     return row, data
+
+
+def stamp_indices(session: Session, project_id: int, clock: Clock) -> str:
+    """ADR-0012: the diffusion letter (A, B, C…) of this issue; every counted line changed since
+    the previous issue (or never issued) takes it. `updated_at` is left untouched."""
+    previous = session.scalars(
+        select(ProjectFile)
+        .where(ProjectFile.project_id == project_id, ProjectFile.kind == "book_pdf")
+        .order_by(ProjectFile.issued_at.desc(), ProjectFile.id.desc())
+    ).all()
+    letter = chr(ord("A") + len(previous))
+    last_issued = previous[0].issued_at if previous else None
+    for item in session.scalars(select(ProjectItem).where(ProjectItem.project_id == project_id)):
+        if item.indice is None or last_issued is None or item.updated_at > last_issued:
+            item.indice = letter
+    return letter
 
 
 def issue_po_pdf(session: Session, files_dir: Path, po_id: int, clock: Clock) -> tuple[str, bytes]:

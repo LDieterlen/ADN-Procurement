@@ -172,17 +172,28 @@ def level1_code(session: Session, category_id: int) -> str:
     return category.code
 
 
-def next_item_code(session: Session, project_id: int, prefix: str) -> str:
-    """`<CAT>-NNN` from `code_sequence`, never decremented (upsert + RETURNING)."""
+def zone_code_of(session: Session, zone_id: int | None) -> str:
+    """Zone code used as the first segment of an item code; '' when the line has no zone."""
+    if zone_id is None:
+        return ""
+    zone = session.get(Zone, zone_id)
+    return zone.code.upper() if zone is not None else ""
+
+
+def next_item_code(session: Session, project_id: int, zone_code: str, prefix: str) -> str:
+    """`<ZONE>-<TYPO>-NN` (or `<TYPO>-NN` without a zone) from `item_code_sequence`, never
+    decremented (upsert + RETURNING), ADR-0012."""
     value = session.execute(
         text(
-            "INSERT INTO code_sequence (project_id, prefix, next_value) VALUES (:p, :x, 2) "
-            "ON CONFLICT (project_id, prefix) DO UPDATE SET next_value = next_value + 1 "
+            "INSERT INTO item_code_sequence (project_id, zone_code, prefix, next_value) "
+            "VALUES (:p, :z, :x, 2) "
+            "ON CONFLICT (project_id, zone_code, prefix) DO UPDATE SET next_value = next_value + 1 "
             "RETURNING next_value - 1"
         ),
-        {"p": project_id, "x": prefix},
+        {"p": project_id, "z": zone_code, "x": prefix},
     ).scalar_one()
-    return f"{prefix}-{int(value):03d}"
+    head = f"{zone_code}-" if zone_code else ""
+    return f"{head}{prefix}-{int(value):02d}"
 
 
 def _check_code_free(session: Session, project_id: int, code: str, exclude_id: int | None) -> None:
@@ -408,14 +419,16 @@ def create_item(
         ensure_open(get_project(session, project_id))
         values = _resolve_defaults(session, project_id, data)
         prefix = level1_code(session, values["category_id"])
+        code = data.item_code or ""
         if data.item_code:
             _check_code_free(session, project_id, data.item_code, None)
-            code = data.item_code
-        else:
-            code = next_item_code(session, project_id, prefix)
         placements = data.placements if data.placements is not None else [PlacementCreate()]
         if not placements:
             placements = [PlacementCreate()]
+        if not data.item_code:
+            code = next_item_code(
+                session, project_id, zone_code_of(session, placements[0].zone_id), prefix
+            )
         seen: set[int | None] = set()
         for placement in placements:
             _check_zone(session, project_id, placement.zone_id)
@@ -472,7 +485,10 @@ def update_item(
         if "category_id" in changes and changes["category_id"] != item.category_id:
             prefix = level1_code(session, changes["category_id"])
             if item.status == "draft" and "item_code" not in changes:
-                changes["item_code"] = next_item_code(session, item.project_id, prefix)
+                first = item.placements[0].zone_id if item.placements else None
+                changes["item_code"] = next_item_code(
+                    session, item.project_id, zone_code_of(session, first), prefix
+                )
         kind = changes.get("kind", item.kind)
         cost = changes.get("unit_cost_cents", item.unit_cost_cents)
         if kind == "existing" and cost:

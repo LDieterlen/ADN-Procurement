@@ -22,6 +22,7 @@ ItemStatus = Literal[
 ]
 Unit = Literal["piece", "pair", "set", "lot", "m", "m2", "roll"]
 ItemFileKind = Literal["image", "quote", "approval", "drawing", "other"]
+Location = Literal["floor", "wall", "ceiling", "door", "other"]  # optional, ADR-0012
 EventKind = Literal[
     "created", "status", "price", "fx", "qty", "product", "placement", "approval", "quote", "other"
 ]
@@ -77,6 +78,7 @@ class PlacementRead(BaseSchema):
 
 
 class ProjectItemCreate(BaseSchema):
+    location: Location | None = None
     """From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free."""
 
     product_id: int | None = None
@@ -116,6 +118,7 @@ class ProjectItemCreate(BaseSchema):
 
 
 class ProjectItemUpdate(BaseSchema):
+    location: Location | None = None
     """Absent = unchanged. `status` never here (POST …/status), placements have their own routes."""
 
     product_id: int | None = None
@@ -274,6 +277,8 @@ class ProjectItemRead(BaseSchema):
     approved_total_qty_milli: int | None
     sort_order: int
     internal_notes: str | None
+    location: Location | None
+    indice: str | None
     created_at: str
     updated_at: str
     placements: list[PlacementRead]

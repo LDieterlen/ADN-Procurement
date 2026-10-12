@@ -15,5 +15,6 @@ class ProjectFileRead(BaseSchema):
     kind: ExportKind
     variant: ExportVariant
     issued_at: str
+    indice: str | None = None  # prescription PDF revision letter (ADR-0012)
     original_name: str
     size_bytes: int

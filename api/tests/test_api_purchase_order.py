@@ -125,13 +125,20 @@ def test_create_po_on_three_lines_totals_add_up_to_the_cent(
     assert po["deliveryAddress"] == "12 rue du Chantier" and po["deliveryContact"] == "M. Dupont"
     assert po["paymentTerms"] == "30 jours"
     lines = {line["itemCode"]: line for line in po["lines"]}
-    assert lines["LUM-001"]["qtyMilli"] == 12_000 and lines["LUM-001"]["netUnitCents"] == 106_250
     assert (
-        lines["LUM-001"]["totalCents"] == 1_275_000
-        and lines["LUM-001"]["totalEurCents"] == 1_491_756
+        lines["CHA-LUM-01"]["qtyMilli"] == 12_000 and lines["CHA-LUM-01"]["netUnitCents"] == 106_250
     )
-    assert lines["LUM-002"]["totalCents"] == 20_000 and lines["LUM-002"]["totalEurCents"] == 23_400
-    assert lines["LUM-003"]["totalCents"] == 5_000 and lines["LUM-003"]["totalEurCents"] == 5_850
+    assert (
+        lines["CHA-LUM-01"]["totalCents"] == 1_275_000
+        and lines["CHA-LUM-01"]["totalEurCents"] == 1_491_756
+    )
+    assert (
+        lines["LOB-LUM-01"]["totalCents"] == 20_000
+        and lines["LOB-LUM-01"]["totalEurCents"] == 23_400
+    )
+    assert (
+        lines["LOB-LUM-02"]["totalCents"] == 5_000 and lines["LOB-LUM-02"]["totalEurCents"] == 5_850
+    )
     assert po["totalCents"] == 1_275_000 + 20_000 + 5_000 == 1_300_000
     assert po["totalEurCents"] == 1_491_756 + 23_400 + 5_850 == 1_521_006
     assert po["vatByRateBp"] == {"2000": 304_201} and po["vatCents"] == 304_201

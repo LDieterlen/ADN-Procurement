@@ -34,6 +34,9 @@ class ProjectCreate(BaseSchema):
     start_on: IsoDate = None
     due_on: IsoDate = None
     notes: Long = None
+    global_budget_cents: Annotated[int | None, Field(ge=0)] = (
+        None  # ADR-0012: envelope created with the project
+    )
 
     @field_validator("name", "code", mode="before")
     @classmethod

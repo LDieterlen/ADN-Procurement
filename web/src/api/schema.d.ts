@@ -2754,6 +2754,8 @@ export interface components {
             deliveryContact?: string | null;
             /** Dueon */
             dueOn?: string | null;
+            /** Globalbudgetcents */
+            globalBudgetCents?: number | null;
             /** Name */
             name: string;
             /** Notes */
@@ -2769,6 +2771,8 @@ export interface components {
             fileId: number;
             /** Id */
             id: number;
+            /** Indice */
+            indice?: string | null;
             /** Issuedat */
             issuedAt: string;
             /**
@@ -2788,10 +2792,7 @@ export interface components {
              */
             variant: "internal" | "client";
         };
-        /**
-         * ProjectItemCreate
-         * @description From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free.
-         */
+        /** ProjectItemCreate */
         ProjectItemCreate: {
             /** Categoryid */
             categoryId?: number | null;
@@ -2827,6 +2828,8 @@ export interface components {
             kind: "ffe" | "ose" | "custom" | "existing" | "fee";
             /** Leadtimeweeks */
             leadTimeWeeks?: number | null;
+            /** Location */
+            location?: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
             /** Materials */
             materials?: string | null;
             /** Name */
@@ -2895,6 +2898,8 @@ export interface components {
             heightMm: number | null;
             /** Id */
             id: number;
+            /** Indice */
+            indice: string | null;
             /** Internalnotes */
             internalNotes: string | null;
             /** Itemcode */
@@ -2906,6 +2911,8 @@ export interface components {
             kind: "ffe" | "ose" | "custom" | "existing" | "fee";
             /** Leadtimeweeks */
             leadTimeWeeks: number | null;
+            /** Location */
+            location: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
             /** Materials */
             materials: string | null;
             /** Name */
@@ -2953,10 +2960,7 @@ export interface components {
             /** Widthmm */
             widthMm: number | null;
         };
-        /**
-         * ProjectItemUpdate
-         * @description Absent = unchanged. `status` never here (POST …/status), placements have their own routes.
-         */
+        /** ProjectItemUpdate */
         ProjectItemUpdate: {
             /** Categoryid */
             categoryId?: number | null;
@@ -2988,6 +2992,8 @@ export interface components {
             kind?: ("ffe" | "ose" | "custom" | "existing" | "fee") | null;
             /** Leadtimeweeks */
             leadTimeWeeks?: number | null;
+            /** Location */
+            location?: ("floor" | "wall" | "ceiling" | "door" | "other") | null;
             /** Materials */
             materials?: string | null;
             /** Name */

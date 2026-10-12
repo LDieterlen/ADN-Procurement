@@ -30,6 +30,9 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         session,
         clock,
         name="Tom Dixon",
+        contact_name="Djamel Sabeur",
+        phone="06 76 27 17 10",
+        email="djamel@example.com",
         currency="GBP",
         default_discount_bp=1500,
         city="London",
@@ -39,6 +42,8 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         session,
         clock,
         name="Beat Light Fat",
+        supplier_ref="BLS01",
+        source_url="https://example.com/beat",
         category_id=lum.id,
         supplier_id=dixon.id,
         list_price_cents=125_000,
@@ -64,6 +69,7 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
             "fxRateMicro": GBP,
             "clientDescription": "Suspension laiton noir",
             "heightMm": 300,
+            "location": "wall",
             "placements": [
                 {"zoneId": lob.id, "qtyMilli": 2000},
                 {"zoneId": cha.id, "qtyMilli": 1000},
@@ -95,7 +101,7 @@ def test_book_html_has_one_page_per_article_and_never_a_price(
     assert [z["name"] for z in context["zones"]] == ["Lobby", "Chambre type A"]
     article = context["zones"][1]["articles"][0]
     assert (
-        article["item_code"] == "LUM-001"
+        article["item_code"] == "LOB-LUM-01"
         and article["qty_text"] == "1"
         and article["qty_total_text"] == "14"
     )
@@ -109,15 +115,37 @@ def test_book_html_has_one_page_per_article_and_never_a_price(
     )
     html = render_html("book.html", context)
     assert (
-        "Atelier X" in html and "Hôtel X" in html and "LUM-001" in html and "Transport" not in html
+        "Atelier X" in html
+        and "Hôtel X" in html
+        and "LOB-LUM-01" in html
+        and "Transport" not in html
     )
-    assert (
-        "Tom Dixon" not in html
-        and "1 062" not in html
-        and "1 243" not in html
-        and "GBP" not in html
-    )
+    # The sheet shows the supplier and its representative, never a price.
+    assert "Tom Dixon" in html and "Djamel Sabeur" in html and "06 76 27 17 10" in html
+    assert "1 062" not in html and "1 243" not in html and "GBP" not in html
     assert "Photo fournisseur, usage interne" in html
+    assert article["location"] == "Mur" and article["reference"] == "BLS01"
+    assert article["link"] == "https://example.com/beat"
+    assert "LISTE" in html and "Localisation" in html and "Validation" in html
+
+
+def test_each_issue_stamps_a_diffusion_letter_on_the_lines_that_changed(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    p, item = world["project"].id, world["item"]
+    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] is None
+    first = client.get(f"/api/v1/projects/{p}/exports/book.pdf")
+    assert first.status_code == 200
+    assert "prescriptions-A-" in first.headers["content-disposition"]
+    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] == "A"
+    assert client.get(f"/api/v1/projects/{p}/exports").json()[0]["indice"] == "A"
+    other = client.post(
+        f"/api/v1/projects/{p}/project-items",
+        json={"name": "Nouvelle", "categoryId": item["categoryId"], "kind": "custom"},
+    ).json()
+    client.get(f"/api/v1/projects/{p}/exports/book.pdf")
+    assert client.get(f"/api/v1/project-items/{item['id']}").json()["indice"] == "A"  # unchanged
+    assert client.get(f"/api/v1/project-items/{other['id']}").json()["indice"] == "B"  # new line
 
 
 def test_book_pdf_is_issued_and_kept(
@@ -125,7 +153,7 @@ def test_book_pdf_is_issued_and_kept(
 ) -> None:
     p = world["project"].id
     html, _pdf = build_book(session, settings.files_dir, p, clock_date())
-    assert count_pages(html, settings.files_dir) == 3  # cover + 2 articles
+    assert count_pages(html, settings.files_dir) == 4  # cover + list + 2 articles
     response = client.get(f"/api/v1/projects/{p}/exports/book.pdf")
     assert response.status_code == 200, response.text
     assert (
@@ -133,7 +161,7 @@ def test_book_pdf_is_issued_and_kept(
     )
     issued = client.get(f"/api/v1/projects/{p}/exports").json()
     assert [(e["kind"], e["variant"]) for e in issued] == [("book_pdf", "client")]
-    assert issued[0]["originalName"].endswith("-book-2026-10-09.pdf")
+    assert issued[0]["originalName"].endswith("-prescriptions-A-2026-10-09.pdf")
 
 
 def test_po_pdf_has_agency_supplier_and_totals_and_is_attached_once(

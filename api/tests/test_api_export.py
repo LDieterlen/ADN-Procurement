@@ -99,9 +99,9 @@ def test_internal_schedule_matches_the_summary_to_the_cent(
     assert rows[0][:5] == ["Zone", "Nom de zone", "×", "Code", "Désignation"]
     body = [r for r in rows[1:] if r[3]]
     assert [(r[0], r[3], r[8], r[9]) for r in body] == [
-        ("LOB", "LUM-001", 2, 14),
-        ("CHA", "LUM-001", 1, 14),
-        (None, "LUM-002", 1, 1),  # fee, unassigned placement (empty zone cell reads back as None)
+        ("LOB", "LOB-LUM-01", 2, 14),
+        ("CHA", "LOB-LUM-01", 1, 14),
+        (None, "LUM-01", 1, 1),  # fee, unassigned placement (empty zone cell reads back as None)
     ]
     lamp = body[0]
     assert lamp[7] == "Tom Dixon" and lamp[10] == 1062.5 and lamp[11] == "GBP"
@@ -146,7 +146,7 @@ def test_client_variant_has_no_purchase_prices_suppliers_or_fees(
         "Description client",
     ]
     body = [r for r in rows[1:] if r and r[3]]
-    assert [r[3] for r in body] == ["LUM-001", "LUM-001"]  # no fee, no cancelled line
+    assert [r[3] for r in body] == ["LOB-LUM-01", "LOB-LUM-01"]  # no fee, no cancelled line
     assert body[0][10] == "Suspension laiton"
     flat = " ".join(str(c) for r in rows for c in r if c is not None)
     assert "Tom Dixon" not in flat and "1243" not in flat and "17403" not in flat

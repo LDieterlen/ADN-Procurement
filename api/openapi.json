@@ -5080,6 +5080,18 @@
             ],
             "title": "Dueon"
           },
+          "globalBudgetCents": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Globalbudgetcents"
+          },
           "name": {
             "maxLength": 200,
             "minLength": 1,
@@ -5140,6 +5152,17 @@
             "title": "Id",
             "type": "integer"
           },
+          "indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indice"
+          },
           "issuedAt": {
             "title": "Issuedat",
             "type": "string"
@@ -5187,7 +5210,6 @@
         "type": "object"
       },
       "ProjectItemCreate": {
-        "description": "From a product (`productId`: every absent field is copied, DATA_MODEL §6) or free.",
         "properties": {
           "categoryId": {
             "anyOf": [
@@ -5369,6 +5391,24 @@
               }
             ],
             "title": "Leadtimeweeks"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "enum": [
+                  "floor",
+                  "wall",
+                  "ceiling",
+                  "door",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
           },
           "materials": {
             "anyOf": [
@@ -5687,6 +5727,17 @@
             "title": "Id",
             "type": "integer"
           },
+          "indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indice"
+          },
           "internalNotes": {
             "anyOf": [
               {
@@ -5723,6 +5774,24 @@
               }
             ],
             "title": "Leadtimeweeks"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "enum": [
+                  "floor",
+                  "wall",
+                  "ceiling",
+                  "door",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
           },
           "materials": {
             "anyOf": [
@@ -5936,6 +6005,8 @@
           "approvedTotalQtyMilli",
           "sortOrder",
           "internalNotes",
+          "location",
+          "indice",
           "createdAt",
           "updatedAt",
           "placements",
@@ -5945,7 +6016,6 @@
         "type": "object"
       },
       "ProjectItemUpdate": {
-        "description": "Absent = unchanged. `status` never here (POST …/status), placements have their own routes.",
         "properties": {
           "categoryId": {
             "anyOf": [
@@ -6133,6 +6203,24 @@
               }
             ],
             "title": "Leadtimeweeks"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "enum": [
+                  "floor",
+                  "wall",
+                  "ceiling",
+                  "door",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
           },
           "materials": {
             "anyOf": [

@@ -700,6 +700,8 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     approvedTotalQtyMilli: null,
     sortOrder: 0,
     internalNotes: null,
+    location: null,
+    indice: null,
     createdAt: NOW,
     updatedAt: NOW,
     placements: [],

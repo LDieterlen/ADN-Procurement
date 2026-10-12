@@ -87,7 +87,7 @@ def test_create_quote_defaults_currency_and_rate_and_computes_net(
     assert dixon["currency"] == "GBP" and dixon["fxRateMicro"] == GBP  # last rate of the project
     assert dixon["supplierName"] == "Tom Dixon" and dixon["retainedCount"] == 0
     line = dixon["lines"][0]
-    assert line["itemCode"] == "LUM-001" and line["netUnitCents"] == 100_300
+    assert line["itemCode"] == "CHA-LUM-01" and line["netUnitCents"] == 100_300
     assert line["netUnitEurCents"] == 117_351  # (100 300 × 1 170 000 + 500 000) / 10⁶
     assert flos["currency"] == "EUR" and flos["fxRateMicro"] == 1_000_000
     assert flos["lines"][0]["netUnitEurCents"] == 110_000

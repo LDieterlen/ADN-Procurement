@@ -98,7 +98,7 @@ def test_partial_then_complete_receipt(client: TestClient, po: dict[str, Any]) -
         po_id,
         [
             {
-                "purchaseOrderLineId": lines["LUM-001"]["id"],
+                "purchaseOrderLineId": lines["CHA-LUM-01"]["id"],
                 "qtyMilli": 6000,
                 "remarks": "2 cartons abîmés",
             }
@@ -106,20 +106,20 @@ def test_partial_then_complete_receipt(client: TestClient, po: dict[str, Any]) -
     )
     assert partial.status_code == 201, partial.text
     assert (
-        partial.json()["lines"][0]["itemCode"] == "LUM-001"
+        partial.json()["lines"][0]["itemCode"] == "CHA-LUM-01"
         and partial.json()["lines"][0]["qtyMilli"] == 6000
     )
     after = client.get(f"/api/v1/purchase-orders/{po_id}").json()
     assert after["status"] == "partially_delivered" and after["deliveriesCount"] == 1
     assert {l["itemCode"]: l["receivedQtyMilli"] for l in after["lines"]} == {
-        "LUM-001": 6000,
-        "LUM-002": 0,
+        "CHA-LUM-01": 6000,
+        "LOB-LUM-01": 0,
     }
     assert client.get(f"/api/v1/project-items/{items[0]['id']}").json()["status"] == "ordered"
     too_much = receive(
         client,
         po_id,
-        [{"purchaseOrderLineId": lines["LUM-001"]["id"], "qtyMilli": 7000}],
+        [{"purchaseOrderLineId": lines["CHA-LUM-01"]["id"], "qtyMilli": 7000}],
         ref="BL-2",
     )
     assert (
@@ -129,8 +129,8 @@ def test_partial_then_complete_receipt(client: TestClient, po: dict[str, Any]) -
         client,
         po_id,
         [
-            {"purchaseOrderLineId": lines["LUM-001"]["id"], "qtyMilli": 6000},
-            {"purchaseOrderLineId": lines["LUM-002"]["id"], "qtyMilli": 2000},
+            {"purchaseOrderLineId": lines["CHA-LUM-01"]["id"], "qtyMilli": 6000},
+            {"purchaseOrderLineId": lines["LOB-LUM-01"]["id"], "qtyMilli": 2000},
         ],
         on="2026-11-20",
         ref="BL-2",
@@ -161,8 +161,8 @@ def test_deleting_a_receipt_reopens_the_lines(client: TestClient, po: dict[str, 
         client,
         po_id,
         [
-            {"purchaseOrderLineId": lines["LUM-001"]["id"], "qtyMilli": 12_000},
-            {"purchaseOrderLineId": lines["LUM-002"]["id"], "qtyMilli": 2000},
+            {"purchaseOrderLineId": lines["CHA-LUM-01"]["id"], "qtyMilli": 12_000},
+            {"purchaseOrderLineId": lines["LOB-LUM-01"]["id"], "qtyMilli": 2000},
         ],
     ).json()
     assert client.get(f"/api/v1/purchase-orders/{po_id}").json()["status"] == "closed"
@@ -190,8 +190,8 @@ def test_receipt_validation(client: TestClient, po: dict[str, Any]) -> None:
         client,
         po_id,
         [
-            {"purchaseOrderLineId": lines["LUM-002"]["id"], "qtyMilli": 1000},
-            {"purchaseOrderLineId": lines["LUM-002"]["id"], "qtyMilli": 1000},
+            {"purchaseOrderLineId": lines["LOB-LUM-01"]["id"], "qtyMilli": 1000},
+            {"purchaseOrderLineId": lines["LOB-LUM-01"]["id"], "qtyMilli": 1000},
         ],
     )
     assert twice.status_code == 422 and "même ligne" in twice.json()["details"][0]["message"]

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.errors import ConflictError, ErrorDetail, NotFoundError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import Client, Project, Setting
+from ffe.models import BudgetLine, Client, Project, Setting
 from ffe.models.project import PROJECT_CLOSED_STATUSES
 from ffe.schemas.project import ProjectCreate, ProjectStatusChange, ProjectUpdate
 from ffe.services.base import stamp
@@ -97,6 +97,7 @@ def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Proje
         contingency = values.pop("contingency_bp")
         if contingency is None:
             contingency = _settings_row(session).default_contingency_bp
+        global_budget = values.pop("global_budget_cents")
         now = stamp(clock)
         project = Project(
             **values,
@@ -107,6 +108,16 @@ def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Proje
             updated_at=now,
         )
         session.add(project)
+        if global_budget is not None:
+            session.flush()
+            session.add(
+                BudgetLine(
+                    project_id=project.id,
+                    amount_cents=global_budget,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
     return project
 
 

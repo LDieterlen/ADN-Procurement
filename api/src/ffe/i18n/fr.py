@@ -55,6 +55,13 @@ TRANSITION_MESSAGES: dict[str, str] = {
     "reopen_after_ordered": "Cette ligne a été commandée : elle ne se rouvre pas (créer une nouvelle ligne).",
     "invalid_transition": "Transition de statut impossible.",
 }
+ITEM_LOCATION_LABELS: dict[str, str] = {
+    "floor": "Sol",
+    "wall": "Mur",
+    "ceiling": "Plafond",
+    "door": "Porte",
+    "other": "Autre",
+}
 ITEM_NOTE_REQUIRED = "Une note est obligatoire pour cette transition."
 ITEM_NEEDS_NAME = "Un libellé est nécessaire."
 ITEM_NEEDS_PRODUCT = "Un produit est nécessaire (sauf sur mesure, existant ou frais)."

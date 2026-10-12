@@ -7,33 +7,63 @@
   </div>
   <h1>{{ project.name }}</h1>
   <p class="muted">Projet {{ project.code }} · {{ client_name }}</p>
-  <p>Book FF&amp;E — {{ item_count }} article(s) dans {{ zone_count }} zone(s)</p>
-  <p class="muted small">Émis le {{ issued_on }}</p>
+  <p>Prescriptions — {{ item_count }} article(s) dans {{ zone_count }} zone(s)</p>
+  <p class="muted small">Diffusion {{ indice }} du {{ issued_on }}</p>
 </section>
+
+<section class="page">
+  <table class="totals"><tr>
+    <td><strong>{{ agency.name or "FFE" }}</strong></td>
+    <td style="text-align:center"><strong>{{ project.name }}</strong></td>
+    <td class="num"><span class="muted small">PRESCRIPTIONS</span><br><strong>LISTE</strong></td>
+  </tr></table>
+  <table class="list">
+    <thead><tr><th>Typologie</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Indice</th></tr></thead>
+    <tbody>
+    {% for zone in zones %}
+      <tr class="zone"><td colspan="5">{{ zone["code"] or "—" }} — {{ zone["name"] }}{% if zone["multiplier"] > 1 %} (× {{ zone["multiplier"] }}){% endif %}</td></tr>
+      {% for a in zone["articles"] %}
+      <tr><td>{{ a["typology"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ a["location"] }}</td><td>{{ a["indice"] }}</td></tr>
+      {% endfor %}
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 {% for zone in zones %}
-  {% for article in zone["articles"] %}
+  {% for a in zone["articles"] %}
   <section class="page">
-    <p class="muted small">Zone {{ zone["code"] or "—" }} — {{ zone["name"] }}{% if zone["multiplier"] > 1 %} (× {{ zone["multiplier"] }}){% endif %}</p>
-    <h2><span class="code">{{ article["item_code"] }}</span> {{ article["name"] }}</h2>
-    <div class="article">
-      <div>
-        {% if article["photo"] %}
-          <img class="photo" src="{{ article["photo"] }}" alt="{{ article["name"] }}">
-          {% if article["license_note"] %}<p class="muted small">{{ article["license_note"] }}</p>{% endif %}
-        {% else %}
-          <p class="muted">Pas de photo</p>
-        {% endif %}
+    <table class="totals"><tr>
+      <td><strong>{{ agency.name or "FFE" }}</strong></td>
+      <td style="text-align:center"><strong>{{ project.name }}</strong><br><span class="muted">{{ zone["name"] }}</span></td>
+      <td class="num"><span class="muted small">PRESCRIPTION</span><br><strong>{{ a["item_code"] }}</strong></td>
+    </tr></table>
+    <table class="list" style="margin: 4mm 0 6mm">
+      <thead><tr><th>Typologie</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Indice</th></tr></thead>
+      <tbody><tr><td>{{ a["typology"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ a["location"] }}</td><td>{{ a["indice"] }}</td></tr></tbody>
+    </table>
+    <div class="sheet">
+      <div class="visuals">
+        {% if a["photo"] %}<img class="photo" src="{{ a["photo"] }}" alt="{{ a["name"] }}">{% else %}<p class="muted">Pas de photo</p>{% endif %}
+        {% if a["license_note"] %}<p class="muted small">{{ a["license_note"] }}</p>{% endif %}
+        {% if a["drawing"] %}<img class="photo drawing" src="{{ a["drawing"] }}" alt="Dessin {{ a["item_code"] }}">{% endif %}
       </div>
-      <dl>
-        {% if article["client_description"] %}<dt>Description</dt><dd>{{ article["client_description"] }}</dd>{% endif %}
-        <dt>Type</dt><dd>{{ article["kind_label"] }}</dd>
-        {% if article["finish"] %}<dt>Finition</dt><dd>{{ article["finish"] }}</dd>{% endif %}
-        {% if article["color"] %}<dt>Couleur</dt><dd>{{ article["color"] }}</dd>{% endif %}
-        {% if article["materials"] %}<dt>Matériaux</dt><dd>{{ article["materials"] }}</dd>{% endif %}
-        {% if article["dimensions"] %}<dt>Dimensions</dt><dd>{{ article["dimensions"] }}</dd>{% endif %}
-        <dt>Quantité dans la zone</dt><dd>{{ article["qty_text"] }}{% if zone["multiplier"] > 1 %} par clé, {{ article["qty_total_text"] }} au total{% endif %}</dd>
-        {% if article["manufacturer"] %}<dt>Fabricant</dt><dd>{{ article["manufacturer"] }}</dd>{% endif %}
-      </dl>
+      <table class="facts">
+        <tr><th>Fabricant</th></tr><tr><td>{{ a["manufacturer"] or "" }}</td></tr>
+        <tr><th>Nom produit</th></tr><tr><td>{{ a["product_name"] }}</td></tr>
+        <tr><th>Référence</th></tr><tr><td>{{ a["reference"] or "" }}</td></tr>
+        <tr><th>Finition</th></tr><tr><td>{{ [a["finish"], a["color"], a["materials"]] | select | join(" · ") }}</td></tr>
+        <tr><th>Dimensions</th></tr><tr><td>{{ a["dimensions"] }}</td></tr>
+        <tr><th>Quantité</th></tr><tr><td>{{ a["qty_text"] }}{% if zone["multiplier"] > 1 %} par clé, {{ a["qty_total_text"] }} au total{% endif %}</td></tr>
+        <tr><th>Commentaires</th></tr><tr><td class="tall">{{ a["client_description"] or "" }}</td></tr>
+        <tr><th>Lien internet</th></tr><tr><td>{% if a["link"] %}<a href="{{ a["link"] }}">{{ a["link"] }}</a>{% endif %}</td></tr>
+        <tr><th>Fournisseur</th></tr><tr><td>{{ a["supplier_name"] or "" }}</td></tr>
+        <tr><th>Représentant</th></tr><tr><td>{{ a["representative"] or "" }}</td></tr>
+        <tr><th>Téléphone</th></tr><tr><td>{{ a["phone"] or "" }}</td></tr>
+        <tr><th>Email</th></tr><tr><td>{{ a["email"] or "" }}</td></tr>
+        <tr><th>Diffusion</th></tr><tr><td>{{ indice }} — {{ issued_on }}</td></tr>
+        <tr><th>Validation</th></tr><tr><td class="tall"></td></tr>
+      </table>
     </div>
   </section>
   {% endfor %}

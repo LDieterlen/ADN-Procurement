@@ -206,7 +206,7 @@ def test_alerts_at_90_and_100_percent_and_overdue_orders(
     late = [
         a for a in client.get(f"/api/v1/projects/{p}/alerts").json() if a["kind"] == "order_overdue"
     ]
-    assert len(late) == 1 and "LUM-002" in late[0]["message"]
+    assert len(late) == 1 and "LOB-LUM-01" in late[0]["message"]
 
 
 def test_dashboard_lists_open_projects_with_their_figures(

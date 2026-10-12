@@ -84,7 +84,7 @@ def test_create_from_product_copies_everything_and_needs_the_fx_rate(
     assert response.status_code == 201, response.text
     body = response.json()
     assert (
-        body["itemCode"] == "LUM-001"
+        body["itemCode"] == "LOB-LUM-01"  # zone of the first placement, typology, 2 digits
         and body["name"] == "Beat Light Fat"
         and body["finish"] == "laiton"
     )
@@ -103,7 +103,7 @@ def test_create_from_product_copies_everything_and_needs_the_fx_rate(
     assert [e["kind"] for e in events] == ["created"]
     # the next GBP line reuses the last rate of the project
     second = post_item(client, p, {"productId": world["lamp"].id}).json()
-    assert second["fxRateMicro"] == GBP and second["itemCode"] == "LUM-002"
+    assert second["fxRateMicro"] == GBP and second["itemCode"] == "LUM-01"  # no zone
 
 
 def test_create_free_line_needs_category_and_name_and_gets_one_unassigned_placement(
@@ -125,7 +125,7 @@ def test_create_free_line_needs_category_and_name_and_gets_one_unassigned_placem
             "unitCostCents": 45_000,
         },
     ).json()
-    assert body["itemCode"] == "LUM-001"  # level-1 prefix of the child category
+    assert body["itemCode"] == "LUM-01"  # level-1 prefix of the child category, no zone
     assert (
         body["currency"] == "EUR" and body["fxRateMicro"] == 1_000_000 and body["discountBp"] == 0
     )
@@ -175,11 +175,15 @@ def test_item_code_can_be_chosen_and_sequence_never_goes_back(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     p = world["project"].id
-    first = post_item(client, p, {"categoryId": world["lum"].id, "name": "A"}).json()
-    assert first["itemCode"] == "LUM-001"
+    cha = {"placements": [{"zoneId": world["cha"].id, "qtyMilli": 1000}]}
+    first = post_item(client, p, {"categoryId": world["lum"].id, "name": "A", **cha}).json()
+    assert first["itemCode"] == "CHA-LUM-01"
     client.delete(f"/api/v1/project-items/{first['id']}")
-    second = post_item(client, p, {"categoryId": world["lum"].id, "name": "B"}).json()
-    assert second["itemCode"] == "LUM-002"  # the hole is kept
+    second = post_item(client, p, {"categoryId": world["lum"].id, "name": "B", **cha}).json()
+    assert second["itemCode"] == "CHA-LUM-02"  # the hole is kept
+    lob = {"placements": [{"zoneId": world["lob"].id, "qtyMilli": 1000}]}
+    third = post_item(client, p, {"categoryId": world["lum"].id, "name": "L", **lob}).json()
+    assert third["itemCode"] == "LOB-LUM-01"  # one sequence per project, zone and typology
     custom = post_item(
         client, p, {"categoryId": world["lum"].id, "name": "C", "itemCode": "LUM-099"}
     ).json()
@@ -211,7 +215,7 @@ def test_same_lamp_in_two_zones_is_one_code_and_14_pieces(
     ).json()
     summary = client.get(f"/api/v1/projects/{p}/summary").json()
     line = summary["lines"][0]
-    assert line["itemCode"] == "LUM-001" and line["totalQtyMilli"] == 14_000
+    assert line["itemCode"] == "LOB-LUM-01" and line["totalQtyMilli"] == 14_000
     assert (
         line["netUnitCents"] == 106_250
         and line["netUnitEurCents"] == 124_313
@@ -281,7 +285,7 @@ def test_carpet_in_m2_allows_fractional_quantities(
     ).json()
     line = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()["lines"][0]
     assert (
-        body["itemCode"] == "TXT-001"
+        body["itemCode"] == "CHA-TXT-01"
         and line["totalQtyMilli"] == 150_000
         and line["totalHtCents"] == 675_000
     )
@@ -450,7 +454,7 @@ def test_replace_product_after_approval(
     assert new.status_code == 201, new.text
     body = new.json()
     assert (
-        body["itemCode"] == "LUM-001"
+        body["itemCode"] == "LOB-LUM-01"
         and body["status"] == "specified"
         and body["approvedAt"] is None
     )
@@ -460,7 +464,7 @@ def test_replace_product_after_approval(
     assert [pl["zoneId"] for pl in body["placements"]] == [world["lob"].id, world["cha"].id]
     previous = client.get(f"/api/v1/project-items/{old['id']}").json()
     assert (
-        previous["itemCode"] == "LUM-001.R1"
+        previous["itemCode"] == "LOB-LUM-01.R1"
         and previous["status"] == "replaced"
         and previous["replacedById"] == body["id"]
     )
@@ -568,3 +572,20 @@ def test_summary_computes_the_latest_order_date_and_the_overdue_flag(
     assert lines[unknown["id"]]["orderBy"] is None and lines[unknown["id"]]["orderOverdue"] is False
     client.patch(f"/api/v1/project-items/{soon['id']}", json={"onHold": True})
     assert client.get(f"/api/v1/projects/{p}/summary").json()["lines"][0]["orderOverdue"] is False
+
+
+# --- étape 11 (ADR-0012) : localisation facultative ----------------------------------------------
+
+
+def test_location_is_optional_and_checked(client: TestClient, world: dict[str, Any]) -> None:
+    p = world["project"].id
+    created = post_item(
+        client, p, {"categoryId": world["lum"].id, "name": "Applique", "location": "wall"}
+    ).json()
+    assert created["location"] == "wall" and created["indice"] is None
+    plain = post_item(client, p, {"categoryId": world["lum"].id, "name": "Sans"}).json()
+    assert plain["location"] is None
+    bad = client.patch(f"/api/v1/project-items/{created['id']}", json={"location": "roof"})
+    assert bad.status_code == 422
+    cleared = client.patch(f"/api/v1/project-items/{created['id']}", json={"location": None})
+    assert cleared.json()["location"] is None

@@ -114,3 +114,22 @@ def test_list_filters_by_client_and_orders_by_code_desc(
     assert [p["id"] for p in client.get(URL, params={"clientId": b.client_id}).json()] == [b.id]
     assert client.get(f"{URL}/{a.id}").json()["name"] == "A"
     assert client.get(f"{URL}/99").status_code == 404
+
+
+def test_global_budget_can_be_created_with_the_project(
+    client: TestClient, session: Session, clock: Clock
+) -> None:
+    owner = make_client(session, clock)
+    created = client.post(
+        "/api/v1/projects",
+        json={"name": "Villa", "clientId": owner.id, "globalBudgetCents": 5_000_000},
+    )
+    assert created.status_code == 201, created.text
+    lines = client.get(f"/api/v1/projects/{created.json()['id']}/budget-lines").json()
+    assert [(b["zoneId"], b["categoryId"], b["amountCents"]) for b in lines] == [
+        (None, None, 5_000_000)
+    ]
+    without = client.post(
+        "/api/v1/projects", json={"name": "Sans budget", "clientId": owner.id}
+    ).json()
+    assert client.get(f"/api/v1/projects/{without['id']}/budget-lines").json() == []
