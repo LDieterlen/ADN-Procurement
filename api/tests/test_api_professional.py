@@ -1,4 +1,4 @@
-"""`/manufacturers`: paginated list, service duplicate rule and the lower(name) index net."""
+"""`/professionals`: paginated list, service duplicate rule and the lower(name) index net."""
 
 from typing import Any
 
@@ -6,11 +6,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
-from conftest import make_manufacturer
+from conftest import make_professional
 from ffe.deps import Clock
-from ffe.models import Manufacturer
+from ffe.models import Professional
 
-URL = "/api/v1/manufacturers"
+URL = "/api/v1/professionals"
 NOW = "2026-10-09T12:00:00Z"
 
 
@@ -30,7 +30,7 @@ def test_create_read_update(client: TestClient) -> None:
 
 def test_list_paginated_and_searchable(client: TestClient, session: Session, clock: Clock) -> None:
     for name in ("Vitra", "Flos", "Hay", "Artemide"):
-        make_manufacturer(session, clock, name=name)
+        make_professional(session, clock, name=name)
     page = client.get(URL, params={"limit": 2}).json()
     assert page["total"] == 4 and [m["name"] for m in page["items"]] == ["Artemide", "Flos"]
     assert client.get(URL, params={"q": "VIT"}).json()["items"][0]["name"] == "Vitra"
@@ -44,12 +44,12 @@ def test_service_detects_accented_duplicates(client: TestClient) -> None:
 
 
 def test_lower_name_index_is_the_last_resort_net(session: Session, clock: Clock) -> None:
-    make_manufacturer(session, clock, name="Flos")
+    make_professional(session, clock, name="Flos")
     import pytest
     from sqlalchemy.exc import IntegrityError
 
-    with pytest.raises(IntegrityError, match="uq_manufacturer_name_lower"), session.begin():
-        session.execute(insert(Manufacturer).values(name="FLOS", created_at=NOW, updated_at=NOW))
+    with pytest.raises(IntegrityError, match="uq_professional_name_lower"), session.begin():
+        session.execute(insert(Professional).values(name="FLOS", created_at=NOW, updated_at=NOW))
 
 
 def test_archive_cycle(client: TestClient) -> None:
@@ -61,5 +61,17 @@ def test_archive_cycle(client: TestClient) -> None:
     assert client.get(URL).json()["total"] == 1
 
 
-def test_unknown_manufacturer_is_404(client: TestClient) -> None:
-    assert client.get(f"{URL}/5").json()["message"] == "Fabricant n° 5 introuvable."
+def test_unknown_professional_is_404(client: TestClient) -> None:
+    assert client.get(f"{URL}/5").json()["message"] == "Professionnel n° 5 introuvable."
+
+
+def test_kind_defaults_to_manufacturer_and_is_checked(client: TestClient) -> None:
+    body = post(client, {"name": "Jouffre", "specialty": "Confection"}).json()
+    assert body["kind"] == "manufacturer" and body["specialty"] == "Confection"
+    assert post(client, {"name": "X", "kind": "plumber"}).status_code == 422
+    updated = client.patch(
+        f"{URL}/{body['id']}",
+        json={"kind": "artisan", "contact2Name": "Nadia", "contact2Email": "nadia@example.com"},
+    ).json()
+    assert updated["kind"] == "artisan" and updated["contact2Email"] == "nadia@example.com"
+    assert client.patch(f"{URL}/{body['id']}", json={"contact2Email": "x"}).status_code == 422

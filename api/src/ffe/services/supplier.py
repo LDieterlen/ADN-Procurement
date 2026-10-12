@@ -20,7 +20,7 @@ def list_suppliers(
     query = select(Supplier).order_by(Supplier.name, Supplier.id)
     if not include_archived:
         query = query.where(Supplier.archived_at.is_(None))
-    rows = search(list(session.scalars(query)), q, ("name", "contact_name"))
+    rows = search(list(session.scalars(query)), q, ("name", "specialty", "contact_name"))
     return page(rows, limit, offset)
 
 

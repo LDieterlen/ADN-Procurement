@@ -26,8 +26,8 @@ from ffe.models import (
     Client,
     File,
     Location,
-    Manufacturer,
     Product,
+    Professional,
     Project,
     ProjectItem,
     Supplier,
@@ -35,8 +35,8 @@ from ffe.models import (
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.location import LocationCreate
-from ffe.schemas.manufacturer import ManufacturerCreate
 from ffe.schemas.product import ProductCreate
+from ffe.schemas.professional import ProfessionalCreate
 from ffe.schemas.project import ProjectCreate
 from ffe.schemas.project_item import ProjectItemCreate
 from ffe.schemas.supplier import SupplierCreate
@@ -44,8 +44,8 @@ from ffe.services.category import create_category
 from ffe.services.client import create_client
 from ffe.services.file import store_upload
 from ffe.services.location import create_location
-from ffe.services.manufacturer import create_manufacturer
 from ffe.services.product import create_product
+from ffe.services.professional import create_professional
 from ffe.services.project import create_project
 from ffe.services.project_item import create_item
 from ffe.services.supplier import create_supplier
@@ -124,10 +124,10 @@ def make_supplier(session: Session, clock: Clock, **overrides: Any) -> Supplier:
     return create_supplier(session, SupplierCreate(**data), clock)
 
 
-def make_manufacturer(session: Session, clock: Clock, **overrides: Any) -> Manufacturer:
+def make_professional(session: Session, clock: Clock, **overrides: Any) -> Professional:
     data: dict[str, Any] = {"name": "Flos"}
     data.update(overrides)
-    return create_manufacturer(session, ManufacturerCreate(**data), clock)
+    return create_professional(session, ProfessionalCreate(**data), clock)
 
 
 def make_category(session: Session, clock: Clock, **overrides: Any) -> Category:

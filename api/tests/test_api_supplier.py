@@ -110,3 +110,21 @@ def test_archive_unarchive_and_read_only_when_archived(client: TestClient) -> No
 
 def test_unknown_supplier_is_404(client: TestClient) -> None:
     assert client.get(f"{URL}/9").json()["message"] == "Fournisseur n° 9 introuvable."
+
+
+def test_specialty_mobile_and_second_contact_round_trip(client: TestClient) -> None:
+    body = post(
+        client,
+        {
+            "name": "Flos",
+            "specialty": "Luminaire",
+            "mobile": " 06 12 80 66 08 ",
+            "contact2Name": "Back office",
+            "contact2Phone": "01 53 85 49 93",
+            "contact2Email": "info@flos.com",
+        },
+    ).json()
+    assert body["specialty"] == "Luminaire" and body["mobile"] == "06 12 80 66 08"
+    assert body["contact2Name"] == "Back office" and body["contact2Email"] == "info@flos.com"
+    assert post(client, {"name": "Y", "contact2Email": "nope"}).status_code == 422
+    assert client.get(URL, params={"q": "lumin"}).json()["total"] == 1

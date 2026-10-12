@@ -1,4 +1,5 @@
-"""`ffe` command line: `serve`, `openapi`, `db migrate|backup|restore|check|export-json|import-json|seed`."""
+"""`ffe` command line: `serve`, `openapi`,
+`db migrate|backup|restore|check|export-json|import-json|seed|import-contacts`."""
 
 import json
 import os
@@ -34,6 +35,11 @@ from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
 from ffe.demo import seed_demo
 from ffe.deps import Deps, utcnow
+from ffe.services.contact_import import (
+    ContactImportError,
+    decode_contacts,
+    import_contacts,
+)
 from ffe.services.file import orphans as file_orphans
 from ffe.services.file import verify_hashes
 
@@ -254,6 +260,32 @@ def import_json_cmd(
             return
         for name, count in imported.items():
             typer.echo(f"  {name:<24} {count} ligne(s)")
+
+
+@db.command("import-contacts")
+def import_contacts_cmd(
+    file: Annotated[Path, typer.Argument(help="Annuaire CSV (NOM;PRESTATION;SAVOIR-FAIRE;…).")],
+    prod: ProdFlag = False,
+) -> None:
+    """Charge un annuaire : « Fournisseur » → fournisseurs, autres prestations → professionnels.
+    Idempotent : les noms déjà présents sont ignorés (ADR-0015)."""
+    with _opened(prod) as (_settings, engine):
+        if has_pending(engine):
+            _fail(DbError("Base non migrée : lancer `ffe db migrate` d'abord."))
+        try:
+            with Session(engine, expire_on_commit=False) as session:
+                result = import_contacts(session, decode_contacts(file.read_bytes()), utcnow)
+        except ContactImportError as error:
+            _fail(DbError(str(error)))
+            return
+        typer.echo(f"Fournisseurs créés : {result.suppliers_created}")
+        typer.echo(f"Professionnels créés : {result.professionals_created}")
+        typer.echo(f"Déjà présents (ignorés) : {result.skipped_existing}")
+        typer.echo(f"Lignes en double dans le fichier (ignorées) : {result.skipped_duplicate_rows}")
+        for old, new in result.renamed:
+            typer.echo(f"Renommé : « {old} » → « {new} » (même nom sous deux prestations)")
+        for email in result.emails_to_check:
+            typer.echo(f"E-mail à vérifier (mis dans les notes) : {email}")
 
 
 @db.command()

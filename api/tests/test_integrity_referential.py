@@ -1,4 +1,4 @@
-"""Schema v0: category, manufacturer and supplier CHECKs, expression and partial unique indexes."""
+"""Schema v0: category, professional and supplier CHECKs, expression and partial unique indexes."""
 
 from typing import Any
 
@@ -6,12 +6,12 @@ import pytest
 from sqlalchemy import Engine, insert, text
 from sqlalchemy.exc import IntegrityError
 
-from ffe.models import Category, Manufacturer, Supplier
+from ffe.models import Category, Professional, Supplier
 
 NOW = "2026-10-09T12:00:00Z"
 EXPECTED_INDEXES = {
     "uq_category_name_lower": "lower(name)",
-    "uq_manufacturer_name_lower": "lower(name)",
+    "uq_professional_name_lower": "lower(name)",
     "uq_project_item_placement_location": "COALESCE(location_id, 0)",
     "uq_budget_line_scope": "COALESCE(supplier_id, 0)",
     "uq_product_file_primary": "WHERE is_primary = 1",
@@ -50,10 +50,10 @@ def test_category_code_and_lower_name_unique(engine: Engine) -> None:
         insert_row(engine, Category, name="LUMINAIRE", code="LU")
 
 
-def test_manufacturer_lower_name_unique(engine: Engine) -> None:
-    insert_row(engine, Manufacturer, name="Flos")
-    with pytest.raises(IntegrityError, match="uq_manufacturer_name_lower"):
-        insert_row(engine, Manufacturer, name="fLOS")
+def test_professional_lower_name_unique(engine: Engine) -> None:
+    insert_row(engine, Professional, name="Flos")
+    with pytest.raises(IntegrityError, match="uq_professional_name_lower"):
+        insert_row(engine, Professional, name="fLOS")
 
 
 @pytest.mark.parametrize(

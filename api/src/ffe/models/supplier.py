@@ -1,4 +1,4 @@
-"""`supplier`: who sells, with the contact printed on the spec sheets (DATA_MODEL §4.7).
+"""`supplier`: who sells, with the contacts printed on the spec sheets (DATA_MODEL §4.7, ADR-0015).
 Only `name` is required; no executives, ever."""
 
 from sqlalchemy import CheckConstraint, Index, Integer, text
@@ -22,9 +22,14 @@ class Supplier(TimestampedMixin, Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    specialty: Mapped[str | None] = mapped_column(Text)
     contact_name: Mapped[str | None] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
     phone: Mapped[str | None] = mapped_column(Text)
+    mobile: Mapped[str | None] = mapped_column(Text)
+    contact2_name: Mapped[str | None] = mapped_column(Text)
+    contact2_phone: Mapped[str | None] = mapped_column(Text)
+    contact2_email: Mapped[str | None] = mapped_column(Text)
     website: Mapped[str | None] = mapped_column(Text)
     currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="EUR")
     default_discount_bp: Mapped[int] = mapped_column(

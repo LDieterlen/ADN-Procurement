@@ -22,7 +22,7 @@ from ffe.schemas.category import CategoryRead
 from ffe.schemas.client import ClientRead
 from ffe.schemas.file import FileRead
 from ffe.schemas.location import LocationRead
-from ffe.schemas.manufacturer import ManufacturerRead
+from ffe.schemas.professional import ProfessionalRead
 from ffe.schemas.project import ProjectRead
 from ffe.schemas.project_item import EventRead, PlacementRead
 from ffe.schemas.setting import SettingRead
@@ -35,7 +35,7 @@ TABLE_ORDER: tuple[str, ...] = (
     "setting",
     "client",
     "category",
-    "manufacturer",
+    "professional",
     "supplier",
     "file",
     "product",
@@ -56,7 +56,7 @@ ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
     "setting": SettingRead,
     "client": ClientRead,
     "category": CategoryRead,
-    "manufacturer": ManufacturerRead,
+    "professional": ProfessionalRead,
     "supplier": SupplierRead,
     "file": FileRead,
     "project": ProjectRead,

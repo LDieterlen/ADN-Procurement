@@ -11,8 +11,8 @@ from ffe.api.v1 import (
     file,
     health,
     location,
-    manufacturer,
     product,
+    professional,
     project,
     project_item,
     setting,
@@ -24,7 +24,7 @@ router = APIRouter()
 router.include_router(health.router)
 router.include_router(client.router)
 router.include_router(supplier.router)
-router.include_router(manufacturer.router)
+router.include_router(professional.router)
 router.include_router(category.router)
 router.include_router(product.router)
 router.include_router(file.router)

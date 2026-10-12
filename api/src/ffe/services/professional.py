@@ -1,0 +1,63 @@
+"""`professional` service (template `client`, D6a.3 factorisation)."""
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ffe.deps import Clock
+from ffe.models import Professional
+from ffe.schemas.professional import ProfessionalCreate, ProfessionalUpdate
+from ffe.services.base import stamp
+from ffe.services.common import archive as common_archive
+from ffe.services.common import check_duplicate_name, ensure_active, get_or_404, page, search
+from ffe.services.common import unarchive as common_unarchive
+
+RESOURCE = "professional"
+
+
+def list_professionals(
+    session: Session, q: str | None, include_archived: bool, limit: int, offset: int
+) -> tuple[list[Professional], int]:
+    query = select(Professional).order_by(Professional.name, Professional.id)
+    if not include_archived:
+        query = query.where(Professional.archived_at.is_(None))
+    rows = search(list(session.scalars(query)), q, ("name", "specialty", "contact_name"))
+    return page(rows, limit, offset)
+
+
+def get_professional(session: Session, professional_id: int) -> Professional:
+    return get_or_404(session, Professional, professional_id, RESOURCE)
+
+
+def create_professional(
+    session: Session, data: ProfessionalCreate, clock: Clock, force: bool = False
+) -> Professional:
+    with session.begin():
+        check_duplicate_name(session, Professional, RESOURCE, data.name, None, force)
+        now = stamp(clock)
+        professional = Professional(**data.model_dump(), created_at=now, updated_at=now)
+        session.add(professional)
+    return professional
+
+
+def update_professional(
+    session: Session, professional_id: int, data: ProfessionalUpdate, clock: Clock
+) -> Professional:
+    with session.begin():
+        professional = ensure_active(get_professional(session, professional_id), RESOURCE)
+        changes = data.model_dump(exclude_unset=True)
+        if "name" in changes and changes["name"] != professional.name:
+            check_duplicate_name(
+                session, Professional, RESOURCE, changes["name"], professional_id, False
+            )
+        for field_name, value in changes.items():
+            setattr(professional, field_name, value)
+        professional.updated_at = stamp(clock)
+    return professional
+
+
+def archive_professional(session: Session, professional_id: int, clock: Clock) -> Professional:
+    return common_archive(session, Professional, professional_id, RESOURCE, clock)
+
+
+def unarchive_professional(session: Session, professional_id: int, clock: Clock) -> Professional:
+    return common_unarchive(session, Professional, professional_id, RESOURCE, clock)

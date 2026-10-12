@@ -3,7 +3,7 @@
 RESOURCE_LABELS: dict[str, str] = {
     "client": "client",
     "supplier": "fournisseur",
-    "manufacturer": "fabricant",
+    "professional": "professionnel",
     "category": "type de produit",
     "product": "produit",
     "file": "fichier",
@@ -13,6 +13,15 @@ RESOURCE_LABELS: dict[str, str] = {
     "placement": "implantation",
 }
 
+PROFESSIONAL_KIND_LABELS: dict[str, str] = {
+    "manufacturer": "Fabricant",
+    "distributor": "Distributeur",
+    "publisher": "Éditeur",
+    "artisan": "Artisan",
+}
+CONTACT_IMPORT_MISSING_COLUMNS = "Colonnes manquantes dans le fichier : {columns}."
+CONTACT_IMPORT_UNKNOWN_KIND = "Ligne {line} ({name}) : prestation inconnue « {kind} »."
+CONTACT_IMPORT_EMAIL_NOTE = "E-mail à vérifier : {email}"
 PROJECT_STATUS_LABELS: dict[str, str] = {
     "prospect": "Prospect",
     "active": "Actif",

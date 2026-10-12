@@ -94,16 +94,29 @@ def upgrade() -> None:
         sqlite_strict=True,
     )
     op.create_table(
-        "manufacturer",
+        "professional",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("kind", sa.Text(), server_default="manufacturer", nullable=False),
+        sa.Column("specialty", sa.Text(), nullable=True),
+        sa.Column("contact_name", sa.Text(), nullable=True),
+        sa.Column("phone", sa.Text(), nullable=True),
+        sa.Column("mobile", sa.Text(), nullable=True),
+        sa.Column("email", sa.Text(), nullable=True),
+        sa.Column("contact2_name", sa.Text(), nullable=True),
+        sa.Column("contact2_phone", sa.Text(), nullable=True),
+        sa.Column("contact2_email", sa.Text(), nullable=True),
         sa.Column("website", sa.Text(), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("archived_at", sa.Text(), nullable=True),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
-        sa.CheckConstraint("length(name) > 0", name=op.f("ck_manufacturer_name_not_empty")),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_manufacturer")),
+        sa.CheckConstraint(
+            "kind IN ('manufacturer','distributor','publisher','artisan')",
+            name=op.f("ck_professional_kind_values"),
+        ),
+        sa.CheckConstraint("length(name) > 0", name=op.f("ck_professional_name_not_empty")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_professional")),
         sqlite_strict=True,
     )
     op.create_table(
@@ -129,9 +142,14 @@ def upgrade() -> None:
         "supplier",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("specialty", sa.Text(), nullable=True),
         sa.Column("contact_name", sa.Text(), nullable=True),
         sa.Column("email", sa.Text(), nullable=True),
         sa.Column("phone", sa.Text(), nullable=True),
+        sa.Column("mobile", sa.Text(), nullable=True),
+        sa.Column("contact2_name", sa.Text(), nullable=True),
+        sa.Column("contact2_phone", sa.Text(), nullable=True),
+        sa.Column("contact2_email", sa.Text(), nullable=True),
         sa.Column("website", sa.Text(), nullable=True),
         sa.Column("currency", sa.Text(), server_default="EUR", nullable=False),
         sa.Column("default_discount_bp", sa.Integer(), server_default=sa.text("0"), nullable=False),
@@ -611,7 +629,7 @@ def upgrade() -> None:
 
     # Expression indexes (DATA_MODEL §3): SQLite cannot reflect them, so Alembic skips them.
     op.execute("CREATE UNIQUE INDEX uq_category_name_lower ON category (lower(name))")
-    op.execute("CREATE UNIQUE INDEX uq_manufacturer_name_lower ON manufacturer (lower(name))")
+    op.execute("CREATE UNIQUE INDEX uq_professional_name_lower ON professional (lower(name))")
     op.execute(
         "CREATE UNIQUE INDEX uq_project_item_placement_location "
         "ON project_item_placement (project_item_id, COALESCE(location_id, 0))"
@@ -633,7 +651,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP INDEX uq_budget_line_scope")
     op.execute("DROP INDEX uq_project_item_placement_location")
-    op.execute("DROP INDEX uq_manufacturer_name_lower")
+    op.execute("DROP INDEX uq_professional_name_lower")
     op.execute("DROP INDEX uq_category_name_lower")
     with op.batch_alter_table("project_item_placement", schema=None) as batch_op:
         batch_op.drop_index("ix_project_item_placement_project_id")
@@ -692,7 +710,7 @@ def downgrade() -> None:
 
     op.drop_table("supplier")
     op.drop_table("setting")
-    op.drop_table("manufacturer")
+    op.drop_table("professional")
     op.drop_table("file")
     with op.batch_alter_table("client", schema=None) as batch_op:
         batch_op.drop_index("ix_client_archived_at")
