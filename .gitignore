@@ -31,3 +31,4 @@ build/
 # Système
 .DS_Store
 Thumbs.db
+node_modules.9p-ancien/

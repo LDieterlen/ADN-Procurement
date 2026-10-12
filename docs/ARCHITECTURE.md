@@ -248,7 +248,7 @@ Fixtures : `conftest.py` crée pour chaque test **un fichier SQLite temporaire**
 | `vitest run` | `web/` | Tests de composants, frontières, fraîcheur de `schema.d.ts` | `vitest.config.ts` |
 
 - `npm run check` dans `web/` = `tsc --noEmit && prettier --check . && vitest run`. Pas d'ESLint (typescript-eslint ne suit pas TypeScript 7).
-- `./check.sh` à la racine enchaîne `api/` puis `web/` en détectant `api/pyproject.toml` et `web/package.json` ; c'est la seule porte avant commit. Pas de CI : la porte est locale.
+- `./check.sh` à la racine enchaîne `api/` puis `web/` ; c'est la seule porte avant commit. `./check.sh web` ou `./check.sh api` ne lance qu'une partie, pour un commit qui ne touche que ce sous-projet. Pas de CI : la porte est locale. Vitest tourne avec `isolate: false` (les tests installent et restaurent leur fausse API).
 - `[tool.uv] system-certs = true` dans `pyproject.toml` (proxy TLS, comme Racoon ; `native-tls` est le nom déprécié par uv 0.12).
 - Pyright : `typeCheckingMode = "standard"` global et `strict = ["src"]` (pyright 1.1.414 ne reconnaît pas `typeCheckingMode` dans `executionEnvironments`).
 - Toute nouvelle dépendance = une ligne dans l'ADR concerné ou dans `JOURNAL.md` ; `uv lock --upgrade` et `npm outdated` revus à chaque étape.
@@ -295,7 +295,7 @@ Ce que la prochaine ressource copie sans réfléchir : les trois schémas, les s
 
 ## 11. Contraintes d'environnement
 
-- **9p** : le dépôt est sur `/workspaces/Perso` (9p drvfs). Code et `node_modules` y vivent (lenteur acceptée) ; **aucune donnée SQLite** n'y est jamais écrite. inotify ne remonte pas toujours : `vite.config.ts` prévoit `server.watch.usePolling` activable par variable d'environnement (`VITE_POLL=1`), `uvicorn --reload` avec `--reload-dir src` (polling via `watchfiles` par `WATCHFILES_FORCE_POLLING=1` si besoin). `vitest run` toujours, jamais en mode watch.
+- **9p** : le dépôt est sur `/workspaces/Perso` (9p drvfs). Le code y vit ; `api/.venv` et `web/node_modules` sont des liens symboliques vers ext4 (`~/.venvs/ffe`, `~/.persist/npm/ffe-web/node_modules`) parce que lire des milliers de petits fichiers à travers 9p multipliait par trois le temps des tests (constaté le 2026-10-12 : vitest 41 s → voir §8) ; après un rebuild du conteneur, `npm ci` dans `web/` recrée les paquets au bon endroit via le lien ; **aucune donnée SQLite** n'y est jamais écrite. inotify ne remonte pas toujours : `vite.config.ts` prévoit `server.watch.usePolling` activable par variable d'environnement (`VITE_POLL=1`), `uvicorn --reload` avec `--reload-dir src` (polling via `watchfiles` par `WATCHFILES_FORCE_POLLING=1` si besoin). `vitest run` toujours, jamais en mode watch.
 - **Accès depuis Windows** : Vite `server.host: true` ; l'API écoute `127.0.0.1` seulement et reste joignable depuis le navigateur Windows par la redirection de ports de WSL/devcontainer.
 - **Persistance** : seul `~/.persist` survit au rebuild. Base, fichiers, sauvegardes, verrou et logs y vivent ; `FFE_BACKUP_DIR` sur le disque Windows est la seule copie hors conteneur. Navigateurs Playwright sous `~/.persist/ms-playwright` (`PLAYWRIGHT_BROWSERS_PATH` posé par les scripts `e2e` et `e2e:install` de `package.json`), donc conservés au rebuild.
 - **Proxy TLS** : `uv` avec `system-certs = true` (comme Racoon) ; côté npm, `cafile`/`strict-ssl` dans `.npmrc` local si `npm install` échoue (jamais versionné). Constaté à l'étape 1 : `uv` et `npm` passent sans réglage supplémentaire.
