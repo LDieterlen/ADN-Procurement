@@ -20,7 +20,7 @@ def test_create_with_name_only_and_defaults(client: TestClient) -> None:
     response = post(client, {"name": "Flos SpA"})
     assert response.status_code == 201, response.text
     body = response.json()
-    assert body["currency"] == "EUR" and body["defaultDiscountBp"] == 0
+    assert body["currency"] == "EUR" and body["contactName"] is None
     assert body["contactName"] is None and body["email"] is None
     assert client.get(f"{URL}/{body['id']}").json() == body
 
@@ -35,10 +35,9 @@ def test_create_with_contact(client: TestClient) -> None:
             "phone": "06 00 00 00 00",
             "website": "https://tomdixon.net",
             "currency": "GBP",
-            "defaultDiscountBp": 1500,
         },
     ).json()
-    assert body["currency"] == "GBP" and body["defaultDiscountBp"] == 1500
+    assert body["currency"] == "GBP"
     assert body["contactName"] == "Djamel Sabeur" and body["website"] == "https://tomdixon.net"
 
 
@@ -48,8 +47,6 @@ def test_create_with_contact(client: TestClient) -> None:
         ({"name": ""}, "name"),
         ({"name": "A", "currency": "EURO"}, "currency"),
         ({"name": "A", "currency": "eur"}, "currency"),
-        ({"name": "A", "defaultDiscountBp": 10001}, "defaultDiscountBp"),
-        ({"name": "A", "defaultDiscountBp": -1}, "defaultDiscountBp"),
         ({"name": "A", "email": "x"}, "email"),
     ],
 )
@@ -128,3 +125,15 @@ def test_specialty_mobile_and_second_contact_round_trip(client: TestClient) -> N
     assert body["contact2Name"] == "Back office" and body["contact2Email"] == "info@flos.com"
     assert post(client, {"name": "Y", "contact2Email": "nope"}).status_code == 422
     assert client.get(URL, params={"q": "lumin"}).json()["total"] == 1
+
+
+def test_filter_by_specialty_and_list_specialties(
+    client: TestClient, session: Session, clock: Clock
+) -> None:
+    make_supplier(session, clock, name="Flos", specialty="Luminaire")
+    make_supplier(session, clock, name="Marset", specialty="luminaire")
+    make_supplier(session, clock, name="Knoll", specialty="Mobilier")
+    make_supplier(session, clock, name="Sans", specialty=None)
+    assert client.get(f"{URL}/specialties").json() == ["Luminaire", "Mobilier"]
+    page = client.get(URL, params={"specialty": "Luminaire"}).json()
+    assert page["total"] == 2 and [s["name"] for s in page["items"]] == ["Flos", "Marset"]

@@ -21,9 +21,15 @@ def list_suppliers(
     include_archived: Annotated[bool, Query(alias="includeArchived")] = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    specialty: Annotated[str | None, Query(max_length=200)] = None,
 ) -> Page[SupplierRead]:
-    items, total = service.list_suppliers(session, q, include_archived, limit, offset)
+    items, total = service.list_suppliers(session, q, include_archived, limit, offset, specialty)
     return Page(items=[SupplierRead.model_validate(s) for s in items], total=total)
+
+
+@router.get("/specialties", operation_id="listSupplierSpecialties")
+def list_specialties(session: SessionDep) -> list[str]:
+    return service.list_specialties(session)
 
 
 @router.post("", status_code=201, operation_id="createSupplier")

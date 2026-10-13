@@ -6,22 +6,42 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.models import Supplier
 from ffe.schemas.supplier import SupplierCreate, SupplierUpdate
-from ffe.services.base import stamp
+from ffe.services.base import normalize_key, stamp
 from ffe.services.common import archive as common_archive
-from ffe.services.common import check_duplicate_name, ensure_active, get_or_404, page, search
+from ffe.services.common import (
+    check_duplicate_name,
+    distinct_sorted,
+    ensure_active,
+    get_or_404,
+    page,
+    search,
+)
 from ffe.services.common import unarchive as common_unarchive
 
 RESOURCE = "supplier"
 
 
 def list_suppliers(
-    session: Session, q: str | None, include_archived: bool, limit: int, offset: int
+    session: Session,
+    q: str | None,
+    include_archived: bool,
+    limit: int,
+    offset: int,
+    specialty: str | None = None,
 ) -> tuple[list[Supplier], int]:
     query = select(Supplier).order_by(Supplier.name, Supplier.id)
     if not include_archived:
         query = query.where(Supplier.archived_at.is_(None))
     rows = search(list(session.scalars(query)), q, ("name", "specialty", "contact_name"))
+    if specialty:
+        rows = [r for r in rows if normalize_key(r.specialty or "") == normalize_key(specialty)]
     return page(rows, limit, offset)
+
+
+def list_specialties(session: Session) -> list[str]:
+    """Distinct specialties of the active suppliers, for the filter menu."""
+    query = select(Supplier.specialty).where(Supplier.archived_at.is_(None))
+    return distinct_sorted(session.scalars(query))
 
 
 def get_supplier(session: Session, supplier_id: int) -> Supplier:

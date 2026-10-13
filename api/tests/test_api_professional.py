@@ -75,3 +75,14 @@ def test_kind_defaults_to_manufacturer_and_is_checked(client: TestClient) -> Non
     ).json()
     assert updated["kind"] == "artisan" and updated["contact2Email"] == "nadia@example.com"
     assert client.patch(f"{URL}/{body['id']}", json={"contact2Email": "x"}).status_code == 422
+
+
+def test_filter_by_kind_and_specialty(client: TestClient, session: Session, clock: Clock) -> None:
+    make_professional(session, clock, name="Jouffre", kind="manufacturer", specialty="Confection")
+    make_professional(session, clock, name="Dedar", kind="publisher", specialty="Tissu")
+    make_professional(session, clock, name="Casamance", kind="publisher", specialty="Tissu")
+    assert client.get(f"{URL}/specialties").json() == ["Confection", "Tissu"]
+    assert client.get(URL, params={"kind": "publisher"}).json()["total"] == 2
+    page = client.get(URL, params={"kind": "publisher", "specialty": "tissu", "q": "ded"}).json()
+    assert [m["name"] for m in page["items"]] == ["Dedar"]
+    assert client.get(URL, params={"kind": "plumber"}).status_code == 422

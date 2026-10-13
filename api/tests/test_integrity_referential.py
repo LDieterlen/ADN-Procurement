@@ -61,7 +61,6 @@ def test_professional_lower_name_unique(engine: Engine) -> None:
     [
         ({"name": ""}, "name_not_empty"),
         ({"name": "A", "currency": "EURO"}, "currency_length"),
-        ({"name": "A", "default_discount_bp": 10001}, "default_discount_bp_range"),
     ],
 )
 def test_supplier_checks(engine: Engine, values: dict[str, Any], constraint: str) -> None:

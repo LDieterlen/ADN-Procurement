@@ -33,9 +33,7 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
         session, clock, project.id, code="CHA", name="Chambre typo A", multiplier=12
     )
     lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
-    dixon = make_supplier(
-        session, clock, name="Tom Dixon", currency="GBP", default_discount_bp=1500
-    )
+    dixon = make_supplier(session, clock, name="Tom Dixon", currency="GBP")
     lamp = make_product(
         session,
         clock,
@@ -70,6 +68,7 @@ def test_create_from_catalogue_copies_the_sheet_and_the_price(
         base(world),
         json={
             "productId": world["lamp"].id,
+            "discountBp": 1500,
             "fxRateMicro": GBP,
             "placements": [{"locationId": world["cha"].id, "qtyMilli": 2000}],
         },
@@ -220,7 +219,7 @@ def test_fee_line_has_no_type_no_placement_and_a_fee_code(
     assert fee.status_code == 201, fee.text
     body = fee.json()
     assert body["itemCode"] == "FR-01" and body["categoryId"] is None and body["placements"] == []
-    assert body["currency"] == "GBP" and body["discountBp"] == 1500
+    assert body["currency"] == "GBP" and body["discountBp"] == 0  # no default discount
     refused = client.post(
         f"/api/v1/project-items/{body['id']}/placements", json={"locationId": world["lob"].id}
     )

@@ -25,9 +25,7 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
     )
     lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
     tab = make_category(session, clock, name="Table", code="TAB")
-    dixon = make_supplier(
-        session, clock, name="Tom Dixon", currency="GBP", default_discount_bp=1500
-    )
+    dixon = make_supplier(session, clock, name="Tom Dixon", currency="GBP")
     wood = make_supplier(session, clock, name="Atelier Bois", currency="EUR")
     base = f"/api/v1/projects/{project.id}/project-items"
     # Lamp: 125 000 GBP −15 % → 106 250 → 124 313 € ; 2 + 12 = 14 → 17 403,82 €
@@ -39,6 +37,7 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
             "supplierId": dixon.id,
             "family": "edition",
             "unitCostCents": 125_000,
+            "discountBp": 1500,
             "fxRateMicro": GBP,
             "placements": [
                 {"locationId": lob.id, "qtyMilli": 2000},

@@ -78,7 +78,7 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
                     "link": item.source_url,
                     "supplier_name": supplier.name if supplier else None,
                     "representative": supplier.contact_name if supplier else None,
-                    "phone": supplier.phone if supplier else None,
+                    "phone": (supplier.mobile or supplier.phone) if supplier else None,
                     "email": supplier.email if supplier else None,
                     "photo": photo,
                     "drawing": drawing,

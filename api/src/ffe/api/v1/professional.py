@@ -6,7 +6,12 @@ from fastapi import APIRouter, Path, Query
 
 from ffe.deps import DepsDep, SessionDep
 from ffe.schemas.base import Page
-from ffe.schemas.professional import ProfessionalCreate, ProfessionalRead, ProfessionalUpdate
+from ffe.schemas.professional import (
+    ProfessionalCreate,
+    ProfessionalKind,
+    ProfessionalRead,
+    ProfessionalUpdate,
+)
 from ffe.services import professional as service
 
 router = APIRouter(prefix="/professionals", tags=["professionals"])
@@ -21,9 +26,18 @@ def list_professionals(
     include_archived: Annotated[bool, Query(alias="includeArchived")] = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    specialty: Annotated[str | None, Query(max_length=200)] = None,
+    kind: ProfessionalKind | None = None,
 ) -> Page[ProfessionalRead]:
-    items, total = service.list_professionals(session, q, include_archived, limit, offset)
+    items, total = service.list_professionals(
+        session, q, include_archived, limit, offset, specialty, kind
+    )
     return Page(items=[ProfessionalRead.model_validate(m) for m in items], total=total)
+
+
+@router.get("/specialties", operation_id="listProfessionalSpecialties")
+def list_specialties(session: SessionDep) -> list[str]:
+    return service.list_specialties(session)
 
 
 @router.post("", status_code=201, operation_id="createProfessional")

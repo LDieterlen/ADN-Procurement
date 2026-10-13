@@ -60,7 +60,6 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         phone="06 76 27 17 10",
         email="djamel@example.com",
         currency="GBP",
-        default_discount_bp=1500,
     )
     base = f"/api/v1/projects/{project.id}/project-items"
     item = client.post(
@@ -75,6 +74,7 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
             "sourceUrl": "https://example.com/beat",
             "comments": "Suspension laiton noir",
             "unitCostCents": 125_000,
+            "discountBp": 1500,
             "fxRateMicro": GBP,
             "placements": [
                 {"locationId": lob.id, "qtyMilli": 2000},

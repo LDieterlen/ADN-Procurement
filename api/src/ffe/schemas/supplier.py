@@ -12,7 +12,6 @@ Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=2000)]
 Currency = Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
 Email = Annotated[str | None, Field(max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
-Bp = Annotated[int, Field(ge=0, le=10000)]
 
 STRIPPED = (
     "name",
@@ -42,7 +41,6 @@ class SupplierCreate(BaseSchema):
     contact2_email: Email = None
     website: Short = None
     currency: Currency = "EUR"
-    default_discount_bp: Bp = 0
     notes: Long = None
 
     @field_validator(*STRIPPED, mode="before")
@@ -63,10 +61,9 @@ class SupplierUpdate(BaseSchema):
     contact2_email: Email = None
     website: Short = None
     currency: Currency | None = None
-    default_discount_bp: Bp | None = None
     notes: Long = None
 
-    @field_validator("name", "currency", "default_discount_bp", mode="before")
+    @field_validator("name", "currency", mode="before")
     @classmethod
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
@@ -92,7 +89,6 @@ class SupplierRead(BaseSchema):
     contact2_email: str | None
     website: str | None
     currency: str
-    default_discount_bp: int
     notes: str | None
     archived_at: str | None
     created_at: str

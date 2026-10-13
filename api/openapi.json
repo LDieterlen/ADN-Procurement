@@ -4656,13 +4656,6 @@
             "title": "Currency",
             "type": "string"
           },
-          "defaultDiscountBp": {
-            "default": 0,
-            "maximum": 10000.0,
-            "minimum": 0.0,
-            "title": "Defaultdiscountbp",
-            "type": "integer"
-          },
           "email": {
             "anyOf": [
               {
@@ -4814,10 +4807,6 @@
             "title": "Currency",
             "type": "string"
           },
-          "defaultDiscountBp": {
-            "title": "Defaultdiscountbp",
-            "type": "integer"
-          },
           "email": {
             "anyOf": [
               {
@@ -4910,7 +4899,6 @@
           "contact2Email",
           "website",
           "currency",
-          "defaultDiscountBp",
           "notes",
           "archivedAt",
           "createdAt",
@@ -4981,19 +4969,6 @@
               }
             ],
             "title": "Currency"
-          },
-          "defaultDiscountBp": {
-            "anyOf": [
-              {
-                "maximum": 10000.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Defaultdiscountbp"
           },
           "email": {
             "anyOf": [
@@ -6764,6 +6739,45 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "specialty",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Specialty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "manufacturer",
+                    "distributor",
+                    "publisher",
+                    "artisan"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
           }
         ],
         "responses": {
@@ -6840,6 +6854,31 @@
           }
         },
         "summary": "Create Professional",
+        "tags": [
+          "professionals"
+        ]
+      }
+    },
+    "/api/v1/professionals/specialties": {
+      "get": {
+        "operationId": "listProfessionalSpecialties",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Listprofessionalspecialties",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Specialties",
         "tags": [
           "professionals"
         ]
@@ -8580,6 +8619,23 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "specialty",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Specialty"
+            }
           }
         ],
         "responses": {
@@ -8656,6 +8712,31 @@
           }
         },
         "summary": "Create Supplier",
+        "tags": [
+          "suppliers"
+        ]
+      }
+    },
+    "/api/v1/suppliers/specialties": {
+      "get": {
+        "operationId": "listSupplierSpecialties",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Listsupplierspecialties",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Specialties",
         "tags": [
           "suppliers"
         ]

@@ -3,7 +3,7 @@
 `create` and `update` stay explicit in each resource service.
 """
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Protocol
 
 from sqlalchemy import select
@@ -98,3 +98,12 @@ def search[T](rows: Sequence[T], q: str | None, keys: Sequence[str]) -> list[T]:
 
 def page[T](rows: Sequence[T], limit: int, offset: int) -> tuple[list[T], int]:
     return list(rows[offset : offset + limit]), len(rows)
+
+
+def distinct_sorted(values: Iterable[str | None]) -> list[str]:
+    """Distinct non-empty texts (first spelling kept, accents and case ignored), sorted."""
+    seen: dict[str, str] = {}
+    for value in values:
+        if value and (key := normalize_key(value)) not in seen:
+            seen[key] = value
+    return sorted(seen.values(), key=normalize_key)

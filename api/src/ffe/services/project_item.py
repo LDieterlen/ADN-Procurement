@@ -272,7 +272,7 @@ def _resolve_defaults(
     if values["unit_cost_cents"] is None:
         values["unit_cost_cents"] = 0
     if values["discount_bp"] is None:
-        values["discount_bp"] = supplier.default_discount_bp if supplier is not None else 0
+        values["discount_bp"] = 0
     values["fx_rate_micro"] = resolve_fx(
         session, project_id, values["currency"], values["fx_rate_micro"]
     )

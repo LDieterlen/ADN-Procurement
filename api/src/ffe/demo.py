@@ -42,7 +42,6 @@ def seed_demo(engine: Engine, clock: Clock) -> Project | None:
                 contact_name="Claire Martin",
                 email="c.martin@example.com",
                 phone="+33 1 00 00 00 00",
-                default_discount_bp=1500,
             ),
             clock,
         )
