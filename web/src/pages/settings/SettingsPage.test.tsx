@@ -58,4 +58,15 @@ describe('page Réglages', () => {
     await user.click(within(section).getByRole('button', { name: 'Sauvegarder maintenant' }))
     expect(await screen.findByText(/copie Windows absente/)).toBeTruthy()
   })
+
+  test('extension Chrome : générer un jeton l’affiche', async () => {
+    const user = userEvent.setup()
+    renderApp('/settings')
+    const card = await screen.findByRole('region', { name: 'Extension Chrome' })
+    expect(within(card).getByText('aucun (extension désactivée)')).toBeTruthy()
+    await user.click(within(card).getByRole('button', { name: 'Générer un jeton' }))
+    await within(card).findByText(/^tok-/)
+    expect(api.setting.extensionToken).toMatch(/^tok-/)
+    expect(within(card).getByRole('button', { name: 'Régénérer le jeton' })).toBeTruthy()
+  })
 })

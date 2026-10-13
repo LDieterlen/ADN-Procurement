@@ -3,12 +3,22 @@ import { Link, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useClient } from '../../api/queries/client'
 import { fileContentUrl } from '../../api/queries/file'
-import { CLOSED_STATUSES, PROJECT_STATUS_LABELS, useChangeProjectStatus, useLocations, useProject, type ProjectStatus } from '../../api/queries/project'
+import {
+  CLOSED_STATUSES,
+  PROJECT_STATUS_LABELS,
+  useChangeProjectStatus,
+  useLocations,
+  useNextProjectIndice,
+  useProject,
+  useRevertProjectIndice,
+  type ProjectStatus,
+} from '../../api/queries/project'
 import { EXPORT_KIND_LABELS, listExportUrl, sheetsExportUrl, useProjectExports } from '../../api/queries/projectFile'
 import { Button } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Pill } from '../../components/ui/Pill'
 import { useSubmitErrors } from '../common/useSubmitErrors'
 import { BudgetStrip } from './BudgetStrip'
 import { ItemsSection } from './ItemsSection'
@@ -23,6 +33,8 @@ export function ProjectPage() {
   const locations = useLocations(id, true)
   const exports = useProjectExports(id)
   const changeStatus = useChangeProjectStatus()
+  const nextIndice = useNextProjectIndice()
+  const revertIndice = useRevertProjectIndice()
   const errors = useSubmitErrors('projet')
 
   function askStatus(status: ProjectStatus) {
@@ -45,6 +57,53 @@ export function ProjectPage() {
     })
   }
 
+  function askIndice(current: string | null) {
+    const next = nextLetter(current)
+    errors.setDialog({
+      title: `Passer à l'indice ${next} ?`,
+      message: current
+        ? `Les fiches modifiées depuis l'indice ${current} prendront la lettre ${next} ; les PDF émis ensuite porteront l'indice ${next}. Les PDF émis entre deux indices sont des essais.`
+        : `Toutes les fiches prendront la lettre ${next} ; les PDF émis ensuite porteront l'indice ${next}.`,
+      actions: [
+        {
+          label: `Passer à l'indice ${next}`,
+          variant: 'primary',
+          onClick: () =>
+            void nextIndice
+              .mutateAsync(id)
+              .then(() => {
+                errors.setDialog(null)
+                errors.toast.show({ kind: 'success', message: `Indice ${next} déclaré ; émettre les fiches PDF pour la diffusion.` })
+              })
+              .catch((error: unknown) => errors.toast.show({ kind: 'error', message: isApiError(error) ? error.message : String(error), persistent: true })),
+        },
+        { label: 'Annuler', onClick: () => errors.setDialog(null) },
+      ],
+    })
+  }
+
+  function askRevert(current: string) {
+    const previous = previousLetter(current)
+    errors.setDialog({
+      title: `Retirer l'indice ${current} ?`,
+      message: previous
+        ? `Le projet revient à l'indice ${previous} ; les fiches marquées ${current} reprennent leur lettre précédente. Les PDF déjà émis restent dans la liste.`
+        : `Le projet revient sans indice ; les fiches marquées ${current} reprennent leur lettre précédente.`,
+      actions: [
+        {
+          label: `Retirer l'indice ${current}`,
+          variant: 'danger',
+          onClick: () =>
+            void revertIndice
+              .mutateAsync(id)
+              .then(() => errors.setDialog(null))
+              .catch((error: unknown) => errors.toast.show({ kind: 'error', message: isApiError(error) ? error.message : String(error), persistent: true })),
+        },
+        { label: 'Annuler', onClick: () => errors.setDialog(null) },
+      ],
+    })
+  }
+
   if (project.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
   if (project.isError) {
     return (
@@ -57,6 +116,10 @@ export function ProjectPage() {
   }
   const p = project.data
   const readOnly = CLOSED_STATUSES.includes(p.status)
+  // The latest sheets PDF issued since the current indice was declared: the one to send.
+  const referenceId = p.indice
+    ? (exports.data ?? []).find((e) => e.kind === 'sheets_pdf' && e.indice === p.indice && e.issuedAt >= (p.indiceChangedAt ?? ''))?.id
+    : undefined
   return (
     <section>
       <PageHeader
@@ -73,6 +136,8 @@ export function ProjectPage() {
             <span className="font-mono text-xs">{p.code}</span>
             <span>·</span>
             <StatusBadge status={p.status} />
+            <span>·</span>
+            <Pill filled={Boolean(p.indice)}>{p.indice ? `Indice ${p.indice}` : 'Sans indice'}</Pill>
             {p.dueOn && (
               <>
                 <span>·</span>
@@ -98,6 +163,16 @@ export function ProjectPage() {
                 ))}
               </select>
             </label>
+            {!readOnly && (
+              <Button onClick={() => askIndice(p.indice)} disabled={nextIndice.isPending}>
+                Nouvel indice
+              </Button>
+            )}
+            {!readOnly && p.indice && (
+              <Button variant="ghost" onClick={() => askRevert(p.indice!)} disabled={revertIndice.isPending}>
+                Retirer l'indice {p.indice}
+              </Button>
+            )}
             <a
               href={sheetsExportUrl(p.id)}
               download
@@ -133,17 +208,21 @@ export function ProjectPage() {
         {exports.data && exports.data.length > 0 && (
           <Card title="Documents émis" label="Documents émis">
             <ul className="space-y-1 text-sm" aria-label="Documents émis">
-              {exports.data.map((e) => (
-                <li key={e.id} className="flex items-center gap-3">
-                  <a href={fileContentUrl(e.fileId)} download={e.originalName} className="underline">
-                    {e.originalName}
-                  </a>
-                  <span className="text-neutral-500">
-                    {EXPORT_KIND_LABELS[e.kind]}
-                    {e.indice ? ` · indice ${e.indice}` : ''} · {e.issuedAt.slice(0, 10)}
-                  </span>
-                </li>
-              ))}
+              {exports.data.map((e) => {
+                const reference = e.id === referenceId
+                return (
+                  <li key={e.id} className={`flex items-center gap-3 ${reference ? 'rounded-lg bg-neutral-100 px-2 py-1' : ''}`}>
+                    <a href={fileContentUrl(e.fileId)} download={e.originalName} className="underline">
+                      {e.originalName}
+                    </a>
+                    <span className="text-neutral-500">
+                      {EXPORT_KIND_LABELS[e.kind]}
+                      {e.indice ? ` · indice ${e.indice}` : e.kind === 'sheets_pdf' ? ' · sans indice' : ''} · {e.issuedAt.slice(0, 10)}
+                    </span>
+                    {reference && <Pill filled>{`Fiches de référence, indice ${p.indice}`}</Pill>}
+                  </li>
+                )
+              })}
             </ul>
           </Card>
         )}
@@ -153,4 +232,35 @@ export function ProjectPage() {
       </ConfirmDialog>
     </section>
   )
+}
+
+/** A, B … Z, AA, AB … (same rule as the server). */
+export function nextLetter(current: string | null): string {
+  if (!current) return 'A'
+  const digits = [...current].map((ch) => ch.charCodeAt(0) - 65)
+  for (let i = digits.length - 1; i >= 0; i--) {
+    if (digits[i]! < 25) {
+      digits[i]! += 1
+      return digits.map((d) => String.fromCharCode(65 + d)).join('')
+    }
+    digits[i] = 0
+  }
+  return 'A' + digits.map((d) => String.fromCharCode(65 + d)).join('')
+}
+
+/** The letter before `current` (B → A, AA → Z, A → null): the inverse of nextLetter. */
+export function previousLetter(current: string): string | null {
+  if (current === 'A') return null
+  const digits = [...current].map((ch) => ch.charCodeAt(0) - 65)
+  for (let i = digits.length - 1; i >= 0; i--) {
+    if (digits[i]! > 0) {
+      digits[i]! -= 1
+      return digits.map((d) => String.fromCharCode(65 + d)).join('')
+    }
+    digits[i] = 25
+  }
+  return digits
+    .slice(1)
+    .map((d) => String.fromCharCode(65 + d))
+    .join('')
 }

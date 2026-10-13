@@ -78,6 +78,32 @@ export function locationLabel(location: LocationRead): string {
   return `${location.code} — ${location.name}${location.multiplier > 1 ? ` (×${location.multiplier})` : ''}`
 }
 
+/** Declares the next diffusion letter (A, B, C…); the articles changed since the previous one take it. */
+export function useNextProjectIndice() {
+  const invalidate = useInvalidate()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => call(api.POST('/api/v1/projects/{project_id}/indice', { params: { path: { project_id: id } } })),
+    onSuccess: () => {
+      invalidate()
+      void queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
+    },
+  })
+}
+
+/** Takes the last declaration back (wrong click): previous letter on the project and its articles. */
+export function useRevertProjectIndice() {
+  const invalidate = useInvalidate()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => call(api.DELETE('/api/v1/projects/{project_id}/indice', { params: { path: { project_id: id } } })),
+    onSuccess: () => {
+      invalidate()
+      void queryClient.invalidateQueries({ queryKey: ['projects', 'summary'] })
+    },
+  })
+}
+
 export function useLocations(projectId: number | undefined, includeArchived: boolean) {
   return useQuery({
     queryKey: projectKeys.locations(projectId ?? 0, includeArchived),

@@ -23,7 +23,7 @@ export function PendingPhoto({ file, onChange, origin }: { file: FileRead | null
   return (
     <div className="flex items-center gap-4" aria-label="Photo">
       {file ? (
-        <img src={fileContentUrl(file.id)} alt="Photo" className="h-28 w-28 rounded-md border border-neutral-200 object-contain" />
+        <img src={fileContentUrl(file.id, file.sha256)} alt="Photo" className="h-28 w-28 rounded-md border border-neutral-200 object-contain" />
       ) : (
         <span className="flex h-28 w-28 items-center justify-center rounded-md border border-dashed border-neutral-300 text-xs text-neutral-400">
           Pas de photo

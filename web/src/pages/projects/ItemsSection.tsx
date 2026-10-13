@@ -141,7 +141,7 @@ function GroupRows({
         </tr>
       )}
       {group.rows.map(({ item, placement, amounts }) => {
-        const imageId = item.files.find((f) => f.isPrimary)?.fileId
+        const image = item.files.find((f) => f.isPrimary)
         const muted = item.status === 'cancelled'
         const share = placement ? amounts?.placements.find((p) => p.placementId === placement.id)?.totalHtCents : amounts?.totalHtCents
         return (
@@ -152,8 +152,8 @@ function GroupRows({
             aria-label={`${item.itemCode} dans ${group.key === 'fees' ? 'frais' : group.code || 'non affecté'}`}
           >
             <td className="px-2 py-2.5">
-              {imageId ? (
-                <img src={fileContentUrl(imageId)} alt="" className="h-9 w-9 rounded-md border border-neutral-200 object-cover" />
+              {image ? (
+                <img src={fileContentUrl(image.fileId, image.sha256)} alt="" className="h-9 w-9 rounded-md border border-neutral-200 object-cover" />
               ) : (
                 <span className="block h-9 w-9 rounded-md border border-dashed border-neutral-200" />
               )}

@@ -1,6 +1,28 @@
 // GÉNÉRÉ par `npm run gen:api` depuis api/openapi.json — ne pas éditer à la main.
 
 export interface paths {
+    "/api/v1/captures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Captures */
+        get: operations["listCaptures"];
+        put?: never;
+        /**
+         * Create Capture
+         * @description From the extension: the page as displayed (multipart `url`, `html` as a file part — a form
+         *     field is capped at 1 Mo by Starlette, a rendered page is often bigger — optional `image`).
+         */
+        post: operations["createCapture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/captures/image": {
         parameters: {
             query?: never;
@@ -29,6 +51,43 @@ export interface paths {
         get: operations["previewCapture"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{capture_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Capture */
+        delete: operations["deleteCapture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{capture_id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach Capture Image
+         * @description From the extension, when the server could not download the image itself.
+         */
+        post: operations["attachCaptureImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -597,6 +656,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/indice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Next Project Indice
+         * @description Declares the next diffusion letter; the articles changed since the previous one take it.
+         */
+        post: operations["nextProjectIndice"];
+        /**
+         * Revert Project Indice
+         * @description Takes the last declaration back (wrong click): previous letter on the project and its articles.
+         */
+        delete: operations["revertProjectIndice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/locations": {
         parameters: {
             query?: never;
@@ -700,6 +783,23 @@ export interface paths {
         head?: never;
         /** Update Settings */
         patch: operations["updateSettings"];
+        trace?: never;
+    };
+    "/api/v1/settings/extension-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Extension Token */
+        post: operations["generateExtensionToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/suppliers": {
@@ -823,6 +923,20 @@ export interface components {
             /** Quickcheck */
             quickCheck: string;
         };
+        /** Body_attachCaptureImage */
+        Body_attachCaptureImage: {
+            /** Image */
+            image: string;
+        };
+        /** Body_createCapture */
+        Body_createCapture: {
+            /** Html */
+            html: string;
+            /** Image */
+            image?: string | null;
+            /** Url */
+            url: string;
+        };
         /** Body_uploadFile */
         Body_uploadFile: {
             /** File */
@@ -909,6 +1023,18 @@ export interface components {
             source: "json-ld" | "opengraph" | "title";
             /** Url */
             url: string;
+        };
+        /**
+         * CaptureRead
+         * @description A page sent by the browser extension, waiting on « Nouvel article ».
+         */
+        CaptureRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            image: components["schemas"]["FileRead"] | null;
+            preview: components["schemas"]["CapturePreviewRead"];
         };
         /** CategoryCreate */
         CategoryCreate: {
@@ -1649,6 +1775,10 @@ export interface components {
             dueOn: string | null;
             /** Id */
             id: number;
+            /** Indice */
+            indice: string | null;
+            /** Indicechangedat */
+            indiceChangedAt: string | null;
             /** Itemcount */
             itemCount: number;
             /** Name */
@@ -1679,6 +1809,10 @@ export interface components {
             dueOn: string | null;
             /** Id */
             id: number;
+            /** Indice */
+            indice: string | null;
+            /** Indicechangedat */
+            indiceChangedAt: string | null;
             /** Name */
             name: string;
             /** Notes */
@@ -1764,6 +1898,8 @@ export interface components {
             baseCurrency: string;
             /** Createdat */
             createdAt: string;
+            /** Extensiontoken */
+            extensionToken: string | null;
             /** Id */
             id: number;
             /** Projectcodeprefix */
@@ -1946,6 +2082,61 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listCaptures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRead"][];
+                };
+            };
+        };
+    };
+    createCapture: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-FFE-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_createCapture"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     captureImage: {
         parameters: {
             query?: never;
@@ -1997,6 +2188,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CapturePreviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteCapture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                capture_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachCaptureImage: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-FFE-Token"?: string | null;
+            };
+            path: {
+                capture_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_attachCaptureImage"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureRead"];
                 };
             };
             /** @description Validation Error */
@@ -3519,6 +3776,68 @@ export interface operations {
             };
         };
     };
+    nextProjectIndice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revertProjectIndice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listLocations: {
         parameters: {
             query?: {
@@ -3816,6 +4135,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generateExtensionToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRead"];
                 };
             };
         };

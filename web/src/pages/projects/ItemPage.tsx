@@ -353,6 +353,7 @@ const EVENT_LABELS: Record<string, string> = {
   status: 'Statut',
   price: 'Prix',
   placement: 'Implantation',
+  indice: 'Indice',
   other: 'Autre',
 }
 

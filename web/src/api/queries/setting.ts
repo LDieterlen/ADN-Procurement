@@ -20,3 +20,12 @@ export function useUpdateSettings() {
     onSuccess: (updated) => queryClient.setQueryData(settingKey, updated),
   })
 }
+
+/** ADR-0017: a new shared secret for the Chrome extension; the previous one stops working. */
+export function useGenerateExtensionToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => call(api.POST('/api/v1/settings/extension-token')),
+    onSuccess: (updated) => queryClient.setQueryData(settingKey, updated),
+  })
+}

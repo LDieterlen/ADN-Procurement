@@ -67,10 +67,10 @@ export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly:
           {item.files.map((file) => (
             <li key={file.fileId} className="space-y-1 rounded border border-neutral-200 p-2 text-xs">
               {file.mimeType.startsWith('image/') ? (
-                <img src={fileContentUrl(file.fileId)} alt={file.caption ?? file.originalName} className="h-32 w-full rounded object-contain" />
+                <img src={fileContentUrl(file.fileId, file.sha256)} alt={file.caption ?? file.originalName} className="h-32 w-full rounded object-contain" />
               ) : (
                 <a
-                  href={fileContentUrl(file.fileId)}
+                  href={fileContentUrl(file.fileId, file.sha256)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex h-24 items-center justify-center rounded bg-neutral-100 underline"

@@ -4,11 +4,14 @@ import { useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
+import { useCaptures, useDeleteCapture, type CaptureRead } from '../../api/queries/capture'
 import { useCategories } from '../../api/queries/category'
+import { fileContentUrl } from '../../api/queries/file'
+import { centsToText } from '../../components/forms/MoneyField'
 import type { FileRead } from '../../api/queries/file'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
 import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
-import { useCreateSupplier, useSuppliers } from '../../api/queries/supplier'
+import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
@@ -32,8 +35,11 @@ export function ItemNewPage() {
   const suppliers = useSuppliers(ALL)
   const create = useCreateItem()
   const attach = useAttachItemFile()
-  const createSupplier = useCreateSupplier()
+  const [brand, setBrand] = useState<string | null>(null)
+  const captures = useCaptures()
+  const deleteCapture = useDeleteCapture()
   const toast = useToast()
+  const [captureId, setCaptureId] = useState<number | null>(null)
   const [captured, setCaptured] = useState<Captured | null>(null)
   const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
   const [modal, setModal] = useState<'supplier' | null>(null)
@@ -43,24 +49,17 @@ export function ItemNewPage() {
   const [banner, setBanner] = useState<string | null>(null)
   const form = useForm<ItemFormValues>({ defaultValues: EMPTY_ITEM })
 
-  /** The brand read on the page is a supplier here: the existing one, or a new one. */
-  async function supplierFor(brand: string | null): Promise<number | null> {
-    if (!brand) return null
-    const known = (suppliers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
-    if (known) return known.id
-    try {
-      return (await createSupplier.mutateAsync({ data: { name: brand, currency: 'EUR' }, force: false })).id
-    } catch (error) {
-      if (isApiError(error) && error.existingId !== undefined) return error.existingId
-      return null
-    }
-  }
+  /** The brand read on a page never creates a supplier (brands are not suppliers): the existing
+   * suppliers whose name resembles it are suggested; a single match is pre-selected, still editable. */
+  const suggestions = brand ? similarSuppliers(brand, suppliers.data?.items ?? []) : []
 
-  async function useCapture(result: Captured) {
+  function useCapture(result: Captured, fromInbox: number | null = null) {
     setCaptured(result)
+    setCaptureId(fromInbox)
     if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
-    const supplierId = await supplierFor(result.preview.brand)
-    form.reset(fromCapture(result.preview, form.getValues(), supplierId))
+    const found = result.preview.brand ? similarSuppliers(result.preview.brand, suppliers.data?.items ?? []) : []
+    setBrand(result.preview.brand)
+    form.reset(fromCapture(result.preview, form.getValues(), found.length === 1 && found[0] ? found[0].id : null))
     setFormKey((k) => k + 1)
     toast.show({ kind: 'success', message: 'Fiche pré-remplie depuis la page ; vérifier le prix (souvent TTC) et choisir le type.' })
   }
@@ -82,6 +81,7 @@ export function ItemNewPage() {
           .mutateAsync({ itemId: created.id, data: { fileId: captured.image.id, kind: 'image', isPrimary: true, caption: null, sortOrder: 0 } })
           .catch(() => undefined)
       }
+      if (captureId !== null) await deleteCapture.mutateAsync(captureId).catch(() => undefined) // consumed
       toast.show({ kind: 'success', message: `${created.itemCode} ajouté${captured?.image ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.` })
       navigate(`/projects/${projectId}/items/${created.id}`)
     } catch (error) {
@@ -141,8 +141,22 @@ export function ItemNewPage() {
       />
       <div className="space-y-6">
         <Card title="Coller une adresse" label="Coller une adresse">
-          <UrlCaptureBox onUse={(result) => void useCapture(result)} />
+          <UrlCaptureBox onUse={(result) => useCapture(result)} />
         </Card>
+        {captures.data && captures.data.length > 0 && (
+          <Card title="Envoyées depuis Chrome" label="Envoyées depuis Chrome">
+            <ul className="divide-y divide-neutral-200">
+              {captures.data.map((c) => (
+                <InboxRow
+                  key={c.id}
+                  capture={c}
+                  onUse={() => useCapture({ preview: c.preview, image: c.image }, c.id)}
+                  onDismiss={() => void deleteCapture.mutateAsync(c.id)}
+                />
+              ))}
+            </ul>
+          </Card>
+        )}
         <Form form={form} onSubmit={submit} banner={banner}>
           <Card title="Article" label="Article">
             <div className="space-y-4">
@@ -151,6 +165,28 @@ export function ItemNewPage() {
                 origin={photo?.origin}
                 onChange={(file) => setPhoto(file ? { file, origin: 'Déposée ici ; jointe à la création.' } : null)}
               />
+              {brand && (
+                <p className="text-sm text-neutral-600" role="note">
+                  Marque lue sur la page : <span className="font-medium">{brand}</span>.{' '}
+                  {suggestions.length === 0 && 'Aucun fournisseur ne lui ressemble : choisir dans la liste ou « + Nouveau ».'}
+                  {suggestions.length === 1 && suggestions[0] && `Fournisseur proposé : ${suggestions[0].name}.`}
+                  {suggestions.length > 1 && (
+                    <>
+                      Fournisseurs proches :{' '}
+                      {suggestions.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="mr-1 rounded-full border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-100"
+                          onClick={() => form.setValue('supplierId', s.id, { shouldDirty: true })}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </p>
+              )}
               <ItemFields
                 key={formKey}
                 form={form}
@@ -211,4 +247,47 @@ export function ItemNewPage() {
       />
     </section>
   )
+}
+
+function InboxRow({ capture, onUse, onDismiss }: { capture: CaptureRead; onUse: () => void; onDismiss: () => void }) {
+  const p = capture.preview
+  const facts = [p.brand, p.reference ? `réf. ${p.reference}` : null, p.priceCents !== null ? `${centsToText(p.priceCents)} ${p.currency ?? ''} affiché` : null]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <li className="flex items-center gap-4 py-3">
+      {capture.image ? (
+        <img src={fileContentUrl(capture.image.id, capture.image.sha256)} alt="" className="h-14 w-14 rounded-md border border-neutral-200 object-contain" />
+      ) : (
+        <div className="h-14 w-14 rounded-md border border-dashed border-neutral-300" />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{p.name}</p>
+        <p className="truncate text-xs text-neutral-500">{facts || p.url}</p>
+      </div>
+      <Button variant="primary" onClick={onUse}>
+        Utiliser
+      </Button>
+      <Button variant="ghost" onClick={onDismiss} aria-label={`Supprimer ${p.name ?? ''}`}>
+        Supprimer
+      </Button>
+    </li>
+  )
+}
+
+/** Accent- and punctuation-insensitive resemblance: « AM.PM » finds « La Redoute / AM PM ». */
+export function similarSuppliers<T extends { id: number; name: string }>(brand: string, suppliers: T[]): T[] {
+  const key = (text: string) =>
+    text
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  const wanted = key(brand)
+  if (!wanted) return []
+  return suppliers.filter((s) => {
+    const name = key(s.name)
+    return name === wanted || ` ${name} `.includes(` ${wanted} `) || ` ${wanted} `.includes(` ${name} `)
+  })
 }

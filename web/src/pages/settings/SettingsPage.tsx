@@ -1,10 +1,10 @@
-// « Réglages » : identité de l'agence (en-tête des PDF), préfixe des codes projet, sauvegardes, santé.
+// « Réglages » : identité de l'agence (en-tête des PDF), préfixe des codes projet, extension Chrome, sauvegardes, santé.
 import { useEffect, useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import { Link } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useHealth } from '../../api/queries/health'
-import { useSettings, useUpdateSettings, type SettingRead, type SettingUpdate } from '../../api/queries/setting'
+import { useGenerateExtensionToken, useSettings, useUpdateSettings, type SettingRead, type SettingUpdate } from '../../api/queries/setting'
 import { useCreateBackup, type BackupRead } from '../../api/queries/system'
 import { Form } from '../../components/forms/Form'
 import { TextArea } from '../../components/forms/TextArea'
@@ -82,6 +82,7 @@ export function SettingsPage() {
   const health = useHealth()
   const update = useUpdateSettings()
   const backup = useCreateBackup()
+  const generateToken = useGenerateExtensionToken()
   const toast = useToast()
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
@@ -132,6 +133,33 @@ export function SettingsPage() {
             serverErrors={serverErrors}
           />
         )}
+      </Card>
+      <Card title="Extension Chrome" label="Extension Chrome" className="max-w-3xl">
+        <p className="mb-3 text-sm text-neutral-600">
+          Le bouton « Envoyer à FFE » de l'extension lit la page produit dans ton navigateur (utile sur les sites qui refusent « Coller une adresse ») et la
+          dépose ici, en attente sur « Nouvel article ». L'extension s'authentifie avec ce jeton, à coller dans ses options.
+        </p>
+        <dl className="mb-3 grid grid-cols-[14rem_1fr] gap-y-1 text-sm">
+          <dt className="text-neutral-500">Jeton</dt>
+          <dd>
+            {settings.data?.extensionToken ? (
+              <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs">{settings.data.extensionToken}</code>
+            ) : (
+              'aucun (extension désactivée)'
+            )}
+          </dd>
+        </dl>
+        <Button
+          onClick={() =>
+            void generateToken
+              .mutateAsync()
+              .then(() => toast.show({ kind: 'success', message: 'Nouveau jeton généré ; le recopier dans les options de l’extension.' }))
+              .catch((error: unknown) => toast.show({ kind: 'error', message: isApiError(error) ? error.message : String(error) }))
+          }
+          disabled={generateToken.isPending}
+        >
+          {settings.data?.extensionToken ? 'Régénérer le jeton' : 'Générer un jeton'}
+        </Button>
       </Card>
       <Card title="Sauvegardes" label="Sauvegardes" className="max-w-3xl">
         <dl className="mb-3 grid grid-cols-[14rem_1fr] gap-y-1 text-sm">

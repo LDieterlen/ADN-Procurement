@@ -6,8 +6,10 @@ import { call } from './client'
 
 export type FileRead = components['schemas']['FileRead']
 
-export function fileContentUrl(fileId: number): string {
-  return `/api/v1/files/${fileId}/content`
+/** Content URL; `sha256` makes the URL change with the bytes, so a browser copy cached under a
+ * reused id (dev database recreated) is never shown again. */
+export function fileContentUrl(fileId: number, sha256?: string): string {
+  return sha256 ? `/api/v1/files/${fileId}/content?v=${sha256.slice(0, 12)}` : `/api/v1/files/${fileId}/content`
 }
 
 /** Builds a multipart/form-data body by hand: standard bytes, no dependency on FormData

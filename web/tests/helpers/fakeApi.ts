@@ -17,6 +17,7 @@ type SummaryRowRead = components['schemas']['SummaryRowRead']
 type BudgetLineRead = components['schemas']['BudgetLineRead']
 type BudgetLineIn = components['schemas']['BudgetLineIn']
 type SettingRead = components['schemas']['SettingRead']
+type CaptureRead = components['schemas']['CaptureRead']
 type ProjectFileRead = components['schemas']['ProjectFileRead']
 type EventRead = components['schemas']['EventRead']
 
@@ -46,6 +47,8 @@ export type FakeApi = {
   items: ProjectItemRead[]
   budgets: BudgetLineRead[]
   setting: SettingRead
+  captures: CaptureRead[]
+  indiceHistory: { projectId: number; indice: string | null; changedAt: string | null; stamped: { item: ProjectItemRead; before: string | null }[] }[]
   exports: ProjectFileRead[]
   events: EventRead[]
   sequences: Record<string, number>
@@ -138,6 +141,27 @@ export function categoryRow(c: Partial<CategoryRead>, id: number): CategoryRead 
   return { id, code: 'DIV', name: 'Type', sortOrder: 0, ...base, ...c }
 }
 
+export function captureRow(c: Partial<CaptureRead>, id: number): CaptureRead {
+  return {
+    id,
+    preview: {
+      url: 'https://www.laredoute.fr/ppdp/prod-1.aspx',
+      name: 'Armento - Canapé',
+      brand: 'AM.PM',
+      reference: '602505402',
+      imageUrl: null,
+      priceCents: 89_900,
+      currency: 'EUR',
+      description: null,
+      source: 'json-ld',
+      ...c.preview,
+    },
+    image: null,
+    createdAt: NOW,
+    ...c,
+  }
+}
+
 export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
   return {
     id,
@@ -148,6 +172,8 @@ export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
     siteAddress: null,
     dueOn: null,
     notes: null,
+    indice: null,
+    indiceChangedAt: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...p,
@@ -435,6 +461,29 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     project.status = (body as { status: ProjectRead['status'] }).status
     return json(200, project)
   }
+  if (sub === 'indice' && method === 'POST') {
+    if (['closed', 'cancelled'].includes(project.status)) return error(409, 'conflict', 'Projet en lecture seule.')
+    const letter = project.indice ? String.fromCharCode(project.indice.charCodeAt(0) + 1) : 'A'
+    const stamped: { item: ProjectItemRead; before: string | null }[] = []
+    for (const item of state.items.filter((i) => i.projectId === project.id))
+      if (item.indice === null || project.indiceChangedAt === null || item.updatedAt > project.indiceChangedAt) {
+        stamped.push({ item, before: item.indice })
+        item.indice = letter
+      }
+    state.indiceHistory.push({ projectId: project.id, indice: project.indice, changedAt: project.indiceChangedAt, stamped })
+    project.indice = letter
+    project.indiceChangedAt = LATER
+    return json(200, project)
+  }
+  if (sub === 'indice' && method === 'DELETE') {
+    const index = state.indiceHistory.map((h) => h.projectId).lastIndexOf(project.id)
+    if (index < 0) return error(409, 'conflict', 'Aucun indice à retirer sur ce projet.')
+    const [last] = state.indiceHistory.splice(index, 1)
+    for (const { item, before } of last!.stamped) item.indice = before
+    project.indice = last!.indice
+    project.indiceChangedAt = last!.changedAt
+    return json(200, project)
+  }
   if (sub === 'project-items' && method === 'GET') {
     const status = url.searchParams.get('status')
     const supplierId = url.searchParams.get('supplierId')
@@ -462,9 +511,8 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     )
   if ((sub === 'exports/sheets.pdf' || sub === 'exports/list.pdf') && method === 'GET') {
     const sheets = sub === 'exports/sheets.pdf'
-    const indice = sheets ? String.fromCharCode(65 + state.exports.filter((e) => e.projectId === project.id && e.kind === 'sheets_pdf').length) : null
-    if (sheets) for (const item of state.items.filter((i) => i.projectId === project.id)) item.indice = item.indice ?? indice
-    const name = sheets ? `${project.code}-fiches-${indice}-2026-10-10.pdf` : `${project.code}-listing-2026-10-10.pdf`
+    const indice = sheets ? project.indice : null
+    const name = sheets ? `${project.code}-fiches${indice ? `-${indice}` : ''}-2026-10-10.pdf` : `${project.code}-listing-2026-10-10.pdf`
     state.exports.unshift({
       id: state.exports.length + 1,
       projectId: project.id,
@@ -944,6 +992,7 @@ export function installFakeApi(
     locations?: Partial<LocationRead>[]
     items?: Partial<ProjectItemRead>[]
     budgets?: Partial<BudgetLineRead>[]
+    captures?: Partial<CaptureRead>[]
   } = {},
 ): FakeApi {
   const originalFetch = globalThis.fetch
@@ -968,9 +1017,12 @@ export function installFakeApi(
       agencyAddress: null,
       agencyEmail: null,
       agencyPhone: null,
+      extensionToken: null,
       createdAt: NOW,
       updatedAt: NOW,
     },
+    captures: (seed.captures ?? []).map((c, i) => captureRow(c, i + 1)),
+    indiceHistory: [],
     exports: [],
     lastBackupAt: null,
     backupDirOk: true,
@@ -1004,6 +1056,18 @@ export function installFakeApi(
       })
     }
     if (url.pathname === '/api/v1/settings' && method === 'GET') return json(200, state.setting)
+    if (url.pathname === '/api/v1/settings/extension-token' && method === 'POST') {
+      state.setting.extensionToken = `tok-${state.requests.length}`
+      return json(200, state.setting)
+    }
+    if (url.pathname === '/api/v1/captures' && method === 'GET') return json(200, state.captures)
+    const captureMatch = /^\/api\/v1\/captures\/(\d+)$/.exec(url.pathname)
+    if (captureMatch && method === 'DELETE') {
+      const index = state.captures.findIndex((c) => c.id === Number(captureMatch[1]))
+      if (index < 0) return error(404, 'not_found', `Capture n° ${captureMatch[1]} introuvable.`)
+      state.captures.splice(index, 1)
+      return new Response(null, { status: 204 })
+    }
     if (url.pathname === '/api/v1/settings' && method === 'PATCH') {
       const patch = body as Partial<SettingRead>
       if (typeof patch.agencyEmail === 'string' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(patch.agencyEmail)) return validation('agencyEmail', 'Format invalide.')

@@ -76,7 +76,13 @@ export function UrlCaptureBox({ onUse }: { onUse: (captured: Captured) => void }
       )}
       {p && (
         <div className="flex items-start gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm">
-          {captured?.image && <img src={fileContentUrl(captured.image.id)} alt="" className="h-20 w-20 rounded-md border border-neutral-200 object-cover" />}
+          {captured?.image && (
+            <img
+              src={fileContentUrl(captured.image.id, captured.image.sha256)}
+              alt=""
+              className="h-20 w-20 rounded-md border border-neutral-200 object-cover"
+            />
+          )}
           <div className="flex-1 space-y-0.5">
             <div className="font-medium">{p.name}</div>
             <div className="text-neutral-600">
