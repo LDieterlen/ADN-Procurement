@@ -4,6 +4,16 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-13 — Retouche fournisseur : sans remise, portable d'abord, devise masquée
+
+**Compte rendu** : demandes de l'utilisateur. `supplier.default_discount_bp` retiré (migration `0001_initial.py` régénérée, base de dev à recréer) : la remise se saisit par article, défaut 0 ; les tests qui comptaient sur la copie passent `discountBp` explicitement. Le portable prime sur le téléphone fixe partout où le contact fournisseur s'affiche (liste des fournisseurs, page article, fiches et listing PDF). La devise du fournisseur est masquée (formulaire et liste) mais reste en base, EUR à la création, toujours copiée sur l'article (défaut appliqué, D15.6). Nouvelle règle de travail : porte complète et commits seulement à la demande (mémoire `feedback-porte-et-commit-sur-demande`).
+
+Puis, à la demande de l'utilisateur : filtres **Savoir-faire** sur les fournisseurs et **Prestation** + **Savoir-faire** sur les professionnels, côté serveur (`?specialty=`, `?kind=`) avec `GET /suppliers/specialties` et `GET /professionals/specialties` pour alimenter les menus ; composant `FilterSelect`.
+
+Page Fournisseurs validée par l'utilisateur le 2026-10-13. `./check.sh contract` ajouté (régénère `openapi.json` puis `schema.d.ts`) ; règle « phase de conception » dans CLAUDE.md.
+
+**Commits** : `feat(api): fournisseur sans remise, portable d'abord dans les PDF, filtres savoir-faire et prestation`, `feat(web): fournisseur sans remise ni devise, filtres savoir-faire et prestation`, `chore(repo): ./check.sh contract, règle de la phase de conception, journal`.
+
 ## 2026-10-12 — Annuaire : professionnels, contacts enrichis, import du fichier de l'agence (ADR-0015)
 
 **Compte rendu** : demande de l'utilisateur avec son fichier `references/ANNUAIRE CONTACTS.csv` (148 lignes, 118 entrées uniques, cinq prestations). **Décisions (mode enchaîné)** : D15.1 la table `manufacturer` devient `professional` avec `kind` (fabricant · distributeur · éditeur · artisan), savoir-faire et deux contacts, onglet « Professionnels » ; D15.2 `supplier` gagne savoir-faire, portable et un second contact ; D15.3 « Fournisseur » → fournisseurs, toute autre prestation → professionnels, comme demandé ; D15.4 import par la CLI `ffe db import-contacts <csv>` (idempotent, lignes en double lues une fois, « Pierre Frey » présent en Éditeur et en Fabricant → second renommé « Pierre Frey (Fabricant) », e-mail invalide `mcourtaud@cvl luminaires.fr` mis en note, `NC` → vide) ; D15.5 le fichier reste hors dépôt (`references/` dans `.gitignore`, données personnelles de tiers). Schéma régénéré (`0001_initial.py`), `openapi.json` et `schema.d.ts` régénérés ; tests : `test_contact_import.py` (6), `test_api_professional.py` (+1), `test_api_supplier.py` (+1), `ProfessionalsPage.test.tsx` adapté. Docs : DATA_MODEL §4.6 et §4.7, API, GLOSSARY, ARCHITECTURE, ADR-0015, CLAUDE.md, README.

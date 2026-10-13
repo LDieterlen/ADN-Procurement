@@ -52,7 +52,7 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Part par état | Share by status | Montant et pourcentage de chaque statut dans le prescrit. | `summary.byStatus` |
 | Engagé / facturé / payé | Committed / invoiced / paid | Suivi des commandes et factures. | Retiré par ADR-0013 |
 | Tarif / prix catalogue | List price | Prix HT avant remise, avec sa devise. | `product.list_price_cents`, `product.currency` |
-| Remise professionnelle | Trade discount | Réduction accordée aux prescripteurs, en points de base. | `supplier.default_discount_bp`, `project_item.discount_bp` |
+| Remise professionnelle | Trade discount | Réduction accordée aux prescripteurs, en points de base. | `project_item.discount_bp` |
 | Prix net | Net price | `unit_cost × (10000 − discount_bp) / 10000`, arrondi au centime. | Calculé par `money.py` ; jamais stocké |
 | HT | Excl. tax | Tous les montants sont saisis, stockés et affichés HT ; pas de TVA (accroche DATA_MODEL §8). | colonnes `*_cents` |
 | Devise / taux de change | Currency / FX rate | ISO 4217 par ligne ; 1 unité = `fx_rate_micro` / 1 000 000 EUR, figé par ligne ; totaux en EUR. | `project_item.currency`, `fx_rate_micro` ; `setting.base_currency` |

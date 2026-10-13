@@ -157,8 +157,7 @@ Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tiss
 | contact_name, email, phone, mobile | TEXT | oui | | | représentant imprimé sur la fiche de spec (nom, e-mail, téléphone) |
 | contact2_name, contact2_phone, contact2_email | TEXT | oui | | | second contact (back office…) |
 | website | TEXT | oui | | | |
-| currency | TEXT | non | `'EUR'` | `length = 3` | devise par défaut des articles |
-| default_discount_bp | INTEGER | non | 0 | `BETWEEN 0 AND 10000` | copiée sur l'article |
+| currency | TEXT | non | `'EUR'` | `length = 3` | devise par défaut des articles ; masquée dans l'interface depuis le 2026-10-13 (toujours EUR à la création) |
 | notes | TEXT | oui | | | |
 | archived_at | TS | oui | | | |
 
@@ -200,7 +199,7 @@ Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tiss
 | unit_cost_cents | INTEGER | non | 0 | `>= 0` | PU HT brut dans `currency` |
 | currency | TEXT | non | `'EUR'` | `length = 3` | copiée du produit (s'il a un prix) sinon du fournisseur |
 | fx_rate_micro | INTEGER | non | 1000000 | `> 0` ; `= 1000000` si EUR | figé par article |
-| discount_bp | INTEGER | non | 0 | `BETWEEN 0 AND 10000` | défaut `supplier.default_discount_bp` |
+| discount_bp | INTEGER | non | 0 | `BETWEEN 0 AND 10000` | saisie par article (plus de remise par défaut sur le fournisseur depuis le 2026-10-13) |
 | quote_ref, quote_indice, quote_url | TEXT | oui | | | n° de devis, indice de devis (A, B…), lien vers le devis |
 | status | TEXT | non | `'to_quote'` | `IN ('to_quote','quoted','to_review','approved','deposit','purchased','cancelled')` | §5 |
 | indice | TEXT | oui | | | lettre de la diffusion des fiches où l'article a changé pour la dernière fois (§7) |
