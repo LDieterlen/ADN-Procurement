@@ -38,7 +38,6 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Dessin | Drawing | Dessin coté de l'agence ou du fabricant, imprimé sous la photo de la fiche. | `project_item_file.kind = 'drawing'` |
 | Représentant | Representative | Contact du fournisseur imprimé sur la fiche de spec (nom, téléphone, e-mail). | `supplier.contact_name`, `phone`, `email` |
 | Validation | Approval | Accord du client sur une fiche ; case « Validation » de la fiche imprimée, statut `approved`. | `project_item.status` |
-| Catalogue | Catalogue | Les produits réutilisables ; un article libre y entre par défaut (case « ne pas ajouter au catalogue » sinon). | `product` ; `ProjectItemCreate.addToCatalogue` |
 
 ## Budget et montants
 
@@ -51,7 +50,7 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Validé | Approved | Σ des articles de statut Validé, Acompte ou Acheté. | Calculé par `money.py` |
 | Part par état | Share by status | Montant et pourcentage de chaque statut dans le prescrit. | `summary.byStatus` |
 | Engagé / facturé / payé | Committed / invoiced / paid | Suivi des commandes et factures. | Retiré par ADR-0013 |
-| Tarif / prix catalogue | List price | Prix HT avant remise, avec sa devise. | `product.list_price_cents`, `product.currency` |
+| Prix unitaire HT | Unit cost | Prix HT avant remise, avec sa devise, saisi sur l'article. | `project_item.unit_cost_cents`, `project_item.currency` |
 | Remise professionnelle | Trade discount | Réduction accordée aux prescripteurs, en points de base. | `project_item.discount_bp` |
 | Prix net | Net price | `unit_cost × (10000 − discount_bp) / 10000`, arrondi au centime. | Calculé par `money.py` ; jamais stocké |
 | HT | Excl. tax | Tous les montants sont saisis, stockés et affichés HT ; pas de TVA (accroche DATA_MODEL §8). | colonnes `*_cents` |
@@ -75,16 +74,16 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Professionnel | Professional | Entrée de l'annuaire : fabricant (atelier, artisan particulier), distributeur, éditeur de tissu ou artisan d'art, avec savoir-faire et deux contacts. **Jamais rattaché** à un produit ni à un article (ADR-0015) ; la marque lue sur une page produit est un fournisseur. | `professional`, `professional.kind` |
 | Savoir-faire | Specialty | Ce que fait un fournisseur ou un professionnel (Confection, Tapis, Luminaire…), texte libre issu de l'annuaire. | `supplier.specialty`, `professional.specialty` |
 | Client / donneur d'ordre | Client | Particulier ou société pour qui le projet est mené. | `client` |
-| Référence | Reference | Numéro de modèle ou code de l'article. | `product.reference`, `project_item.reference` |
-| Dimensions | Dimensions | Texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm ». | `product.dimensions`, `project_item.dimensions` |
-| Finitions | Finish | Description libre de l'aspect ; copiée du produit vers l'article puis figée. | `product.finish`, `project_item.finish` |
-| Lien internet | Web link | Adresse de la fiche produit, imprimée sur la fiche de spec. | `product.source_url`, `project_item.source_url` |
+| Référence | Reference | Numéro de modèle ou code de l'article. | `project_item.reference` |
+| Dimensions | Dimensions | Texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm ». | `project_item.dimensions` |
+| Finitions | Finish | Description libre de l'aspect. | `project_item.finish` |
+| Lien internet | Web link | Adresse de la fiche produit, imprimée sur la fiche de spec. | `project_item.source_url` |
 | Commentaires | Comments | Texte imprimé sur la fiche de prescription. | `project_item.comments` |
 | Statut / état | Status | À chiffrer, Devisé, À revoir, Validé, Acompte, Acheté, Annulé ; libre, journalisé. | `project_item.status` (CHECK) |
 | En attente | On hold | Décision client en suspens ; compté mais signalé. | `project_item.on_hold` |
 | Remplacé | Replaced / substituted | Ligne retirée au profit d'une autre ; historique conservé. | `project_item.status = 'replaced'`, `replaced_by_id` |
 | Option / alternative | Alternative (A/B) | Variantes présentées au client ; une seule retenue. Hors v1. | Reporté : `alternative_of_id` (D0.14) |
-| Historique / événement | Event log | Journal en ajout seul des changements de statut, de prix, de produit et d'implantation d'un article. | `project_item_event` |
+| Historique / événement | Event log | Journal en ajout seul des changements de statut, de prix et d'implantation d'un article. | `project_item_event` |
 | Archivage | Archiving | Masquer sans supprimer ; la suppression physique est bornée (article à chiffrer sans événement, localisation vide, implantation, ligne de budget). | colonnes `archived_at` ; index `(archived_at, name)` ; les UNIQUE métier s'appliquent aussi aux archivés ; doublon d'un archivé détecté par le service → 409 `archivedId` |
 | Objet de transfert | DTO (Data Transfer Object) | Forme JSON d'une ressource renvoyée par l'API, sans champ calculé. | schéma Pydantic `XxxRead` (`schemas/`) |
 | Fichier joint | Attachment / file | Photo, fiche technique, devis ; dédoublonné par hash, stocké hors base. | `file.sha256` ; `product_file`, `project_item_file` ; `~/.persist/ffe/files/` |
@@ -101,4 +100,4 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Recherche d'entreprises | Company registry lookup | API DINUM gratuite ; VIES pour l'UE ; dirigeants jamais stockés. | F3 ; `supplier.registry_*`, `supplier_registry_snapshot` (reportés) |
 | Non diffusible | Non-public registry entry | Entreprise (souvent un artisan ou un particulier) ayant demandé l'opacité de ses données au registre : absente ou tronquée dans les résultats, à saisir à la main. | F3 ; aucune colonne |
 | JSON-LD | JSON-LD | Données structurées `schema.org/Product` présentes dans la plupart des pages produit ; source de la capture. | F5/F6 ; `product_source.raw_json` (reporté) |
-| URL source | Source URL | Page web d'origine d'un produit. | `product.source_url`, `file.source_url` |
+| URL source | Source URL | Page web d'origine d'un article ou d'une image. | `project_item.source_url`, `file.source_url` |

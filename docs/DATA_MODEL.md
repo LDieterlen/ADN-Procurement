@@ -17,10 +17,9 @@ Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centai
 | Article (`project_item`) | **Une fiche de prescription** dans un projet : « Beat Light Fat, Flos, réf. BLS01, laiton, Ø 36 × H 30 cm, 1 062,50 GBP HT net ». Porte le code FF&E (`CHA-LUD-01`), le prix figé, le statut unique. Jamais l'emplacement |
 | Implantation (`project_item_placement`) | **Un emplacement d'un article** : localisation + quantité par unité. La même lampe dans le lobby (×2) et en chambre typo A (×1, localisation ×12) = un article, deux implantations, quantité totale 14 (exemple suivi en §4.9, §4.10 et §6) |
 | Localisation (`location`) | Lieu de destination dans un projet (lobby, bar, chambre typo A, suite…) avec sa **zone** (Zones communes, Hébergement, Back of house…), son **niveau** (R0, R+1…) et son **nombre** (multiplicateur, défaut 1) |
-| Produit | Fiche catalogue réutilisable ; l'article en **copie** la fiche à l'association, puis vit sa vie. Un article libre **rejoint le catalogue par défaut** (ADR-0013) |
 | Frais (`kind = 'fee'`) | Ligne forfaitaire par fournisseur (livraison, emballage…) : comptée dans le budget, sans type, sans implantation, absente des fiches |
 
-Conséquences : le catalogue peut changer sans réécrire un projet ; un code identifie une fiche, pas une pièce ; les totaux sont calculés par `api/src/ffe/money.py`, jamais stockés ; zéro vue SQL ; le front n'additionne jamais.
+Conséquences : pas de catalogue, l'article porte toute sa fiche (ADR-0016) ; un code identifie une fiche, pas une pièce ; les totaux sont calculés par `api/src/ffe/money.py`, jamais stockés ; zéro vue SQL ; le front n'additionne jamais.
 
 ---
 
@@ -37,16 +36,11 @@ erDiagram
     project_item ||--o{ project_item_placement : "implante dans"
     location ||--o{ project_item_placement : "recoit"
     location ||--o{ budget_line : "enveloppe localisation"
-    category ||--o{ product : "type"
     category ||--o{ project_item : "type"
-    supplier ||--o{ product : "fournisseur"
     supplier ||--o{ project_item : "fournisseur"
     supplier ||--o{ budget_line : "enveloppe fournisseur"
-    product ||--o{ project_item : "copie dans"
     project_item ||--o{ project_item_event : "journal"
-    product ||--o{ product_file : "photos, fiches"
     project_item ||--o{ project_item_file : "photo, dessin"
-    file ||--o{ product_file : "fichier"
     file ||--o{ project_item_file : "fichier"
     file ||--o{ project_file : "fichier"
 ```
@@ -70,11 +64,11 @@ erDiagram
 | Booléens | `INTEGER NOT NULL DEFAULT 0 CHECK (x IN (0, 1))` | Pas de BOOLEAN en SQLite |
 | Statuts et énumérations | `TEXT` + `CHECK (x IN (...))`, miroir d'un `Literal[...]` Pydantic ; pas de CHECK sur `project_item_event.kind` | Un seul endroit à changer ; le journal reste ouvert |
 | UNIQUE métier | Jamais de colonne nullable dans un UNIQUE sans `COALESCE` ; index d'expression ou partiels écrits à la main dans la migration | Deux NULL sont distincts pour SQLite |
-| FK | `foreign_keys = ON` ; `ON DELETE RESTRICT` partout sauf enfants stricts en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `product_file`, `item_code_sequence` ; toute FK a un index | Un référentiel utilisé ne disparaît jamais |
+| FK | `foreign_keys = ON` ; `ON DELETE RESTRICT` partout sauf enfants stricts en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `item_code_sequence` ; toute FK a un index | Un référentiel utilisé ne disparaît jamais |
 | FK composites | `UNIQUE (id, project_id)` sur `project_item` et `location` ; implantations et budgets référencent `(x_id, project_id)` | Aucune référence croisée entre projets |
-| Archivage | `archived_at` sur `client`, `supplier`, `professional`, `category`, `product`, `location` ; `project` utilise `status` ; `project_item` le statut `cancelled` | On ne perd jamais une fiche vue par un client |
+| Archivage | `archived_at` sur `client`, `supplier`, `professional`, `category`, `location` ; `project` utilise `status` ; `project_item` le statut `cancelled` | On ne perd jamais une fiche vue par un client |
 | Suppression physique bornée | `project_item` en `to_quote` sans autre événement que `created` ; `location` sans implantation ni budget ; `project_item_placement` (jamais la dernière) ; `budget_line` (par le `PUT` en bloc) ; jointures fichier | Règle d'app testée + RESTRICT en filet |
-| Fichiers | `file` dédoublonné par `sha256`, stocké `FFE_DATA_DIR/files/<sha256>.<ext>` ; `unlink` seulement si plus aucune jointure (`product_file`, `project_item_file`, `project_file`) | Une seule logique |
+| Fichiers | `file` dédoublonné par `sha256`, stocké `FFE_DATA_DIR/files/<sha256>.<ext>` ; `unlink` seulement si plus aucune jointure (`project_item_file`, `project_file`) | Une seule logique |
 | Nommage des contraintes | `naming_convention` SQLAlchemy (`pk_`, `fk_`, `uq_`, `ck_<table>_<nom>`, `ix_`) ; chaque CHECK nommé | Alembic batch exige des noms |
 | Migrations | Avant la v1 : `0001_initial.py` unique régénérée (ADR-0012) ; après : additives, relues, jamais éditées | Règles maîtresses : ARCHITECTURE §5 |
 
@@ -161,25 +155,13 @@ Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tiss
 | notes | TEXT | oui | | | |
 | archived_at | TS | oui | | | |
 
-### 4.8 `product` — catalogue
+### 4.8 (libre)
 
-| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
-|---|---|---|---|---|---|
-| name | TEXT | non | — | `length > 0` | |
-| category_id | INTEGER | non | — | FK `category` RESTRICT | type |
-| reference | TEXT | oui | | | doublon = même fournisseur + référence normalisée (409 `duplicate`, `?force=true`) |
-| supplier_id | INTEGER | oui | | FK `supplier` RESTRICT | |
-| list_price_cents | INTEGER | oui | | `>= 0` | HT dans `currency` |
-| currency | TEXT | non | `'EUR'` | `length = 3` | |
-| dimensions | TEXT | oui | | | texte libre : « L 120 × P 60 × H 75 cm », « Ø 36 cm » |
-| finish | TEXT | oui | | | finitions |
-| source_url | TEXT | oui | | | lien internet |
-| notes | TEXT | oui | | | |
-| archived_at | TS | oui | | | |
+Le catalogue `product` / `product_file` a été retiré le 2026-10-13 (ADR-0016) : l'article porte sa fiche, « Coller une adresse » la pré-remplit.
 
-### 4.9 `file` et jointures `product_file`, `project_item_file`
+### 4.9 `file` et jointure `project_item_file`
 
-`file` : `sha256` (`UNIQUE`, 64), `ext`, `mime_type`, `size_bytes`, `original_name`, `source_url`, `license_note` (droit d'usage imprimé sous la photo), `created_at`. Jointures (`*_id`, `file_id` FK RESTRICT, `UNIQUE (parent_id, file_id)`) : `kind` (`product_file` : `image` \| `datasheet` \| `drawing` \| `other` ; `project_item_file` : `image` \| `drawing` \| `other`), `is_primary` (une seule par parent, image seulement, index partiel), `caption`, `sort_order`. Suppression du parent en CASCADE.
+`file` : `sha256` (`UNIQUE`, 64), `ext`, `mime_type`, `size_bytes`, `original_name`, `source_url`, `license_note` (droit d'usage imprimé sous la photo), `created_at`. Jointure (`project_item_id`, `file_id` FK RESTRICT, `UNIQUE (parent_id, file_id)`) : `kind` (`image` \| `drawing` \| `other`), `is_primary` (une seule par parent, image seulement, index partiel), `caption`, `sort_order`. Suppression du parent en CASCADE.
 
 ### 4.10 `project_item` — l'article (pivot)
 
@@ -189,7 +171,6 @@ Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tiss
 | item_code | TEXT | non | — | `UNIQUE (project_id, item_code)` ; `length > 0` | `<LOC>-<TYPE>-NN` (§7), éditable en `to_quote` |
 | kind | TEXT | non | `'product'` | `IN ('product','fee')` | |
 | category_id | INTEGER | oui | | FK `category` RESTRICT ; `(kind = 'fee') = (category_id IS NULL)` | type ; obligatoire pour un article |
-| product_id | INTEGER | oui | | FK `product` RESTRICT | fiche catalogue d'origine ou créée depuis l'article |
 | supplier_id | INTEGER | oui | | FK `supplier` RESTRICT | obligatoire pour `fee` (règle d'app) |
 | name | TEXT | non | — | `length > 0` | désignation / nom produit |
 | reference | TEXT | oui | | | référence produit |
@@ -205,11 +186,11 @@ Fabricants (artisans et ateliers particuliers), distributeurs, éditeurs de tiss
 | indice | TEXT | oui | | | lettre de la diffusion des fiches où l'article a changé pour la dernière fois (§7) |
 | sort_order | INTEGER | non | 0 | | |
 
-Index : `(project_id, sort_order)`, `(project_id, status)`, `product_id`, `supplier_id`, `category_id`.
+Index : `(project_id, sort_order)`, `(project_id, status)`, `supplier_id`, `category_id`.
 
-Création (`services/project_item.create_item`) : depuis `product_id`, tout champ absent de la fiche (`name`, `category_id`, `reference`, `supplier_id`, `finish`, `dimensions`, `source_url`) et le prix sont copiés ; sans produit, `category_id` et `name` sont requis ; `currency` : donnée, sinon celle du produit à prix, sinon celle du fournisseur, sinon EUR ; `fx_rate_micro` : donné, sinon le dernier taux du projet pour cette devise, sinon 422 ; `add_to_catalogue` (défaut vrai) : un article libre crée un `product` depuis la fiche, ou se lie au jumeau actif (même fournisseur + référence normalisée).
+Création (`services/project_item.create_item`) : `category_id` et `name` requis pour un article ; `currency` : donnée, sinon celle du fournisseur, sinon EUR ; `fx_rate_micro` : donné, sinon le dernier taux du projet pour cette devise, sinon 422 ; `discount_bp` défaut 0 ; une implantation non affectée si `placements` absent.
 
-Exemple : `(3, 'CHA-LUD-01', 'product', 10, 23, 4, 9, 'Beat Light Fat', 'BLS01', 'edition', 'indoor', 'laiton', 'Ø 36 × H 30 cm', 'https://…', NULL, 125000, 'GBP', 1170000, 1500, 'DV-2026-118', 'A', NULL, 'approved', 'A', 0)`.
+Exemple : `(3, 'CHA-LUD-01', 'product', 10, 4, 9, 'Beat Light Fat', 'BLS01', 'edition', 'indoor', 'laiton', 'Ø 36 × H 30 cm', 'https://…', NULL, 125000, 'GBP', 1170000, 1500, 'DV-2026-118', 'A', NULL, 'approved', 'A', 0)`.
 
 ### 4.11 `project_item_placement` — implantation
 
@@ -224,7 +205,7 @@ Exemple : `(3, 'CHA-LUD-01', 'product', 10, 23, 4, 9, 'Beat Light Fat', 'BLS01',
 
 ### 4.12 `project_item_event` — journal
 
-`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `product`, `placement`, `other` ; sans CHECK), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de produit ou d'implantation.
+`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `placement`, `other`), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de produit ou d'implantation.
 
 ### 4.13 `item_code_sequence`
 

@@ -4,6 +4,12 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-13 — Catalogue retiré (ADR-0016)
+
+**Compte rendu** : question de l'utilisateur sur le volume et l'utilité du catalogue (« il n'y a presque jamais deux fois le même produit ») ; options exposées (retirer, opt-in, garder), il a choisi de **supprimer le catalogue**. Tables `product` et `product_file`, routes `/products…`, page Produits, sélecteur « depuis le catalogue », case « ne pas ajouter au catalogue », jumeau fournisseur + référence, repli de photo `catalogueImageFileId` et événement `product` retirés ; `queries/file.ts` reprend l'upload et l'URL de contenu ; migration `0001_initial.py` régénérée (15 tables), contrat régénéré ; tests adaptés (`test_api_project_item.py` : la fiche complète se poste à la main ; `ItemNewPage.test.tsx`). Docs : ADR-0016, DATA_MODEL §4.8 à 4.10, API, ARCHITECTURE, GLOSSARY, ROADMAP (idée parquée « reprendre un article d'un autre projet »), CLAUDE.md, README. Vérifié : pyright, pytest, `npm run check` verts.
+
+**Commits** : `feat(api): catalogue retiré — tables product et product_file, routes /products, productId et repli de photo`, `feat(web): catalogue retiré — page Produits, sélecteur depuis le catalogue, queries/file.ts`, `docs(repo): ADR-0016 sans catalogue`. Base de dev à recréer (serveur arrêté) : `rm ~/.persist/ffe-dev/ffe.sqlite*`, `ffe db migrate`, `ffe db seed --demo`, `ffe db import-contacts …`.
+
 ## 2026-10-13 — Retouche fournisseur : sans remise, portable d'abord, devise masquée
 
 **Compte rendu** : demandes de l'utilisateur. `supplier.default_discount_bp` retiré (migration `0001_initial.py` régénérée, base de dev à recréer) : la remise se saisit par article, défaut 0 ; les tests qui comptaient sur la copie passent `discountBp` explicitement. Le portable prime sur le téléphone fixe partout où le contact fournisseur s'affiche (liste des fournisseurs, page article, fiches et listing PDF). La devise du fournisseur est masquée (formulaire et liste) mais reste en base, EUR à la création, toujours copiée sur l'article (défaut appliqué, D15.6). Nouvelle règle de travail : porte complète et commits seulement à la demande (mémoire `feedback-porte-et-commit-sur-demande`).
