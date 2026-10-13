@@ -14,7 +14,6 @@ EXPECTED_INDEXES = {
     "uq_professional_name_lower": "lower(name)",
     "uq_project_item_placement_location": "COALESCE(location_id, 0)",
     "uq_budget_line_scope": "COALESCE(supplier_id, 0)",
-    "uq_product_file_primary": "WHERE is_primary = 1",
     "uq_project_item_file_primary": "WHERE is_primary = 1",
 }
 

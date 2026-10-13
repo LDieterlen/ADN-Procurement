@@ -5,7 +5,6 @@ RESOURCE_LABELS: dict[str, str] = {
     "supplier": "fournisseur",
     "professional": "professionnel",
     "category": "type de produit",
-    "product": "produit",
     "file": "fichier",
     "project": "projet",
     "location": "localisation",
@@ -67,7 +66,6 @@ ITEM_CODE_TAKEN = "Ce code FF&E est déjà utilisé dans le projet."
 ITEM_DELETE_ONLY_NEW = (
     "Seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon."
 )
-ITEM_PRODUCT_LINKED_NOTE = "lié au produit n° {id} du catalogue"
 PLACEMENT_LOCATION_NOT_IN_PROJECT = "La localisation n'appartient pas à ce projet."
 PLACEMENT_LOCATION_ARCHIVED = "La localisation est archivée."
 PLACEMENT_LOCATION_TAKEN = "L'article est déjà implanté dans cette localisation."
@@ -92,9 +90,9 @@ CAPTURE_IMAGE_TYPE = "L'image n'est pas un JPEG, PNG ou WebP."
 PAYLOAD_TOO_LARGE = "Fichier trop volumineux : {mb} Mo au plus."
 FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seulement."
 FILE_EMPTY = "Fichier vide."
-PRODUCT_FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
-PRODUCT_FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
-PRODUCT_FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
+FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
+FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
+FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
 CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
 SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 

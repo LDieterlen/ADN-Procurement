@@ -16,7 +16,6 @@ from ffe.models import (
     Category,
     Client,
     Location,
-    Product,
     Project,
     ProjectItem,
     Setting,
@@ -25,14 +24,11 @@ from ffe.models import (
 from ffe.services.project_item import list_items
 
 
-def _file_of(
-    item: ProjectItem, product: Product | None, primary: bool, kind: str | None
-) -> tuple[str | None, str | None]:
-    """Main photo (`primary`) or first file of `kind` of the line, else of the product."""
-    for junctions in (item.files, product.files if product is not None else []):
-        for junction in junctions:
-            if (primary and junction.is_primary) or (kind and junction.kind == kind):
-                return junction.file.filename, junction.file.license_note
+def _file_of(item: ProjectItem, primary: bool, kind: str | None) -> tuple[str | None, str | None]:
+    """Main photo (`primary`) or first file of `kind` of the line."""
+    for junction in item.files:
+        if (primary and junction.is_primary) or (kind and junction.kind == kind):
+            return junction.file.filename, junction.file.license_note
     return None, None
 
 
@@ -47,9 +43,8 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
     for item in list_items(session, project_id):
         if item.kind != "product":
             continue
-        product = session.get(Product, item.product_id) if item.product_id is not None else None
-        photo, license_note = _file_of(item, product, True, None)
-        drawing, _ = _file_of(item, product, False, "drawing")
+        photo, license_note = _file_of(item, True, None)
+        drawing, _ = _file_of(item, False, "drawing")
         category = categories.get(item.category_id) if item.category_id else None
         supplier = suppliers.get(item.supplier_id) if item.supplier_id else None
         pairs = [

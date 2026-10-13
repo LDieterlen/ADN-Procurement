@@ -15,7 +15,7 @@ ItemStatus = Literal[
 ItemFamily = Literal["custom", "joinery", "ose", "edition", "gallery", "artwork", "textile"]
 ItemUsage = Literal["indoor", "outdoor"]
 ItemFileKind = Literal["image", "drawing", "other"]
-EventKind = Literal["created", "status", "price", "product", "placement", "other"]
+EventKind = Literal["created", "status", "price", "placement", "other"]
 
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]
@@ -65,12 +65,9 @@ class PlacementRead(BaseSchema):
 
 
 class ProjectItemCreate(BaseSchema):
-    """From a catalogue product (`productId`: every absent field is copied) or free. A free
-    article is added to the catalogue unless `addToCatalogue` is false (ADR-0013)."""
+    """The whole sheet is typed here (ADR-0016: no catalogue)."""
 
     kind: ItemKind = "product"
-    product_id: int | None = None
-    add_to_catalogue: bool = True
     category_id: int | None = None
     supplier_id: int | None = None
     name: Short = None
@@ -101,7 +98,6 @@ class ProjectItemCreate(BaseSchema):
 class ProjectItemUpdate(BaseSchema):
     """Absent = unchanged. `status` never here (POST …/status), placements have their own routes."""
 
-    product_id: int | None = None
     category_id: int | None = None
     supplier_id: int | None = None
     name: Annotated[str | None, Field(min_length=1, max_length=200)] = None
@@ -200,7 +196,6 @@ class ProjectItemRead(BaseSchema):
     item_code: str
     kind: ItemKind
     category_id: int | None
-    product_id: int | None
     supplier_id: int | None
     name: str
     reference: str | None
@@ -224,26 +219,18 @@ class ProjectItemRead(BaseSchema):
     updated_at: str
     placements: list[PlacementRead]
     files: list[ItemFileRead]
-    catalogue_image_file_id: (
-        int | None
-    )  # primary photo of the catalogue product, shown when the article has none
 
     @classmethod
     def from_model(cls, item: Any) -> ProjectItemRead:
         base = {
             name: getattr(item, name)
             for name in cls.model_fields
-            if name not in ("placements", "files", "catalogue_image_file_id")
+            if name not in ("placements", "files")
         }
-        product = item.product
-        catalogue_image = (
-            next((f.file_id for f in product.files if f.is_primary), None) if product else None
-        )
         return cls(
             **base,
             placements=[PlacementRead.model_validate(p) for p in item.placements],
             files=[ItemFileRead.from_junction(f) for f in item.files],
-            catalogue_image_file_id=catalogue_image,
         )
 
 

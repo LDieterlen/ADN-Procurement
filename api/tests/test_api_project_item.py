@@ -13,7 +13,6 @@ from conftest import (
     make_file,
     make_item,
     make_location,
-    make_product,
     make_project,
     make_supplier,
 )
@@ -34,19 +33,18 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
     )
     lud = make_category(session, clock, name="Luminaire décoratif", code="LUD")
     dixon = make_supplier(session, clock, name="Tom Dixon", currency="GBP")
-    lamp = make_product(
-        session,
-        clock,
-        name="Beat Light Fat",
-        category_id=lud.id,
-        reference="BLS01",
-        supplier_id=dixon.id,
-        list_price_cents=125_000,
-        currency="GBP",
-        finish="laiton",
-        dimensions="Ø 36 × H 30 cm",
-        source_url="https://example.com/beat",
-    )
+    # The full sheet of an article, typed by hand (ADR-0016: no catalogue).
+    lamp = {
+        "name": "Beat Light Fat",
+        "categoryId": lud.id,
+        "reference": "BLS01",
+        "supplierId": dixon.id,
+        "unitCostCents": 125_000,
+        "currency": "GBP",
+        "finish": "laiton",
+        "dimensions": "Ø 36 × H 30 cm",
+        "sourceUrl": "https://example.com/beat",
+    }
     return {
         "project": project,
         "lob": lob,
@@ -61,13 +59,13 @@ def base(world: dict[str, Any]) -> str:
     return f"/api/v1/projects/{world['project'].id}/project-items"
 
 
-def test_create_from_catalogue_copies_the_sheet_and_the_price(
+def test_create_with_the_full_sheet_and_the_price(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     created = client.post(
         base(world),
         json={
-            "productId": world["lamp"].id,
+            **world["lamp"],
             "discountBp": 1500,
             "fxRateMicro": GBP,
             "placements": [{"locationId": world["cha"].id, "qtyMilli": 2000}],
@@ -119,50 +117,6 @@ def test_a_hand_written_code_must_be_free(client: TestClient, world: dict[str, A
     assert dup.status_code == 422 and dup.json()["details"][0]["field"] == "itemCode"
 
 
-def test_free_article_joins_the_catalogue_unless_asked_otherwise(
-    client: TestClient, world: dict[str, Any]
-) -> None:
-    free = client.post(
-        base(world),
-        json={
-            "name": "Chaise Gau",
-            "categoryId": world["lud"].id,
-            "reference": "GAU-1",
-            "supplierId": world["dixon"].id,
-            "unitCostCents": 42_000,
-            "fxRateMicro": GBP,
-            "dimensions": "L 45 cm",
-        },
-    ).json()
-    assert free["productId"] is not None
-    product = client.get(f"/api/v1/products/{free['productId']}").json()
-    assert product["name"] == "Chaise Gau" and product["reference"] == "GAU-1"
-    assert product["listPriceCents"] == 42_000 and product["currency"] == "GBP"
-    assert product["dimensions"] == "L 45 cm" and product["supplierId"] == world["dixon"].id
-    events = client.get(f"/api/v1/project-items/{free['id']}/events").json()
-    assert "catalogue" in events[0]["note"]
-    # Same supplier and reference again: linked to the existing product, no duplicate.
-    again = client.post(
-        base(world),
-        json={
-            "name": "Chaise Gau (autre projet de couleur)",
-            "categoryId": world["lud"].id,
-            "supplierId": world["dixon"].id,
-            "reference": " gau-1 ",
-            "fxRateMicro": GBP,
-            "currency": "GBP",
-        },
-    ).json()
-    assert again["productId"] == free["productId"]
-    assert client.get("/api/v1/products").json()["total"] == 2  # the fixture lamp + Chaise Gau
-    private = client.post(
-        base(world),
-        json={"name": "Tête de lit", "categoryId": world["lud"].id, "addToCatalogue": False},
-    ).json()
-    assert private["productId"] is None
-    assert client.get("/api/v1/products").json()["total"] == 2
-
-
 @pytest.mark.parametrize(
     ("body", "field"),
     [
@@ -196,10 +150,8 @@ def test_create_rejects_each_invalid_field(
 def test_fx_rate_is_remembered_per_currency_in_the_project(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    first = client.post(
-        base(world), json={"productId": world["lamp"].id, "fxRateMicro": 1_200_000}
-    ).json()
-    second = client.post(base(world), json={"productId": world["lamp"].id}).json()
+    first = client.post(base(world), json={**world["lamp"], "fxRateMicro": 1_200_000}).json()
+    second = client.post(base(world), json=world["lamp"]).json()
     assert first["fxRateMicro"] == second["fxRateMicro"] == 1_200_000
 
 
@@ -233,7 +185,7 @@ def test_patch_sheet_price_and_type_journals_price_and_renumbers_while_new(
     item = client.post(
         base(world),
         json={
-            "productId": world["lamp"].id,
+            **world["lamp"],
             "fxRateMicro": GBP,
             "placements": [{"locationId": world["cha"].id}],
         },
@@ -367,29 +319,6 @@ def test_list_filters_and_search(client: TestClient, world: dict[str, Any]) -> N
     assert ids({"supplierId": world["dixon"].id}) == [b["id"]]
     assert ids({"q": "appli"}) == [a["id"]]
     assert ids({"q": "lud-02"}) == [b["id"]]
-
-
-def test_catalogue_photo_is_copied_onto_the_article_and_shown_as_fallback(
-    client: TestClient, session: Session, settings: Settings, clock: Clock, world: dict[str, Any]
-) -> None:
-    photo = make_file(session, settings, clock, PNG_BYTES, "beat.png")
-    client.post(
-        f"/api/v1/products/{world['lamp'].id}/files", json={"fileId": photo.id, "isPrimary": True}
-    )
-    item = client.post(base(world), json={"productId": world["lamp"].id, "fxRateMicro": GBP}).json()
-    assert [f["fileId"] for f in item["files"]] == [photo.id] and item["files"][0][
-        "isPrimary"
-    ] is True
-    assert item["catalogueImageFileId"] == photo.id
-    detached = client.delete(f"/api/v1/project-items/{item['id']}/files/{photo.id}").json()
-    assert (
-        detached["files"] == [] and detached["catalogueImageFileId"] == photo.id
-    )  # fallback stays
-    assert (settings.files_dir / photo.filename).exists()  # still referenced by the product
-    free = client.post(
-        base(world), json={"name": "Libre", "categoryId": world["lud"].id, "addToCatalogue": False}
-    ).json()
-    assert free["files"] == [] and free["catalogueImageFileId"] is None
 
 
 def test_files_photo_and_drawing(

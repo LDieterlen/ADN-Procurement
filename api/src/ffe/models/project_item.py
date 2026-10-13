@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
-from ffe.models.product import Product
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
 
@@ -28,7 +27,7 @@ class ProjectItem(TimestampedMixin, Base):
         CheckConstraint("length(item_code) > 0", name="item_code_not_empty"),
         CheckConstraint("length(name) > 0", name="name_not_empty"),
         CheckConstraint(f"kind IN ({_sql_list(ITEM_KINDS)})", name="kind_enum"),
-        # A fee line has no product type; an article always has one.
+        # A fee line has no type; an article always has one.
         CheckConstraint("(kind = 'fee') = (category_id IS NULL)", name="fee_has_no_type"),
         CheckConstraint(
             f"family IS NULL OR family IN ({_sql_list(ITEM_FAMILIES)})", name="family_enum"
@@ -42,7 +41,6 @@ class ProjectItem(TimestampedMixin, Base):
         CheckConstraint(f"status IN ({_sql_list(ITEM_STATUSES)})", name="status_enum"),
         Index("ix_project_item_project_id", "project_id", "sort_order"),
         Index("ix_project_item_status", "project_id", "status"),
-        Index("ix_project_item_product_id", "product_id"),
         Index("ix_project_item_supplier_id", "supplier_id"),
         Index("ix_project_item_category_id", "category_id"),
         STRICT,
@@ -57,13 +55,10 @@ class ProjectItem(TimestampedMixin, Base):
     category_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("category.id", ondelete="RESTRICT")
     )
-    product_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("product.id", ondelete="RESTRICT")
-    )
     supplier_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("supplier.id", ondelete="RESTRICT")
     )
-    # --- the spec sheet (copied from the catalogue product, then free) ---
+    # --- the spec sheet (ADR-0013 ; free text, ADR-0016 : no catalogue) ---
     name: Mapped[str] = mapped_column(Text, nullable=False)
     reference: Mapped[str | None] = mapped_column(Text)
     family: Mapped[str | None] = mapped_column(Text)
@@ -102,5 +97,3 @@ class ProjectItem(TimestampedMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
-    # Read-only: the catalogue product, for its primary photo when the article has none.
-    product: Mapped[Product | None] = relationship(Product, lazy="selectin", viewonly=True)

@@ -1,7 +1,7 @@
 """`project_item` service: the business core (DATA_MODEL §4.11–4.15, §5, §7 ; ADR-0013).
 
 Every write is one transaction and writes its journal row in the same transaction. Status, price
-(cost, discount, currency, rate), product and placement changes are always journaled.
+(cost, discount, currency, rate) and placement changes are always journaled.
 """
 
 import json
@@ -18,7 +18,6 @@ from ffe.i18n import fr
 from ffe.models import (
     Category,
     Location,
-    Product,
     ProjectItem,
     ProjectItemEvent,
     ProjectItemFile,
@@ -36,22 +35,11 @@ from ffe.schemas.project_item import (
 )
 from ffe.services.base import normalize_key, stamp
 from ffe.services.file import get_file, unlink_if_orphan
-from ffe.services.product import find_twin
 from ffe.services.project import ensure_open, get_project
 
 RESOURCE = "project_item"
 FEE_PREFIX = "FR"
 PRICE_FIELDS = ("unit_cost_cents", "currency", "fx_rate_micro", "discount_bp")
-# Fields of the spec sheet copied from a catalogue product when the line does not give them.
-COPIED_FROM_PRODUCT = (
-    "name",
-    "category_id",
-    "reference",
-    "supplier_id",
-    "finish",
-    "dimensions",
-    "source_url",
-)
 
 
 def _err(field: str, message: str) -> ValidationAppError:
@@ -245,20 +233,12 @@ def resolve_fx(session: Session, project_id: int, currency: str, given: int | No
 def _resolve_defaults(
     session: Session, project_id: int, data: ProjectItemCreate, now: str
 ) -> dict[str, Any]:
-    values = data.model_dump(exclude={"placements", "item_code", "add_to_catalogue"})
+    values = data.model_dump(exclude={"placements", "item_code"})
     if data.kind == "fee":
-        if data.category_id is not None or data.product_id is not None or data.placements:
+        if data.category_id is not None or data.placements:
             raise _err("kind", fr.ITEM_FEE_HAS_NO_TYPE)
         if data.supplier_id is None:
             raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
-    product = _check_reference(session, Product, "productId", data.product_id, "Produit")
-    if product is not None:
-        for field in COPIED_FROM_PRODUCT:
-            if values[field] in (None, ""):
-                values[field] = getattr(product, field)
-        if values["unit_cost_cents"] is None and product.list_price_cents is not None:
-            values["unit_cost_cents"] = product.list_price_cents
-            values["currency"] = values["currency"] or product.currency
     if data.kind == "product" and values["category_id"] is None:
         raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
     _check_reference(session, Category, "categoryId", values["category_id"], "Type de produit")
@@ -276,33 +256,7 @@ def _resolve_defaults(
     values["fx_rate_micro"] = resolve_fx(
         session, project_id, values["currency"], values["fx_rate_micro"]
     )
-    if data.kind == "product" and product is None and data.add_to_catalogue:
-        values["product_id"] = _catalogue_product(session, values, now).id
     return values
-
-
-def _catalogue_product(session: Session, values: dict[str, Any], now: str) -> Product:
-    """ADR-0013: a free article joins the catalogue — the active twin (supplier + reference)
-    if there is one, else a new product built from the sheet."""
-    twin = find_twin(session, values["supplier_id"], values["reference"])
-    if twin is not None:
-        return twin
-    product = Product(
-        name=values["name"],
-        category_id=values["category_id"],
-        reference=values["reference"],
-        supplier_id=values["supplier_id"],
-        list_price_cents=values["unit_cost_cents"] or None,
-        currency=values["currency"],
-        dimensions=values["dimensions"],
-        finish=values["finish"],
-        source_url=values["source_url"],
-        created_at=now,
-        updated_at=now,
-    )
-    session.add(product)
-    session.flush()
-    return product
 
 
 # --- placements -------------------------------------------------------------------------------
@@ -432,7 +386,6 @@ def create_item(
         ensure_open(get_project(session, project_id))
         now = stamp(clock)
         values = _resolve_defaults(session, project_id, data, now)
-        product = session.get(Product, values["product_id"]) if values["product_id"] else None
         placements: list[PlacementCreate] = []
         if data.kind == "product":
             placements = data.placements or [PlacementCreate()]
@@ -465,27 +418,8 @@ def create_item(
                     updated_at=now,
                 )
             )
-        if product is not None:
-            # The catalogue photo becomes the article's own (same file, new junction); it may diverge later.
-            for junction in product.files:
-                if junction.is_primary:
-                    item.files.append(
-                        ProjectItemFile(
-                            file_id=junction.file_id,
-                            kind="image",
-                            is_primary=1,
-                            caption=junction.caption,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                    )
         session.add(item)
         session.flush()
-        note = (
-            fr.ITEM_PRODUCT_LINKED_NOTE.format(id=item.product_id)
-            if item.product_id is not None and data.product_id is None
-            else None
-        )
         write_event(
             session,
             item,
@@ -493,7 +427,6 @@ def create_item(
             clock,
             to_status="to_quote",
             new_value=price_json(item),
-            note=note,
         )
     return _reloaded(session, item)
 
@@ -509,13 +442,12 @@ def update_item(
                 raise _err("itemCode", fr.ITEM_CODE_IMMUTABLE)
             _check_code_free(session, item.project_id, changes["item_code"], item_id)
         if item.kind == "fee":
-            if changes.get("category_id") is not None or changes.get("product_id") is not None:
+            if changes.get("category_id") is not None:
                 raise _err("kind", fr.ITEM_FEE_HAS_NO_TYPE)
             if "supplier_id" in changes and changes["supplier_id"] is None:
                 raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
         elif "category_id" in changes and changes["category_id"] is None:
             raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
-        _check_reference(session, Product, "productId", changes.get("product_id"), "Produit")
         _check_reference(session, Supplier, "supplierId", changes.get("supplier_id"), "Fournisseur")
         if (
             "category_id" in changes
@@ -538,7 +470,6 @@ def update_item(
             elif fx_given is None and "currency" in changes:
                 changes["fx_rate_micro"] = resolve_fx(session, item.project_id, currency, None)
         before_price = price_json(item)
-        before_product = item.product_id
         for field_name, value in changes.items():
             setattr(item, field_name, value)
         item.updated_at = stamp(clock)
@@ -546,15 +477,6 @@ def update_item(
         if after_price != before_price:
             write_event(
                 session, item, "price", clock, old_value=before_price, new_value=after_price
-            )
-        if item.product_id != before_product:
-            write_event(
-                session,
-                item,
-                "product",
-                clock,
-                old_value=str(before_product),
-                new_value=str(item.product_id),
             )
     return _reloaded(session, item)
 
@@ -598,14 +520,14 @@ def change_status(session: Session, item_id: int, data: StatusChange, clock: Clo
     return _reloaded(session, item)
 
 
-# --- files (same shape as product_file) --------------------------------------------------------
+# --- files --------------------------------------------------------
 
 
 def _junction(item: ProjectItem, file_id: int) -> ProjectItemFile:
     for junction in item.files:
         if junction.file_id == file_id:
             return junction
-    raise ConflictError(fr.PRODUCT_FILE_NOT_ATTACHED)
+    raise ConflictError(fr.FILE_NOT_ATTACHED)
 
 
 def attach_file(session: Session, item_id: int, data: ItemFileAttach, clock: Clock) -> ProjectItem:
@@ -613,9 +535,9 @@ def attach_file(session: Session, item_id: int, data: ItemFileAttach, clock: Clo
         item = _editable(session, item_id)
         get_file(session, data.file_id)
         if any(j.file_id == data.file_id for j in item.files):
-            raise ConflictError(fr.PRODUCT_FILE_ALREADY_ATTACHED)
+            raise ConflictError(fr.FILE_ALREADY_ATTACHED)
         if data.is_primary and data.kind != "image":
-            raise _err("isPrimary", fr.PRODUCT_FILE_PRIMARY_NOT_IMAGE)
+            raise _err("isPrimary", fr.FILE_PRIMARY_NOT_IMAGE)
         if data.is_primary:
             for junction in item.files:
                 junction.is_primary = 0
@@ -646,7 +568,7 @@ def update_file(
         kind = changes.get("kind", junction.kind)
         is_primary = changes.get("is_primary", bool(junction.is_primary))
         if is_primary and kind != "image":
-            raise _err("isPrimary", fr.PRODUCT_FILE_PRIMARY_NOT_IMAGE)
+            raise _err("isPrimary", fr.FILE_PRIMARY_NOT_IMAGE)
         if is_primary:
             for other in item.files:
                 if other.file_id != file_id:

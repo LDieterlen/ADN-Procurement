@@ -153,7 +153,6 @@ def seed_demo(engine: Engine, clock: Clock) -> Project | None:
                 finish="Chêne naturel huilé",
                 dimensions="L 200 × H 120 cm",
                 unit_cost_cents=185_000,
-                add_to_catalogue=False,
                 placements=[PlacementCreate(location_id=room.id, qty_milli=1000)],
             ),
             clock,

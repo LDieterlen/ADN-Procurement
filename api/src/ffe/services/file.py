@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.errors import ErrorDetail, NotFoundError, PayloadTooLargeError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import File, ProductFile, ProjectFile, ProjectItemFile
+from ffe.models import File, ProjectFile, ProjectItemFile
 from ffe.services.base import stamp
 
 RESOURCE = "file"
@@ -107,7 +107,7 @@ def unlink_if_orphan(session: Session, files_dir: Path, file_id: int) -> bool:
         file = session.get(File, file_id)
         if file is None:
             return False
-        for junction in (ProductFile, ProjectItemFile, ProjectFile):
+        for junction in (ProjectItemFile, ProjectFile):
             referenced = session.scalar(
                 select(func.count()).select_from(junction).where(junction.file_id == file_id)
             )

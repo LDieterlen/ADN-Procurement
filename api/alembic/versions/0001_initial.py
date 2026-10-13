@@ -1,10 +1,10 @@
-"""schéma initial v0 (ADR-0012, ADR-0013 : une seule migration régénérée depuis les modèles jusqu'à la v1)
+"""schéma initial v0 (ADR-0012, ADR-0013, ADR-0016 : une seule migration régénérée depuis les modèles jusqu'à la v1)
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-10-12
+Create Date: 2026-10-13
 
-Générée par `alembic revision --autogenerate` puis relue : 17 tables STRICT (DATA_MODEL §4), CHECK et
+Générée par `alembic revision --autogenerate` puis relue : 15 tables STRICT (DATA_MODEL §4), CHECK et
 UNIQUE des modèles, index partiels rendus par Alembic ; les quatre index d'expression (COALESCE,
 lower) et la ligne unique de `setting` sont écrits à la main en fin d'`upgrade`. Tant que la v1 n'est
 pas déclarée, ce fichier est le seul de l'historique et se régénère à chaque changement de modèle.
@@ -165,49 +165,6 @@ def upgrade() -> None:
         batch_op.create_index("ix_supplier_archived_at", ["archived_at", "name"], unique=False)
 
     op.create_table(
-        "product",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=False),
-        sa.Column("category_id", sa.Integer(), nullable=False),
-        sa.Column("reference", sa.Text(), nullable=True),
-        sa.Column("supplier_id", sa.Integer(), nullable=True),
-        sa.Column("list_price_cents", sa.Integer(), nullable=True),
-        sa.Column("currency", sa.Text(), server_default="EUR", nullable=False),
-        sa.Column("dimensions", sa.Text(), nullable=True),
-        sa.Column("finish", sa.Text(), nullable=True),
-        sa.Column("source_url", sa.Text(), nullable=True),
-        sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("archived_at", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.Text(), nullable=False),
-        sa.Column("updated_at", sa.Text(), nullable=False),
-        sa.CheckConstraint("length(currency) = 3", name=op.f("ck_product_currency_length")),
-        sa.CheckConstraint("length(name) > 0", name=op.f("ck_product_name_not_empty")),
-        sa.CheckConstraint(
-            "list_price_cents IS NULL OR list_price_cents >= 0",
-            name=op.f("ck_product_list_price_min"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["category_id"],
-            ["category.id"],
-            name=op.f("fk_product_category_id_category"),
-            ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
-            ["supplier_id"],
-            ["supplier.id"],
-            name=op.f("fk_product_supplier_id_supplier"),
-            ondelete="RESTRICT",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_product")),
-        sqlite_strict=True,
-    )
-    with op.batch_alter_table("product", schema=None) as batch_op:
-        batch_op.create_index("ix_product_archived_at", ["archived_at", "name"], unique=False)
-        batch_op.create_index("ix_product_category_id", ["category_id"], unique=False)
-        batch_op.create_index("ix_product_reference", ["supplier_id", "reference"], unique=False)
-        batch_op.create_index("ix_product_supplier_id", ["supplier_id"], unique=False)
-
-    op.create_table(
         "project",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("code", sa.Text(), nullable=False),
@@ -295,47 +252,6 @@ def upgrade() -> None:
         batch_op.create_index("ix_location_project_id", ["project_id", "sort_order"], unique=False)
 
     op.create_table(
-        "product_file",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("product_id", sa.Integer(), nullable=False),
-        sa.Column("file_id", sa.Integer(), nullable=False),
-        sa.Column("kind", sa.Text(), server_default="image", nullable=False),
-        sa.Column("is_primary", sa.Integer(), server_default=sa.text("0"), nullable=False),
-        sa.Column("caption", sa.Text(), nullable=True),
-        sa.Column("sort_order", sa.Integer(), server_default=sa.text("0"), nullable=False),
-        sa.Column("created_at", sa.Text(), nullable=False),
-        sa.Column("updated_at", sa.Text(), nullable=False),
-        sa.CheckConstraint(
-            "is_primary = 0 OR kind = 'image'", name=op.f("ck_product_file_primary_is_image")
-        ),
-        sa.CheckConstraint(
-            "kind IN ('image', 'datasheet', 'drawing', 'other')",
-            name=op.f("ck_product_file_kind_enum"),
-        ),
-        sa.CheckConstraint("is_primary IN (0, 1)", name=op.f("ck_product_file_is_primary_bool")),
-        sa.ForeignKeyConstraint(
-            ["file_id"], ["file.id"], name=op.f("fk_product_file_file_id_file"), ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["product_id"],
-            ["product.id"],
-            name=op.f("fk_product_file_product_id_product"),
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_product_file")),
-        sa.UniqueConstraint("product_id", "file_id", name="uq_product_file_product_id"),
-        sqlite_strict=True,
-    )
-    with op.batch_alter_table("product_file", schema=None) as batch_op:
-        batch_op.create_index("ix_product_file_file_id", ["file_id"], unique=False)
-        batch_op.create_index(
-            "uq_product_file_primary",
-            ["product_id"],
-            unique=True,
-            sqlite_where=sa.text("is_primary = 1"),
-        )
-
-    op.create_table(
         "project_file",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("project_id", sa.Integer(), nullable=False),
@@ -369,7 +285,6 @@ def upgrade() -> None:
         sa.Column("item_code", sa.Text(), nullable=False),
         sa.Column("kind", sa.Text(), server_default="product", nullable=False),
         sa.Column("category_id", sa.Integer(), nullable=True),
-        sa.Column("product_id", sa.Integer(), nullable=True),
         sa.Column("supplier_id", sa.Integer(), nullable=True),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("reference", sa.Text(), nullable=True),
@@ -430,12 +345,6 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["product_id"],
-            ["product.id"],
-            name=op.f("fk_project_item_product_id_product"),
-            ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
             ["project_id"],
             ["project.id"],
             name=op.f("fk_project_item_project_id_project"),
@@ -454,7 +363,6 @@ def upgrade() -> None:
     )
     with op.batch_alter_table("project_item", schema=None) as batch_op:
         batch_op.create_index("ix_project_item_category_id", ["category_id"], unique=False)
-        batch_op.create_index("ix_project_item_product_id", ["product_id"], unique=False)
         batch_op.create_index(
             "ix_project_item_project_id", ["project_id", "sort_order"], unique=False
         )
@@ -669,7 +577,6 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_item_supplier_id")
         batch_op.drop_index("ix_project_item_status")
         batch_op.drop_index("ix_project_item_project_id")
-        batch_op.drop_index("ix_project_item_product_id")
         batch_op.drop_index("ix_project_item_category_id")
 
     op.drop_table("project_item")
@@ -678,11 +585,6 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_file_file_id")
 
     op.drop_table("project_file")
-    with op.batch_alter_table("product_file", schema=None) as batch_op:
-        batch_op.drop_index("uq_product_file_primary", sqlite_where=sa.text("is_primary = 1"))
-        batch_op.drop_index("ix_product_file_file_id")
-
-    op.drop_table("product_file")
     with op.batch_alter_table("location", schema=None) as batch_op:
         batch_op.drop_index("ix_location_project_id")
 
@@ -693,13 +595,6 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_client_id")
 
     op.drop_table("project")
-    with op.batch_alter_table("product", schema=None) as batch_op:
-        batch_op.drop_index("ix_product_supplier_id")
-        batch_op.drop_index("ix_product_reference")
-        batch_op.drop_index("ix_product_category_id")
-        batch_op.drop_index("ix_product_archived_at")
-
-    op.drop_table("product")
     with op.batch_alter_table("supplier", schema=None) as batch_op:
         batch_op.drop_index("ix_supplier_archived_at")
 

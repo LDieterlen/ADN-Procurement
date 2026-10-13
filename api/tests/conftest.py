@@ -26,7 +26,6 @@ from ffe.models import (
     Client,
     File,
     Location,
-    Product,
     Professional,
     Project,
     ProjectItem,
@@ -35,7 +34,6 @@ from ffe.models import (
 from ffe.schemas.category import CategoryCreate
 from ffe.schemas.client import ClientCreate
 from ffe.schemas.location import LocationCreate
-from ffe.schemas.product import ProductCreate
 from ffe.schemas.professional import ProfessionalCreate
 from ffe.schemas.project import ProjectCreate
 from ffe.schemas.project_item import ProjectItemCreate
@@ -44,7 +42,6 @@ from ffe.services.category import create_category
 from ffe.services.client import create_client
 from ffe.services.file import store_upload
 from ffe.services.location import create_location
-from ffe.services.product import create_product
 from ffe.services.professional import create_professional
 from ffe.services.project import create_project
 from ffe.services.project_item import create_item
@@ -136,15 +133,6 @@ def make_category(session: Session, clock: Clock, **overrides: Any) -> Category:
     return create_category(session, CategoryCreate(**data), clock)
 
 
-def make_product(session: Session, clock: Clock, **overrides: Any) -> Product:
-    """A product in a fresh category unless `category_id` is given."""
-    if "category_id" not in overrides:
-        overrides["category_id"] = make_category(session, clock, name="Divers", code="DIV").id
-    data: dict[str, Any] = {"name": "Beat Light Fat", "list_price_cents": 125000}
-    data.update(overrides)
-    return create_product(session, ProductCreate(**data), clock)
-
-
 # Tiny valid files for upload tests (signatures only: the API sniffs magic bytes).
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 64
@@ -186,15 +174,11 @@ def make_location(session: Session, clock: Clock, project_id: int, **overrides: 
 
 
 def make_item(session: Session, clock: Clock, project_id: int, **overrides: Any) -> ProjectItem:
-    """A free article (not added to the catalogue) in a fresh type unless `category_id` is given."""
-    if (
-        "category_id" not in overrides
-        and "product_id" not in overrides
-        and overrides.get("kind") != "fee"
-    ):
+    """An article in a fresh type unless `category_id` is given."""
+    if "category_id" not in overrides and overrides.get("kind") != "fee":
         n = next(_counter)
         code = "T" + chr(65 + n % 26) + chr(65 + (n // 26) % 26)
         overrides["category_id"] = make_category(session, clock, name=f"Type {n}", code=code).id
-    data: dict[str, Any] = {"name": "Article", "unit_cost_cents": 10000, "add_to_catalogue": False}
+    data: dict[str, Any] = {"name": "Article", "unit_cost_cents": 10000}
     data.update(overrides)
     return create_item(session, project_id, ProjectItemCreate(**data), clock)

@@ -11,7 +11,6 @@ from ffe.api.v1 import (
     file,
     health,
     location,
-    product,
     professional,
     project,
     project_item,
@@ -26,7 +25,6 @@ router.include_router(client.router)
 router.include_router(supplier.router)
 router.include_router(professional.router)
 router.include_router(category.router)
-router.include_router(product.router)
 router.include_router(file.router)
 router.include_router(project.router)
 router.include_router(location.router)

@@ -38,8 +38,6 @@ TABLE_ORDER: tuple[str, ...] = (
     "professional",
     "supplier",
     "file",
-    "product",
-    "product_file",
     "project",
     "location",
     "project_item",
@@ -50,7 +48,7 @@ TABLE_ORDER: tuple[str, ...] = (
     "budget_line",
     "project_file",
 )
-# Row validation before insert (D4.11); `product` and `product_file` rows are validated by the
+# Row validation before insert (D4.11); rows without a schema here are validated by the
 # database (STRICT, CHECK, FK) only.
 ROW_SCHEMAS: dict[str, type[BaseSchema]] = {
     "setting": SettingRead,
