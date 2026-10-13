@@ -10,7 +10,7 @@ let api: FakeApi
 beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
-    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', defaultDiscountBp: 1500 }],
+    suppliers: [{ name: 'Tom Dixon', currency: 'GBP' }],
     categories: [
       { code: 'LUD', name: 'Luminaire décoratif', sortOrder: 10 },
       { code: 'AS', name: 'Assise', sortOrder: 5 },
@@ -71,7 +71,7 @@ describe('page Nouvel article', () => {
     expect(api.products).toHaveLength(1)
   })
 
-  test('depuis le catalogue en GBP : la fiche est pré-remplie, le taux demandé, le montant 14 917,56 € apparaît', async () => {
+  test('depuis le catalogue en GBP : la fiche est pré-remplie, le taux demandé, le montant 17 550,00 € apparaît', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/new')
     await screen.findByRole('option', { name: /Beat Light Fat/ })
@@ -85,8 +85,8 @@ describe('page Nouvel article', () => {
     await user.selectOptions(within(placement).getByLabelText('Localisation'), '2')
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))
     await screen.findByRole('heading', { name: 'Beat Light Fat' })
-    expect(api.items[0]).toMatchObject({ productId: 1, fxRateMicro: 1_170_000, discountBp: 1500, reference: 'BLS01', finish: 'laiton', currency: 'GBP' })
-    expect(await screen.findByText(/14 917,56 € HT/)).toBeTruthy()
+    expect(api.items[0]).toMatchObject({ productId: 1, fxRateMicro: 1_170_000, discountBp: 0, reference: 'BLS01', finish: 'laiton', currency: 'GBP' })
+    expect(await screen.findByText(/17 550,00 € HT/)).toBeTruthy()
   })
 
   test('un fournisseur se crée depuis la page sans la quitter', async () => {

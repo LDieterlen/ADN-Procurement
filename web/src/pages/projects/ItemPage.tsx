@@ -173,8 +173,8 @@ export function ItemPage() {
               suppliers={options(suppliers.data?.items)}
               onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
               contact={
-                supplier && (supplier.contactName || supplier.phone || supplier.email)
-                  ? [supplier.contactName, supplier.phone, supplier.email].filter(Boolean).join(' · ')
+                supplier && (supplier.contactName || supplier.mobile || supplier.phone || supplier.email)
+                  ? [supplier.contactName, supplier.mobile ?? supplier.phone, supplier.email].filter(Boolean).join(' · ')
                   : undefined
               }
             />

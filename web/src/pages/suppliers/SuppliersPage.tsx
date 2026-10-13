@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useSuppliers, type SupplierRead } from '../../api/queries/supplier'
-import { bpToText } from '../../components/forms/BpField'
+import { useSupplierSpecialties, useSuppliers, type SupplierRead } from '../../api/queries/supplier'
+import { FilterSelect } from '../../components/forms/FilterSelect'
 import { DataTable, type Column } from '../../components/tables/DataTable'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -13,11 +13,9 @@ const LIMIT = 50
 const COLUMNS: Column<SupplierRead>[] = [
   { key: 'name', header: 'Nom', render: (s) => <span className="font-medium">{s.name}</span> },
   { key: 'specialty', header: 'Savoir-faire', render: (s) => s.specialty ?? '' },
-  { key: 'currency', header: 'Devise', render: (s) => s.currency },
-  { key: 'discount', header: 'Remise', render: (s) => (s.defaultDiscountBp ? `${bpToText(s.defaultDiscountBp)} %` : ''), className: 'text-right' },
   { key: 'contact', header: 'Représentant', render: (s) => s.contactName ?? '' },
   { key: 'email', header: 'E-mail', render: (s) => s.email ?? '' },
-  { key: 'phone', header: 'Téléphone', render: (s) => s.phone ?? '' },
+  { key: 'phone', header: 'Téléphone', render: (s) => s.mobile ?? s.phone ?? '' },
   { key: 'status', header: '', render: (s) => (s.archivedAt ? <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs">Archivé</span> : null) },
 ]
 
@@ -25,7 +23,9 @@ export function SuppliersPage() {
   const [q, setQ] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [offset, setOffset] = useState(0)
-  const suppliers = useSuppliers({ q, includeArchived, limit: LIMIT, offset })
+  const [specialty, setSpecialty] = useState('')
+  const suppliers = useSuppliers({ q, includeArchived, limit: LIMIT, offset, specialty })
+  const specialties = useSupplierSpecialties()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -49,9 +49,18 @@ export function SuppliersPage() {
             setQ(event.target.value)
             setOffset(0)
           }}
-          placeholder="Nom ou représentant…"
+          placeholder="Nom, savoir-faire ou représentant…"
           aria-label="Rechercher"
           className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+        />
+        <FilterSelect
+          label="Savoir-faire"
+          value={specialty}
+          onChange={(value) => {
+            setSpecialty(value)
+            setOffset(0)
+          }}
+          options={(specialties.data ?? []).map((s) => ({ value: s, label: s }))}
         />
         <label className="flex items-center gap-1.5 text-sm text-neutral-700">
           <input

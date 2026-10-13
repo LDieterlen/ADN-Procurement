@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useProfessionals, type ProfessionalRead } from '../../api/queries/professional'
+import { useProfessionalSpecialties, useProfessionals, type ProfessionalKind, type ProfessionalRead } from '../../api/queries/professional'
+import { FilterSelect } from '../../components/forms/FilterSelect'
 import { DataTable, type Column } from '../../components/tables/DataTable'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -26,7 +27,10 @@ export function ProfessionalsPage() {
   const [q, setQ] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [offset, setOffset] = useState(0)
-  const professionals = useProfessionals({ q, includeArchived, limit: LIMIT, offset })
+  const [specialty, setSpecialty] = useState('')
+  const [kind, setKind] = useState('')
+  const professionals = useProfessionals({ q, includeArchived, limit: LIMIT, offset, specialty, kind: (kind || null) as ProfessionalKind | null })
+  const specialties = useProfessionalSpecialties()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -54,6 +58,25 @@ export function ProfessionalsPage() {
           placeholder="Rechercher un nom, un savoir-faire, un contact…"
           aria-label="Rechercher"
           className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+        />
+        <FilterSelect
+          label="Prestation"
+          all="Toutes"
+          value={kind}
+          onChange={(value) => {
+            setKind(value)
+            setOffset(0)
+          }}
+          options={(Object.keys(KIND_LABELS) as ProfessionalKind[]).map((k) => ({ value: k, label: KIND_LABELS[k] }))}
+        />
+        <FilterSelect
+          label="Savoir-faire"
+          value={specialty}
+          onChange={(value) => {
+            setSpecialty(value)
+            setOffset(0)
+          }}
+          options={(specialties.data ?? []).map((s) => ({ value: s, label: s }))}
         />
         <label className="flex items-center gap-1.5 text-sm text-neutral-700">
           <input

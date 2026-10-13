@@ -11,7 +11,7 @@ const PNG = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 
 beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
-    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', defaultDiscountBp: 1500, contactName: 'Djamel Sabeur', phone: '06 00 00 00 00' }],
+    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', contactName: 'Djamel Sabeur', phone: '01 00 00 00 00', mobile: '06 00 00 00 00' }],
     categories: [{ code: 'LUD', name: 'Luminaire décoratif' }],
     projects: [{ name: 'Rénovation', clientId: 1, status: 'active' }],
     locations: [

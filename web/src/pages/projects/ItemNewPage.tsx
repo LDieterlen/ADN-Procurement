@@ -76,7 +76,7 @@ export function ItemNewPage() {
     const known = (suppliers.data?.items ?? []).find((m) => m.name.localeCompare(brand, 'fr', { sensitivity: 'base' }) === 0)
     if (known) return known.id
     try {
-      return (await createSupplier.mutateAsync({ data: { name: brand, currency: 'EUR', defaultDiscountBp: 0 }, force: false })).id
+      return (await createSupplier.mutateAsync({ data: { name: brand, currency: 'EUR' }, force: false })).id
     } catch (error) {
       if (isApiError(error) && error.existingId !== undefined) return error.existingId
       return null

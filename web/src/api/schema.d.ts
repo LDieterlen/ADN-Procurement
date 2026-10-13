@@ -423,6 +423,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/professionals/specialties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Specialties */
+        get: operations["listProfessionalSpecialties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/professionals/{professional_id}": {
         parameters: {
             query?: never;
@@ -802,6 +819,23 @@ export interface paths {
         put?: never;
         /** Create Supplier */
         post: operations["createSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suppliers/specialties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Specialties */
+        get: operations["listSupplierSpecialties"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2085,11 +2119,6 @@ export interface components {
              * @default EUR
              */
             currency: string;
-            /**
-             * Defaultdiscountbp
-             * @default 0
-             */
-            defaultDiscountBp: number;
             /** Email */
             email?: string | null;
             /** Mobile */
@@ -2121,8 +2150,6 @@ export interface components {
             createdAt: string;
             /** Currency */
             currency: string;
-            /** Defaultdiscountbp */
-            defaultDiscountBp: number;
             /** Email */
             email: string | null;
             /** Id */
@@ -2154,8 +2181,6 @@ export interface components {
             contactName?: string | null;
             /** Currency */
             currency?: string | null;
-            /** Defaultdiscountbp */
-            defaultDiscountBp?: number | null;
             /** Email */
             email?: string | null;
             /** Mobile */
@@ -3267,6 +3292,8 @@ export interface operations {
                 includeArchived?: boolean;
                 limit?: number;
                 offset?: number;
+                specialty?: string | null;
+                kind?: ("manufacturer" | "distributor" | "publisher" | "artisan") | null;
             };
             header?: never;
             path?: never;
@@ -3325,6 +3352,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProfessionalSpecialties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };
@@ -4354,6 +4401,7 @@ export interface operations {
                 includeArchived?: boolean;
                 limit?: number;
                 offset?: number;
+                specialty?: string | null;
             };
             header?: never;
             path?: never;
@@ -4412,6 +4460,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listSupplierSpecialties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };

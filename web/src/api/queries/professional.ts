@@ -8,23 +8,38 @@ import type { ListParams } from './supplier'
 export type ProfessionalRead = components['schemas']['ProfessionalRead']
 export type ProfessionalCreate = components['schemas']['ProfessionalCreate']
 export type ProfessionalUpdate = components['schemas']['ProfessionalUpdate']
+export type ProfessionalKind = ProfessionalRead['kind']
+export type ProfessionalListParams = ListParams & { kind?: ProfessionalKind | null }
 
 export const professionalKeys = {
   all: ['professionals'] as const,
-  list: (params: ListParams) => ['professionals', 'list', params] as const,
+  list: (params: ProfessionalListParams) => ['professionals', 'list', params] as const,
   one: (id: number) => ['professionals', 'one', id] as const,
 }
 
-export function useProfessionals(params: ListParams) {
+export function useProfessionals(params: ProfessionalListParams) {
   return useQuery({
     queryKey: professionalKeys.list(params),
     queryFn: () =>
       call(
         api.GET('/api/v1/professionals', {
-          params: { query: { q: params.q.trim() || undefined, includeArchived: params.includeArchived, limit: params.limit, offset: params.offset } },
+          params: {
+            query: {
+              q: params.q.trim() || undefined,
+              includeArchived: params.includeArchived,
+              limit: params.limit,
+              offset: params.offset,
+              specialty: params.specialty || undefined,
+              kind: params.kind ?? undefined,
+            },
+          },
         }),
       ),
   })
+}
+
+export function useProfessionalSpecialties() {
+  return useQuery({ queryKey: ['professionals', 'specialties'] as const, queryFn: () => call(api.GET('/api/v1/professionals/specialties')) })
 }
 
 export function useProfessional(id: number | undefined) {

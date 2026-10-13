@@ -1,11 +1,11 @@
-// Pure supplier form (ADR-0013, ADR-0015): name, specialty, two contacts, website, currency, usual discount, notes.
+// Pure supplier form (ADR-0013, ADR-0015): name, specialty, two contacts, website, notes.
+// The currency stays in the database (default EUR, copied to articles) but is hidden from the form: the
+// existing value is kept on edit.
 import { useEffect } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import type { ErrorDetail } from '../../api/errors'
 import type { SupplierCreate, SupplierRead } from '../../api/queries/supplier'
-import { BpField } from '../../components/forms/BpField'
 import { Form } from '../../components/forms/Form'
-import { Select } from '../../components/forms/Select'
 import { TextArea } from '../../components/forms/TextArea'
 import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
@@ -22,7 +22,6 @@ export type SupplierFormValues = {
   contact2Email: string
   website: string
   currency: string
-  defaultDiscountBp: number | null
   notes: string
 }
 
@@ -38,7 +37,6 @@ const EMPTY: SupplierFormValues = {
   contact2Email: '',
   website: '',
   currency: 'EUR',
-  defaultDiscountBp: 0,
   notes: '',
 }
 
@@ -57,7 +55,6 @@ export function fromSupplier(s: SupplierRead): SupplierFormValues {
     contact2Email: s.contact2Email ?? '',
     website: s.website ?? '',
     currency: s.currency,
-    defaultDiscountBp: s.defaultDiscountBp,
     notes: s.notes ?? '',
   }
 }
@@ -77,7 +74,6 @@ export function toPayload(v: SupplierFormValues): SupplierCreate {
     contact2Email: orNull(v.contact2Email),
     website: orNull(v.website),
     currency: v.currency,
-    defaultDiscountBp: v.defaultDiscountBp ?? 0,
     notes: orNull(v.notes),
   }
 }
@@ -111,8 +107,6 @@ export function SupplierForm({
         <TextInput name="name" label="Nom" autoFocus />
         <TextInput name="specialty" label="Savoir-faire" />
         <TextInput name="website" label="Site web" />
-        <Select name="currency" label="Devise" options={CURRENCIES} />
-        <BpField name="defaultDiscountBp" label="Remise habituelle" hint="Copiée sur chaque article à l'affectation" />
       </div>
       <fieldset className="max-w-3xl space-y-3">
         <legend className="text-sm font-semibold">Représentant (imprimé sur les fiches)</legend>

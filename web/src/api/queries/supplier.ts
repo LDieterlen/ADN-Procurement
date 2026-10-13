@@ -9,7 +9,7 @@ export type SupplierCreate = components['schemas']['SupplierCreate']
 export type SupplierUpdate = components['schemas']['SupplierUpdate']
 export type SupplierPage = components['schemas']['Page_SupplierRead_']
 
-export type ListParams = { q: string; includeArchived: boolean; limit: number; offset: number }
+export type ListParams = { q: string; includeArchived: boolean; limit: number; offset: number; specialty?: string | null }
 
 export const supplierKeys = {
   all: ['suppliers'] as const,
@@ -23,10 +23,22 @@ export function useSuppliers(params: ListParams) {
     queryFn: () =>
       call(
         api.GET('/api/v1/suppliers', {
-          params: { query: { q: params.q.trim() || undefined, includeArchived: params.includeArchived, limit: params.limit, offset: params.offset } },
+          params: {
+            query: {
+              q: params.q.trim() || undefined,
+              includeArchived: params.includeArchived,
+              limit: params.limit,
+              offset: params.offset,
+              specialty: params.specialty || undefined,
+            },
+          },
         }),
       ),
   })
+}
+
+export function useSupplierSpecialties() {
+  return useQuery({ queryKey: ['suppliers', 'specialties'] as const, queryFn: () => call(api.GET('/api/v1/suppliers/specialties')) })
 }
 
 export function useSupplier(id: number | undefined) {

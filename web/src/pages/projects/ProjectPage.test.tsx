@@ -10,7 +10,7 @@ let api: FakeApi
 beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
-    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', defaultDiscountBp: 1500 }],
+    suppliers: [{ name: 'Tom Dixon', currency: 'GBP' }],
     categories: [
       { code: 'LUD', name: 'Luminaire décoratif', sortOrder: 10 },
       { code: 'AS', name: 'Assise', sortOrder: 5 },

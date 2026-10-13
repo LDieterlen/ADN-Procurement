@@ -181,7 +181,7 @@ export function ProductEditPage() {
       if (known) supplierId = known.id
       else
         supplierId = await createSupplier
-          .mutateAsync({ data: { name: brand, currency: 'EUR', defaultDiscountBp: 0 }, force: false })
+          .mutateAsync({ data: { name: brand, currency: 'EUR' }, force: false })
           .then((m) => m.id)
           .catch((error: unknown) => (isApiError(error) && error.existingId !== undefined ? error.existingId : null))
     }

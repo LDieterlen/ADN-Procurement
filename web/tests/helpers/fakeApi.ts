@@ -111,7 +111,6 @@ export function supplierRow(s: Partial<SupplierRead>, id: number): SupplierRead 
     contact2Email: null,
     website: null,
     currency: 'EUR',
-    defaultDiscountBp: 0,
     notes: null,
     ...base,
     ...s,
@@ -493,7 +492,7 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       unitCostCents: (p.unitCostCents as number | null) ?? product?.listPriceCents ?? 0,
       currency,
       fxRateMicro: fx,
-      discountBp: (p.discountBp as number | null) ?? supplier?.defaultDiscountBp ?? 0,
+      discountBp: (p.discountBp as number | null) ?? 0,
       quoteRef: (p.quoteRef as string | null) ?? null,
       quoteIndice: (p.quoteIndice as string | null) ?? null,
       quoteUrl: (p.quoteUrl as string | null) ?? null,
@@ -943,14 +942,25 @@ function handleNamed<T extends Named>(
   searchKeys: (keyof T)[] = ['name'],
 ): Response | undefined {
   const payload = (body ?? {}) as Partial<T> & { name?: string }
+  if (rest === 'specialties' && method === 'GET') {
+    const values = rows.filter((r) => r.archivedAt === null).map((r) => (r as { specialty?: string | null }).specialty ?? '')
+    return json(
+      200,
+      [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    )
+  }
   if (rest === undefined && method === 'GET') {
     const q = url.searchParams.get('q')
+    const specialty = url.searchParams.get('specialty')
+    const kind = url.searchParams.get('kind')
     const includeArchived = url.searchParams.get('includeArchived') === 'true'
     const limit = Number(url.searchParams.get('limit') ?? 50)
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const all = rows
       .filter((r) => includeArchived || r.archivedAt === null)
       .filter((r) => !q || searchKeys.some((k) => normalize(String(r[k] ?? '')).includes(normalize(q))))
+      .filter((r) => !specialty || normalize((r as { specialty?: string | null }).specialty ?? '') === normalize(specialty))
+      .filter((r) => !kind || (r as { kind?: string }).kind === kind)
       .sort((a, b) => a.name.localeCompare(b.name))
     return paginated ? json(200, { items: all.slice(offset, offset + limit), total: all.length }) : json(200, all)
   }
