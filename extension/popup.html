@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Envoyer à FFE</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 0; padding: 14px; width: 320px; color: #171717; }
+      h1 { font-size: 15px; margin: 0 0 8px; }
+      #page { font-size: 12px; color: #525252; margin: 0 0 12px; word-break: break-all; max-height: 3.6em; overflow: hidden; }
+      button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #171717; background: #171717; color: #fff; cursor: pointer; }
+      button[disabled] { opacity: 0.5; cursor: default; }
+      #status { margin-top: 10px; font-size: 13px; min-height: 1.4em; }
+      .error { color: #b91c1c; }
+      .ok { color: #166534; }
+      a { color: #171717; font-size: 12px; }
+      footer { margin-top: 12px; display: flex; justify-content: space-between; }
+    </style>
+  </head>
+  <body>
+    <h1>Envoyer à FFE</h1>
+    <p id="page">…</p>
+    <button id="send">Envoyer la fiche</button>
+    <p id="status" aria-live="polite"></p>
+    <footer>
+      <a href="#" id="options">Options (adresse, jeton)</a>
+      <a href="#" id="open">Ouvrir FFE</a>
+    </footer>
+    <script src="popup.js"></script>
+  </body>
+</html>

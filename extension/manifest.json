@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "FFE — Envoyer à FFE",
+  "description": "Envoie la fiche produit affichée à l'outil FFE local (nom, marque, référence, prix, photo), en attente sur « Nouvel article ».",
+  "version": "0.1.0",
+  "action": { "default_popup": "popup.html", "default_title": "Envoyer à FFE" },
+  "options_page": "options.html",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"]
+}

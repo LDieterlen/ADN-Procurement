@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Options — Envoyer à FFE</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 0; padding: 24px; max-width: 560px; color: #171717; }
+      h1 { font-size: 18px; margin: 0 0 16px; }
+      label { display: block; font-weight: 600; margin: 12px 0 4px; }
+      input { font: inherit; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d4d4d4; border-radius: 8px; }
+      small { color: #525252; }
+      button { font: inherit; margin-top: 16px; padding: 8px 14px; border-radius: 8px; border: 1px solid #171717; background: #171717; color: #fff; cursor: pointer; }
+      #status { margin-top: 10px; color: #166534; }
+    </style>
+  </head>
+  <body>
+    <h1>Envoyer à FFE — options</h1>
+    <label for="baseUrl">Adresse de l'API FFE</label>
+    <input id="baseUrl" placeholder="http://localhost:8000" />
+    <small>Le port 8000 du conteneur doit être transféré vers Windows (VS Code le fait quand l'API tourne).</small>
+    <label for="webUrl">Adresse de l'interface FFE</label>
+    <input id="webUrl" placeholder="http://localhost:5180" />
+    <label for="token">Jeton</label>
+    <input id="token" placeholder="Réglages → Extension Chrome → Générer un jeton" />
+    <button id="save">Enregistrer</button>
+    <p id="status" aria-live="polite"></p>
+    <script src="options.js"></script>
+  </body>
+</html>
