@@ -300,111 +300,6 @@ export interface paths {
         patch: operations["updatePlacement"];
         trace?: never;
     };
-    "/api/v1/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Products */
-        get: operations["listProducts"];
-        put?: never;
-        /** Create Product */
-        post: operations["createProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/products/{product_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Product */
-        get: operations["getProduct"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update Product */
-        patch: operations["updateProduct"];
-        trace?: never;
-    };
-    "/api/v1/products/{product_id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Archive Product */
-        post: operations["archiveProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/products/{product_id}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Attach Product File */
-        post: operations["attachProductFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/products/{product_id}/files/{file_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Detach Product File */
-        delete: operations["detachProductFile"];
-        options?: never;
-        head?: never;
-        /** Update Product File */
-        patch: operations["updateProductFile"];
-        trace?: never;
-    };
-    "/api/v1/products/{product_id}/unarchive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Unarchive Product */
-        post: operations["unarchiveProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/professionals": {
         parameters: {
             query?: never;
@@ -1373,13 +1268,6 @@ export interface components {
             /** Zone */
             zone?: string | null;
         };
-        /** Page[ProductRead] */
-        Page_ProductRead_: {
-            /** Items */
-            items: components["schemas"]["ProductRead"][];
-            /** Total */
-            total: number;
-        };
         /** Page[ProfessionalRead] */
         Page_ProfessionalRead_: {
             /** Items */
@@ -1444,152 +1332,6 @@ export interface components {
             qtyMilli?: number | null;
             /** Sortorder */
             sortOrder?: number | null;
-        };
-        /** ProductCreate */
-        ProductCreate: {
-            /** Categoryid */
-            categoryId: number;
-            /**
-             * Currency
-             * @default EUR
-             */
-            currency: string;
-            /** Dimensions */
-            dimensions?: string | null;
-            /** Finish */
-            finish?: string | null;
-            /** Listpricecents */
-            listPriceCents?: number | null;
-            /** Name */
-            name: string;
-            /** Notes */
-            notes?: string | null;
-            /** Reference */
-            reference?: string | null;
-            /** Sourceurl */
-            sourceUrl?: string | null;
-            /** Supplierid */
-            supplierId?: number | null;
-        };
-        /** ProductFileAttach */
-        ProductFileAttach: {
-            /** Caption */
-            caption?: string | null;
-            /** Fileid */
-            fileId: number;
-            /**
-             * Isprimary
-             * @default false
-             */
-            isPrimary: boolean;
-            /**
-             * Kind
-             * @default image
-             * @enum {string}
-             */
-            kind: "image" | "datasheet" | "drawing" | "other";
-            /**
-             * Sortorder
-             * @default 0
-             */
-            sortOrder: number;
-        };
-        /** ProductFileRead */
-        ProductFileRead: {
-            /** Caption */
-            caption: string | null;
-            /** Ext */
-            ext: string;
-            /** Fileid */
-            fileId: number;
-            /** Isprimary */
-            isPrimary: boolean;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "image" | "datasheet" | "drawing" | "other";
-            /** Licensenote */
-            licenseNote?: string | null;
-            /** Mimetype */
-            mimeType: string;
-            /** Originalname */
-            originalName: string;
-            /** Sha256 */
-            sha256: string;
-            /** Sizebytes */
-            sizeBytes: number;
-            /** Sortorder */
-            sortOrder: number;
-        };
-        /** ProductFileUpdate */
-        ProductFileUpdate: {
-            /** Caption */
-            caption?: string | null;
-            /** Isprimary */
-            isPrimary?: boolean | null;
-            /** Kind */
-            kind?: ("image" | "datasheet" | "drawing" | "other") | null;
-            /** Licensenote */
-            licenseNote?: string | null;
-            /** Sortorder */
-            sortOrder?: number | null;
-        };
-        /** ProductRead */
-        ProductRead: {
-            /** Archivedat */
-            archivedAt: string | null;
-            /** Categoryid */
-            categoryId: number;
-            /** Createdat */
-            createdAt: string;
-            /** Currency */
-            currency: string;
-            /** Dimensions */
-            dimensions: string | null;
-            /** Files */
-            files: components["schemas"]["ProductFileRead"][];
-            /** Finish */
-            finish: string | null;
-            /** Id */
-            id: number;
-            /** Listpricecents */
-            listPriceCents: number | null;
-            /** Name */
-            name: string;
-            /** Notes */
-            notes: string | null;
-            /** Reference */
-            reference: string | null;
-            /** Sourceurl */
-            sourceUrl: string | null;
-            /** Supplierid */
-            supplierId: number | null;
-            /** Updatedat */
-            updatedAt: string;
-        };
-        /** ProductUpdate */
-        ProductUpdate: {
-            /** Categoryid */
-            categoryId?: number | null;
-            /** Currency */
-            currency?: string | null;
-            /** Dimensions */
-            dimensions?: string | null;
-            /** Finish */
-            finish?: string | null;
-            /** Listpricecents */
-            listPriceCents?: number | null;
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Reference */
-            reference?: string | null;
-            /** Sourceurl */
-            sourceUrl?: string | null;
-            /** Supplierid */
-            supplierId?: number | null;
         };
         /** ProfessionalCreate */
         ProfessionalCreate: {
@@ -1728,15 +1470,9 @@ export interface components {
         };
         /**
          * ProjectItemCreate
-         * @description From a catalogue product (`productId`: every absent field is copied) or free. A free
-         *     article is added to the catalogue unless `addToCatalogue` is false (ADR-0013).
+         * @description The whole sheet is typed here (ADR-0016: no catalogue).
          */
         ProjectItemCreate: {
-            /**
-             * Addtocatalogue
-             * @default true
-             */
-            addToCatalogue: boolean;
             /** Categoryid */
             categoryId?: number | null;
             /** Comments */
@@ -1765,8 +1501,6 @@ export interface components {
             name?: string | null;
             /** Placements */
             placements?: components["schemas"]["PlacementCreate"][] | null;
-            /** Productid */
-            productId?: number | null;
             /** Quoteindice */
             quoteIndice?: string | null;
             /** Quoteref */
@@ -1791,8 +1525,6 @@ export interface components {
         };
         /** ProjectItemRead */
         ProjectItemRead: {
-            /** Catalogueimagefileid */
-            catalogueImageFileId: number | null;
             /** Categoryid */
             categoryId: number | null;
             /** Comments */
@@ -1828,8 +1560,6 @@ export interface components {
             name: string;
             /** Placements */
             placements: components["schemas"]["PlacementRead"][];
-            /** Productid */
-            productId: number | null;
             /** Projectid */
             projectId: number;
             /** Quoteindice */
@@ -1883,8 +1613,6 @@ export interface components {
             itemCode?: string | null;
             /** Name */
             name?: string | null;
-            /** Productid */
-            productId?: number | null;
             /** Quoteindice */
             quoteIndice?: string | null;
             /** Quoteref */
@@ -2970,308 +2698,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectItemRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    listProducts: {
-        parameters: {
-            query?: {
-                q?: string | null;
-                includeArchived?: boolean;
-                categoryId?: number | null;
-                supplierId?: number | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_ProductRead_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    createProduct: {
-        parameters: {
-            query?: {
-                force?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProductCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    getProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProductUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    archiveProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    attachProductFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProductFileAttach"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    detachProductFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-                file_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    updateProductFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-                file_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProductFileUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    unarchiveProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                product_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductRead"];
                 };
             };
             /** @description Validation Error */

@@ -2,7 +2,7 @@
 import { Link, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useClient } from '../../api/queries/client'
-import { fileContentUrl } from '../../api/queries/product'
+import { fileContentUrl } from '../../api/queries/file'
 import { CLOSED_STATUSES, PROJECT_STATUS_LABELS, useChangeProjectStatus, useLocations, useProject, type ProjectStatus } from '../../api/queries/project'
 import { EXPORT_KIND_LABELS, listExportUrl, sheetsExportUrl, useProjectExports } from '../../api/queries/projectFile'
 import { Button } from '../../components/ui/Button'

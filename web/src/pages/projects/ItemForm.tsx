@@ -2,7 +2,6 @@
 // sheet, then the budget block. Rendered inside a `Form`; the page owns the submit button.
 import { useWatch, type UseFormReturn } from 'react-hook-form'
 import type { CapturePreviewRead } from '../../api/queries/capture'
-import type { ProductRead } from '../../api/queries/product'
 import {
   ITEM_FAMILY_LABELS,
   ITEM_USAGE_LABELS,
@@ -88,22 +87,6 @@ export function fromItem(item: ProjectItemRead): ItemFormValues {
   }
 }
 
-/** The sheet of a catalogue product, copied into the form (the server copies the same fields). */
-export function fromProduct(product: ProductRead, current: ItemFormValues): ItemFormValues {
-  return {
-    ...current,
-    name: product.name,
-    categoryId: product.categoryId,
-    reference: product.reference ?? '',
-    supplierId: product.supplierId,
-    finish: product.finish ?? '',
-    dimensions: product.dimensions ?? '',
-    sourceUrl: product.sourceUrl ?? '',
-    unitCostCents: product.listPriceCents,
-    currency: product.listPriceCents !== null ? product.currency : current.currency,
-  }
-}
-
 /** A product page read by the server (ADR-0014): the generic fields, the rest stays as typed. */
 export function fromCapture(found: CapturePreviewRead, current: ItemFormValues, supplierId: number | null): ItemFormValues {
   return {
@@ -147,16 +130,11 @@ export function toUpdatePayload(v: ItemFormValues, item: ProjectItemRead): Proje
   return payload
 }
 
-export function toCreatePayload(
-  v: ItemFormValues,
-  extra: { productId: number | null; addToCatalogue: boolean; locationId: number | null; qtyMilli: number },
-): ProjectItemCreate {
+export function toCreatePayload(v: ItemFormValues, extra: { locationId: number | null; qtyMilli: number }): ProjectItemCreate {
   const fx = fxMicro(v.fxRate)
   return {
     kind: 'product',
-    addToCatalogue: extra.addToCatalogue,
     sortOrder: 0,
-    productId: extra.productId,
     name: orNull(v.name),
     categoryId: v.categoryId,
     reference: orNull(v.reference),

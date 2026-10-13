@@ -1,11 +1,11 @@
-// New article (ADR-0013): the same sheet as the article page, pre-filled from a catalogue product
-// if one is picked, a first placement, and the « ne pas ajouter au catalogue » choice.
+// New article (ADR-0013, ADR-0016): the same sheet as the article page, optionally pre-filled by
+// « Coller une adresse », with a first placement.
 import { useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCategories } from '../../api/queries/category'
-import { useProducts, type FileRead } from '../../api/queries/product'
+import type { FileRead } from '../../api/queries/file'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
 import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
 import { useCreateSupplier, useSuppliers } from '../../api/queries/supplier'
@@ -18,7 +18,7 @@ import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { NewSupplierModal } from './InlineCreate'
-import { EMPTY_ITEM, fromCapture, fromProduct, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
+import { EMPTY_ITEM, fromCapture, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
 
@@ -30,8 +30,6 @@ export function ItemNewPage() {
   const locations = useLocations(projectId, false)
   const categories = useCategories(false)
   const suppliers = useSuppliers(ALL)
-  const [search, setSearch] = useState('')
-  const products = useProducts({ ...ALL, q: search, categoryId: null, supplierId: null, limit: 50 })
   const create = useCreateItem()
   const attach = useAttachItemFile()
   const createSupplier = useCreateSupplier()
@@ -39,36 +37,11 @@ export function ItemNewPage() {
   const [captured, setCaptured] = useState<Captured | null>(null)
   const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
   const [modal, setModal] = useState<'supplier' | null>(null)
-  const [productId, setProductId] = useState<number | null>(null)
-  const [addToCatalogue, setAddToCatalogue] = useState(true)
   const [locationId, setLocationId] = useState<string>('')
   const [qty, setQty] = useState('1')
   const [formKey, setFormKey] = useState(0)
   const [banner, setBanner] = useState<string | null>(null)
   const form = useForm<ItemFormValues>({ defaultValues: EMPTY_ITEM })
-
-  function pickProduct(id: number | null) {
-    setProductId(id)
-    const product = (products.data?.items ?? []).find((p) => p.id === id)
-    const primary = product?.files.find((f) => f.isPrimary)
-    if (primary) {
-      setPhoto({
-        file: {
-          id: primary.fileId,
-          sha256: primary.sha256,
-          ext: primary.ext,
-          mimeType: primary.mimeType,
-          sizeBytes: primary.sizeBytes,
-          originalName: primary.originalName,
-          sourceUrl: null,
-          createdAt: '',
-        },
-        origin: 'Photo du produit du catalogue ; jointe à la création.',
-      })
-    }
-    form.reset(product ? fromProduct(product, form.getValues()) : form.getValues())
-    setFormKey((k) => k + 1) // MoneyField and BpField keep their own text: remount them
-  }
 
   /** The brand read on the page is a supplier here: the existing one, or a new one. */
   async function supplierFor(brand: string | null): Promise<number | null> {
@@ -85,7 +58,6 @@ export function ItemNewPage() {
 
   async function useCapture(result: Captured) {
     setCaptured(result)
-    setProductId(null)
     if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
     const supplierId = await supplierFor(result.preview.brand)
     form.reset(fromCapture(result.preview, form.getValues(), supplierId))
@@ -101,8 +73,6 @@ export function ItemNewPage() {
       const created = await create.mutateAsync({
         projectId,
         data: toCreatePayload(values, {
-          productId,
-          addToCatalogue: productId === null && addToCatalogue,
           locationId: locationId ? Number(locationId) : null,
           qtyMilli: milli,
         }),
@@ -147,7 +117,6 @@ export function ItemNewPage() {
     )
   }
   const options = (rows: { id: number; name: string }[] | undefined) => (rows ?? []).map((r) => ({ id: r.id, label: r.name }))
-  const productOptions = (products.data?.items ?? []).map((pr) => ({ id: pr.id, label: pr.name, hint: pr.reference ?? undefined }))
 
   return (
     <section>
@@ -174,43 +143,6 @@ export function ItemNewPage() {
         <Card title="Coller une adresse" label="Coller une adresse">
           <UrlCaptureBox onUse={(result) => void useCapture(result)} />
         </Card>
-        <Card title="Depuis le catalogue" label="Depuis le catalogue">
-          <div className="grid grid-cols-3 gap-4">
-            <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
-              Rechercher un produit
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal"
-                placeholder="Nom ou référence…"
-                aria-label="Rechercher un produit"
-              />
-            </label>
-            <label className="col-span-2 flex flex-col gap-1 text-sm font-medium text-neutral-700">
-              Produit
-              <select
-                value={productId ?? ''}
-                onChange={(event) => pickProduct(event.target.value ? Number(event.target.value) : null)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-normal"
-                aria-label="Produit du catalogue"
-              >
-                <option value="">— article libre —</option>
-                {productOptions.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                    {o.hint ? ` — ${o.hint}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="mt-2 text-xs text-neutral-500">
-            {productId
-              ? 'La fiche ci-dessous est copiée du produit ; elle reste modifiable sans toucher le catalogue.'
-              : 'Sans produit, la fiche saisie ci-dessous crée un article libre.'}
-          </p>
-        </Card>
         <Form form={form} onSubmit={submit} banner={banner}>
           <Card title="Article" label="Article">
             <div className="space-y-4">
@@ -227,12 +159,6 @@ export function ItemNewPage() {
                 suppliers={options(suppliers.data?.items)}
                 onCreateSupplier={() => setModal('supplier')}
               />
-              {productId === null && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={!addToCatalogue} onChange={(e) => setAddToCatalogue(!e.target.checked)} />
-                  Ne pas ajouter au catalogue
-                </label>
-              )}
             </div>
           </Card>
           <Card title="Implantation" label="Implantation" className="mt-6">

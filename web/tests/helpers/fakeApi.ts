@@ -8,8 +8,6 @@ type ClientRead = components['schemas']['ClientRead']
 type SupplierRead = components['schemas']['SupplierRead']
 type ProfessionalRead = components['schemas']['ProfessionalRead']
 type CategoryRead = components['schemas']['CategoryRead']
-type ProductRead = components['schemas']['ProductRead']
-type ProductFileRead = components['schemas']['ProductFileRead']
 type FileRead = components['schemas']['FileRead']
 type ProjectRead = components['schemas']['ProjectRead']
 type LocationRead = components['schemas']['LocationRead']
@@ -42,7 +40,6 @@ export type FakeApi = {
   suppliers: SupplierRead[]
   professionals: ProfessionalRead[]
   categories: CategoryRead[]
-  products: ProductRead[]
   files: FileRead[]
   projects: ProjectRead[]
   locations: LocationRead[]
@@ -141,25 +138,6 @@ export function categoryRow(c: Partial<CategoryRead>, id: number): CategoryRead 
   return { id, code: 'DIV', name: 'Type', sortOrder: 0, ...base, ...c }
 }
 
-export function productRow(p: Partial<ProductRead>, id: number): ProductRead {
-  return {
-    id,
-    name: 'Produit',
-    categoryId: 1,
-    reference: null,
-    supplierId: null,
-    listPriceCents: null,
-    currency: 'EUR',
-    dimensions: null,
-    finish: null,
-    sourceUrl: null,
-    notes: null,
-    files: [],
-    ...base,
-    ...p,
-  }
-}
-
 export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
   return {
     id,
@@ -187,7 +165,6 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     itemCode: `LUD-${String(id).padStart(2, '0')}`,
     kind: 'product',
     categoryId: 1,
-    productId: null,
     supplierId: null,
     name: 'Article',
     reference: null,
@@ -211,7 +188,6 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     updatedAt: NOW,
     placements: [],
     files: [],
-    catalogueImageFileId: null,
     ...i,
   }
 }
@@ -292,7 +268,7 @@ type Junction = {
 }
 
 function handleJunctions(state: FakeApi, owner: { files: Junction[] }, method: string, sub: string, body: unknown, defaultKind: string): Response | undefined {
-  const payload = (body ?? {}) as Partial<ProductFileRead> & { fileId?: number }
+  const payload = (body ?? {}) as Partial<Junction> & { fileId?: number }
   const fileMatch = /^files(?:\/(\d+))?$/.exec(sub)
   if (!fileMatch) return undefined
   const fileId = fileMatch[1] ? Number(fileMatch[1]) : undefined
@@ -329,57 +305,6 @@ function handleJunctions(state: FakeApi, owner: { files: Junction[] }, method: s
   return undefined
 }
 
-function handleProducts(state: FakeApi, url: URL, method: string, rest: string | undefined, body: unknown): Response | undefined {
-  const payload = (body ?? {}) as Partial<ProductRead>
-  if (rest === undefined && method === 'GET') {
-    const q = url.searchParams.get('q')
-    const includeArchived = url.searchParams.get('includeArchived') === 'true'
-    const categoryId = url.searchParams.get('categoryId')
-    const rows = state.products
-      .filter((p) => includeArchived || p.archivedAt === null)
-      .filter((p) => !categoryId || p.categoryId === Number(categoryId))
-      .filter((p) => !q || normalize(p.name).includes(normalize(q)) || normalize(p.reference ?? '').includes(normalize(q)))
-      .sort((a, b) => a.name.localeCompare(b.name))
-    return json(200, { items: rows, total: rows.length })
-  }
-  if (rest === undefined && method === 'POST') {
-    const name = (payload.name ?? '').trim()
-    if (!name) return validation('name', 'Champ obligatoire.')
-    if (!payload.categoryId) return validation('categoryId', 'Champ obligatoire.')
-    const created = productRow({ ...payload, name }, state.products.length + 1)
-    state.products.push(created)
-    return json(201, created)
-  }
-  const match = /^(\d+)(?:\/(.+))?$/.exec(rest ?? '')
-  if (!match) return undefined
-  const product = state.products.find((p) => p.id === Number(match[1]))
-  if (!product) return error(404, 'not_found', `Produit n° ${match[1]} introuvable.`)
-  const sub = match[2]
-  if (sub?.startsWith('files')) {
-    const response = handleJunctions(state, product as { files: Junction[] }, method, sub, body, 'image')
-    if (response && method === 'PATCH' && typeof (body as { licenseNote?: string | null }).licenseNote !== 'undefined') {
-      const junction = product.files.find((f) => f.fileId === Number(/files\/(\d+)/.exec(sub)?.[1]))
-      if (junction) junction.licenseNote = (body as { licenseNote: string | null }).licenseNote
-      return json(200, product)
-    }
-    return response
-  }
-  if (sub === 'archive' && method === 'POST') {
-    product.archivedAt = NOW
-    return json(200, product)
-  }
-  if (sub === 'unarchive' && method === 'POST') {
-    product.archivedAt = null
-    return json(200, product)
-  }
-  if (!sub && method === 'GET') return json(200, product)
-  if (!sub && method === 'PATCH') {
-    Object.assign(product, body, { updatedAt: LATER })
-    return json(200, product)
-  }
-  return undefined
-}
-
 const CLOSED = ['closed', 'cancelled']
 let placementSeq = 1000
 
@@ -411,19 +336,17 @@ function pushEvent(state: FakeApi, itemId: number, kind: string, extra: Partial<
 
 function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unknown>): Response {
   const kind = (p.kind as string) ?? 'product'
-  const product = typeof p.productId === 'number' ? state.products.find((x) => x.id === p.productId) : undefined
-  if (p.productId && !product) return validation('productId', 'Produit introuvable.')
   if (kind === 'fee' && !p.supplierId) return validation('supplierId', 'Une ligne de frais est rattachée à un fournisseur.')
-  const categoryId = (p.categoryId as number | null) ?? product?.categoryId ?? null
+  const categoryId = (p.categoryId as number | null) ?? null
   if (kind === 'product' && categoryId === null) return validation('categoryId', 'Un type de produit est nécessaire.')
   if (kind === 'product' && categoryId !== null && !state.categories.some((c) => c.id === categoryId))
     return validation('categoryId', `Type de produit n° ${categoryId} introuvable.`)
-  const name = ((p.name as string | null) ?? product?.name ?? '').trim()
+  const name = ((p.name as string | null) ?? '').trim()
   if (!name) return validation('name', 'Une désignation est nécessaire.')
-  const supplierId = (p.supplierId as number | null) ?? product?.supplierId ?? null
+  const supplierId = (p.supplierId as number | null) ?? null
   const supplier = supplierId ? state.suppliers.find((s) => s.id === supplierId) : undefined
   if (supplierId && !supplier) return validation('supplierId', `Fournisseur n° ${supplierId} introuvable.`)
-  const currency = (p.currency as string | null) ?? (product?.listPriceCents != null ? product.currency : null) ?? supplier?.currency ?? 'EUR'
+  const currency = (p.currency as string | null) ?? supplier?.currency ?? 'EUR'
   const known = state.items.find((i) => i.projectId === project.id && i.currency === currency)?.fxRateMicro
   const fx = currency === 'EUR' ? 1_000_000 : ((p.fxRateMicro as number | null) ?? known)
   if (fx === undefined) return validation('fxRateMicro', "Un taux de change est nécessaire pour une devise autre que l'euro.")
@@ -443,53 +366,23 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
     (kind === 'fee' ? nextCode(state, project.id, '', 'FR') : nextCode(state, project.id, locationCode, typeCode(state, categoryId)))
   if (p.itemCode && state.items.some((i) => i.projectId === project.id && i.itemCode === p.itemCode))
     return validation('itemCode', 'Ce code FF&E est déjà utilisé dans le projet.')
-  const reference = (p.reference as string | null) ?? product?.reference ?? null
-  let productId = product?.id ?? null
-  let note: string | null = null
-  if (kind === 'product' && !product && (p.addToCatalogue as boolean | undefined) !== false) {
-    const twin = state.products.find(
-      (x) => x.archivedAt === null && x.supplierId === supplierId && supplierId !== null && reference && normalize(x.reference ?? '') === normalize(reference),
-    )
-    const linked =
-      twin ??
-      (() => {
-        const created = productRow(
-          {
-            name,
-            categoryId: categoryId ?? 1,
-            reference,
-            supplierId,
-            listPriceCents: (p.unitCostCents as number | null) || null,
-            currency,
-            dimensions: (p.dimensions as string | null) ?? null,
-            finish: (p.finish as string | null) ?? null,
-            sourceUrl: (p.sourceUrl as string | null) ?? null,
-          },
-          state.products.length + 1,
-        )
-        state.products.push(created)
-        return created
-      })()
-    productId = linked.id
-    note = `lié au produit n° ${linked.id} du catalogue`
-  }
+  const reference = (p.reference as string | null) ?? null
   const created = itemRow(
     {
       projectId: project.id,
       itemCode,
       kind: kind as ProjectItemRead['kind'],
       categoryId: kind === 'fee' ? null : categoryId,
-      productId,
       supplierId,
       name,
       reference,
       family: (p.family as ProjectItemRead['family']) ?? null,
       usage: (p.usage as ProjectItemRead['usage']) ?? null,
-      finish: (p.finish as string | null) ?? product?.finish ?? null,
-      dimensions: (p.dimensions as string | null) ?? product?.dimensions ?? null,
-      sourceUrl: (p.sourceUrl as string | null) ?? product?.sourceUrl ?? null,
+      finish: (p.finish as string | null) ?? null,
+      dimensions: (p.dimensions as string | null) ?? null,
+      sourceUrl: (p.sourceUrl as string | null) ?? null,
       comments: (p.comments as string | null) ?? null,
-      unitCostCents: (p.unitCostCents as number | null) ?? product?.listPriceCents ?? 0,
+      unitCostCents: (p.unitCostCents as number | null) ?? 0,
       currency,
       fxRateMicro: fx,
       discountBp: (p.discountBp as number | null) ?? 0,
@@ -497,13 +390,12 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       quoteIndice: (p.quoteIndice as string | null) ?? null,
       quoteUrl: (p.quoteUrl as string | null) ?? null,
       placements: placementsIn.map((pl) => placementRow(id, pl.locationId, pl.qtyMilli)),
-      files: (product?.files ?? []).filter((f) => f.isPrimary).map((f) => ({ ...f, kind: 'image' as const })),
-      catalogueImageFileId: product?.files.find((f) => f.isPrimary)?.fileId ?? null,
+      files: [],
     },
     id,
   )
   state.items.push(created)
-  pushEvent(state, id, 'created', { toStatus: 'to_quote', changedAt: NOW, note })
+  pushEvent(state, id, 'created', { toStatus: 'to_quote', changedAt: NOW })
   return json(201, created)
 }
 
@@ -1048,7 +940,6 @@ export function installFakeApi(
     suppliers?: Partial<SupplierRead>[]
     professionals?: Partial<ProfessionalRead>[]
     categories?: Partial<CategoryRead>[]
-    products?: Partial<ProductRead>[]
     projects?: Partial<ProjectRead>[]
     locations?: Partial<LocationRead>[]
     items?: Partial<ProjectItemRead>[]
@@ -1061,7 +952,6 @@ export function installFakeApi(
     suppliers: (seed.suppliers ?? []).map((s, i) => supplierRow(s, i + 1)),
     professionals: (seed.professionals ?? []).map((m, i) => professionalRow(m, i + 1)),
     categories: (seed.categories ?? []).map((c, i) => categoryRow(c, i + 1)),
-    products: (seed.products ?? []).map((p, i) => productRow(p, i + 1)),
     files: [],
     projects: (seed.projects ?? []).map((p, i) => projectRow(p, i + 1)),
     locations: (seed.locations ?? []).map((l, i) => locationRow(l, i + 1)),
@@ -1164,9 +1054,7 @@ export function installFakeApi(
         at: '2026-10-10T08:00:00Z',
       })
     }
-    const route = /^\/api\/v1\/(clients|suppliers|professionals|categories|products|files|projects|locations|project-items|placements)(?:\/(.+))?$/.exec(
-      url.pathname,
-    )
+    const route = /^\/api\/v1\/(clients|suppliers|professionals|categories|files|projects|locations|project-items|placements)(?:\/(.+))?$/.exec(url.pathname)
     if (route) {
       const [, collection, rest] = route
       let response: Response | undefined
@@ -1174,7 +1062,6 @@ export function installFakeApi(
       if (collection === 'suppliers') response = handleNamed(state.suppliers, supplierRow, true, url, method, rest, body, ['name', 'contactName'])
       if (collection === 'professionals') response = handleNamed(state.professionals, professionalRow, true, url, method, rest, body)
       if (collection === 'categories') response = handleCategories(state.categories, url, method, rest, body)
-      if (collection === 'products') response = handleProducts(state, url, method, rest, body)
       if (collection === 'files') response = await handleFiles(state, request, method, rest)
       if (collection === 'projects') response = handleProjects(state, url, method, rest, body)
       if (collection === 'locations') response = handleLocations(state, method, rest, body)

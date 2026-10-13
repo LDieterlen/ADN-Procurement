@@ -15,7 +15,6 @@ beforeEach(() => {
       { code: 'LUD', name: 'Luminaire décoratif', sortOrder: 10 },
       { code: 'AS', name: 'Assise', sortOrder: 5 },
     ],
-    products: [{ name: 'Beat Light Fat', categoryId: 1, supplierId: 1, reference: 'BLS01', listPriceCents: 125_000, currency: 'GBP', finish: 'laiton' }],
     projects: [{ name: 'Rénovation', clientId: 1, status: 'active' }],
     locations: [
       { projectId: 1, code: 'LOB', name: 'Lobby', zone: 'Zones communes', level: 'R0', multiplier: 1, sortOrder: 10 },

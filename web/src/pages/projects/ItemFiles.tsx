@@ -1,7 +1,7 @@
 // Photo and drawing of an article (ADR-0012): the main photo prints on the spec sheet, the drawing under it.
 import { useRef } from 'react'
 import { isApiError } from '../../api/errors'
-import { fileContentUrl, useUploadFile } from '../../api/queries/product'
+import { fileContentUrl, useUploadFile } from '../../api/queries/file'
 import { useAttachItemFile, useDetachItemFile, useUpdateItemFile, type ProjectItemRead } from '../../api/queries/projectItem'
 import { useToast } from '../../components/ui/Toast'
 
@@ -62,12 +62,6 @@ export function ItemFiles({ item, readOnly }: { item: ProjectItemRead; readOnly:
           </>
         )}
       </div>
-      {item.files.length === 0 && item.catalogueImageFileId && (
-        <div className="flex items-center gap-3 text-xs text-neutral-500">
-          <img src={fileContentUrl(item.catalogueImageFileId)} alt="" className="h-20 w-20 rounded-md border border-neutral-200 object-contain" />
-          <span>Photo du produit du catalogue, utilisée tant que l'article n'a pas la sienne.</span>
-        </div>
-      )}
       {item.files.length > 0 && (
         <ul className="grid grid-cols-4 gap-3" aria-label="Fichiers de l'article">
           {item.files.map((file) => (

@@ -352,7 +352,6 @@ const EVENT_LABELS: Record<string, string> = {
   created: 'Création',
   status: 'Statut',
   price: 'Prix',
-  product: 'Produit',
   placement: 'Implantation',
   other: 'Autre',
 }

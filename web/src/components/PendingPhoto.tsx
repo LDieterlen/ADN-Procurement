@@ -2,7 +2,7 @@
 // product, or dropped here. It is attached by the page once the article or product is created.
 import { useRef } from 'react'
 import { isApiError } from '../api/errors'
-import { fileContentUrl, useUploadFile, type FileRead } from '../api/queries/product'
+import { fileContentUrl, useUploadFile, type FileRead } from '../api/queries/file'
 import { useToast } from './ui/Toast'
 
 export function PendingPhoto({ file, onChange, origin }: { file: FileRead | null; onChange: (file: FileRead | null) => void; origin?: string }) {

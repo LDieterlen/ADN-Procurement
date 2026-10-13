@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { isApiError } from '../api/errors'
 import { useCaptureImage, usePreviewCapture, type CapturePreviewRead } from '../api/queries/capture'
-import { fileContentUrl, type FileRead } from '../api/queries/product'
+import { fileContentUrl, type FileRead } from '../api/queries/file'
 import { centsToText } from './forms/MoneyField'
 import { Button } from './ui/Button'
 

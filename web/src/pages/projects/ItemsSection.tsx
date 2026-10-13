@@ -6,7 +6,7 @@ import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useProjectSummary, type LineAmountsRead } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
-import { fileContentUrl } from '../../api/queries/product'
+import { fileContentUrl } from '../../api/queries/file'
 import type { LocationRead } from '../../api/queries/project'
 import { ENGAGED_STATUSES, ITEM_STATUS_LABELS, useProjectItems, type ProjectItemRead } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
@@ -141,7 +141,7 @@ function GroupRows({
         </tr>
       )}
       {group.rows.map(({ item, placement, amounts }) => {
-        const imageId = item.files.find((f) => f.isPrimary)?.fileId ?? item.catalogueImageFileId
+        const imageId = item.files.find((f) => f.isPrimary)?.fileId
         const muted = item.status === 'cancelled'
         const share = placement ? amounts?.placements.find((p) => p.placementId === placement.id)?.totalHtCents : amounts?.totalHtCents
         return (
