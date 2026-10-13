@@ -6,7 +6,7 @@ Il s'adresse à un architecte d'intérieur ou décorateur qui gère seul ses pro
 
 ## État
 
-**Au 2026-10-11 : étapes 1 à 10c, F1, F2 et F4 livrées** — référentiel, produits et fichiers, projets et zones, lignes avec placements et statuts, budgets et tableau de bord, sauvegardes et réglages, devis, bons de commande, réceptions et factures, exports xlsx et PDF, import de tarifs. Restent F3 (registre d'entreprises), F5 (coller une URL) et F6 (extension navigateur). Détail et décisions : [`docs/ROADMAP.md`](docs/ROADMAP.md) et [`docs/JOURNAL.md`](docs/JOURNAL.md).
+**Au 2026-10-11 : étapes 1 à 10c, F1, F2 et F4 livrées** — référentiel, produits et fichiers, projets et zones, lignes avec placements et statuts, budgets et tableau de bord, sauvegardes et réglages, devis, bons de commande, réceptions et factures, exports xlsx et PDF, import de tarifs. F5 (coller une URL) et F6 (extension Chrome, voir [`extension/README.md`](extension/README.md)) livrées les 2026-10-12 et 13 ; reste F3 (registre d'entreprises). Détail et décisions : [`docs/ROADMAP.md`](docs/ROADMAP.md) et [`docs/JOURNAL.md`](docs/JOURNAL.md).
 
 ## Architecture (3 couches)
 
@@ -32,7 +32,7 @@ mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pa
 (cd api && uv run ffe db migrate && uv run ffe db seed --demo)   # base de dev (~/.persist/ffe-dev) + 19 types de produit + projet d'exemple
 
 # Développement : deux terminaux
-(cd api && uv run ffe serve --reload)   # API sur http://127.0.0.1:8000
+(cd api && uv run ffe serve --reload)   # API sur http://127.0.0.1:8000 ; tant que la v1 n'est pas déclarée, un changement de schéma recrée la base de dev tout seul au démarrage (sauvegarde `pre-reset`, types, projet d'exemple, annuaire `references/ANNUAIRE FUSION.csv` si présent) ; à la main : `uv run ffe db reset-dev`
 (cd web && npm run dev)                 # interface sur http://localhost:5180 (ouvrir depuis Windows)
 
 # Usage réel (base ~/.persist/ffe) : construire le front, puis servir le tout sur un seul port

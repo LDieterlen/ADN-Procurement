@@ -1,0 +1,12 @@
+# ADR-0017 — Extension Chrome « Envoyer à FFE » : boîte de réception, jeton, CORS
+
+- **Statut** : acceptée (2026-10-13)
+- **Contexte** : « Coller une adresse » (ADR-0014) échoue sur les sites protégés (La Redoute : 403 Cloudflare quel que soit le client HTTP). Le navigateur de l'utilisateur, lui, affiche la page. Contourner la protection côté serveur est exclu (règles du projet).
+- **Décision** :
+  - **Manifest V3 sans outil de construction** (`extension/` : `manifest.json`, `popup.html/js`, `options.html/js`), chargée « non empaquetée » depuis le dépôt ; pas de Firefox pour l'instant.
+  - **Boîte de réception** : la fenêtre de l'extension lit la page affichée (`chrome.scripting`, URL sans fragment + `outerHTML` envoyé comme pièce jointe, un champ de formulaire étant plafonné à 1 Mo) et la poste en multipart sur `POST /captures` ; l'API fait la **même extraction** que « Coller une adresse » et garde une ligne `capture` (nom, marque, référence, prix, devise, description, source, image). Le serveur tente l'image ; s'il échoue (CDN protégé), l'extension l'envoie elle-même (`POST /captures/{id}/image`). La capture attend sur « Nouvel article » (carte « Envoyées depuis Chrome », bouton « Utiliser », consommée à la création, « Supprimer » sinon) : projet, type et localisation se choisissent dans FFE, rien n'est créé sans validation.
+  - **Jeton** : `setting.extension_token`, généré sur la page Réglages (`POST /settings/extension-token`), envoyé en `X-FFE-Token`, comparé en temps constant ; 401 sinon. Les routes de lecture et de suppression restent au front (même origine).
+  - **CORS** : `CORSMiddleware` limité à `chrome-extension://<id>` (toute extension, le jeton fait le tri), méthodes GET/POST, en-têtes `X-FFE-Token` et `Content-Type`. `TrustedHost` inchangé (`localhost`, `127.0.0.1` ; VS Code transfère le port 8000 vers Windows).
+  - `host_permissions: <all_urls>` : l'adresse des images n'est pas connue d'avance ; extension personnelle, non publiée.
+- **Conséquences** : table `capture` (16 tables), migration régénérée ; `unlink_if_orphan` compte `capture.image_file_id` ; aucune dépendance (Starlette fournit CORS) ; l'extension se vérifie à la main (README), l'API et l'interface par tests. Une page à la demande, jamais de parcours de site.
+- **Alternatives écartées** : création de l'article depuis la fenêtre de l'extension (dupliquerait le formulaire) ; WXT ou Vite pour l'extension (une chaîne de plus pour trois fichiers) ; CORS ouvert à `*` (toute page web pourrait écrire dans la base locale).

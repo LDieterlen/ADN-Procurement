@@ -238,7 +238,7 @@ Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client
 - **Critère de fini** : depuis Chrome sous Windows, un produit capturé apparaît dans la boîte de réception puis devient un produit après validation.
 - **Décisions préalables** : DF6.1 manifest nu ou WXT (à trancher) ; DF6.2 jeton obligatoire sur toutes les routes si l'écoute n'est pas `127.0.0.1` (défaut : oui).
 - **Risques** : le devcontainer n'est pas `localhost` vu de Windows ; CSP des sites.
-- **État** : [ ] à faire
+- **État** : [x] faite le 2026-10-13 — ADR-0017 ; DF6.1 : manifest nu (trois fichiers, sans build) ; DF6.2 : jeton obligatoire sur les routes d'écriture de l'extension (`X-FFE-Token`), CORS limité à `chrome-extension://`, écoute toujours `127.0.0.1` (port transféré par VS Code) ; table `capture` (pas `capture_inbox`), `setting.extension_token` ; Chrome seulement. Commits dans le JOURNAL.
 
 ---
 

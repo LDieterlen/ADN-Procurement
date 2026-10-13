@@ -15,7 +15,7 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Localisation | Location | Lieu de destination dans un projet (lobby, bar, chambre typo A, suite…) avec sa zone, son niveau et son nombre ; un article s'implante dans plusieurs localisations. | `location` (ADR-0013) |
 | Zone | Zone | Regroupement de localisations : Zones communes, Hébergement, Back of house… texte libre, axe de budget. | `location.zone` |
 | Niveau | Level | Étage de la localisation : R0, R+1… | `location.level` |
-| Indice | Revision index | Lettre de diffusion des fiches de prescription (A, B, C…) ; un article porte la lettre de la diffusion où il a changé pour la dernière fois. | `project_file.indice`, `project_item.indice` |
+| Indice | Revision index | Lettre de diffusion déclarée sur le projet (« Nouvel indice » : A, B, C…) ; un article porte la lettre de la déclaration où il a changé pour la dernière fois ; un PDF porte la lettre courante au moment de l'émission, la dernière fiche émise depuis la déclaration est la référence. | `project.indice`, `project_file.indice`, `project_item.indice` |
 | Indice de devis | Quote revision | Lettre de la version du devis fournisseur (A, B…), saisie sur l'article. | `project_item.quote_indice` |
 | Prescription / spécification | Specification / to specify | Choisir et documenter un produit précis pour un emplacement. | `project_item` |
 | Listing FF&E | FF&E schedule | Tableau synthétique des articles : code, type, désignation, référence, fournisseur, quantité, montant HT, état, indice. | Page projet ; `GET …/exports/list.pdf` |
@@ -99,5 +99,6 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | N° de TVA intracommunautaire | EU VAT number | Identifiant TVA UE (`FR` + 11 caractères) ; vérifiable via VIES (F3). | `supplier.vat_number` ; `setting` (agence) |
 | Recherche d'entreprises | Company registry lookup | API DINUM gratuite ; VIES pour l'UE ; dirigeants jamais stockés. | F3 ; `supplier.registry_*`, `supplier_registry_snapshot` (reportés) |
 | Non diffusible | Non-public registry entry | Entreprise (souvent un artisan ou un particulier) ayant demandé l'opacité de ses données au registre : absente ou tronquée dans les résultats, à saisir à la main. | F3 ; aucune colonne |
-| JSON-LD | JSON-LD | Données structurées `schema.org/Product` présentes dans la plupart des pages produit ; source de la capture. | F5/F6 ; `product_source.raw_json` (reporté) |
+| Boîte de réception / capture | Inbox / capture | Fiche produit envoyée depuis Chrome par l'extension (ADR-0017), en attente sur « Nouvel article » ; consommée à la création de l'article. | `capture` ; `GET /captures` |
+| JSON-LD | JSON-LD | Données structurées `schema.org/Product` présentes dans la plupart des pages produit ; source de la capture. | F5/F6 ; `captures/extract.py` |
 | URL source | Source URL | Page web d'origine d'un article ou d'une image. | `project_item.source_url`, `file.source_url` |

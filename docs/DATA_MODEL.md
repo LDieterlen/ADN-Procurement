@@ -87,6 +87,7 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 | seed_category_version | INTEGER | non | 0 | | version du seed des types (`ffe db seed`) |
 | project_code_prefix | TEXT | non | `''` | | `'P'` → `P2026-001` |
 | agency_name, agency_address, agency_email, agency_phone | TEXT | name non, autres oui | `''` | | en-tête des PDF |
+| extension_token | TEXT | oui | | | jeton de l'extension Chrome (ADR-0017), généré sur Réglages ; NULL = extension désactivée |
 
 ### 4.2 `client`
 
@@ -103,6 +104,7 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 | site_address | TEXT | oui | | | |
 | due_on | DATE | oui | | format date | échéance |
 | notes | TEXT | oui | | | |
+| indice, indice_changed_at | TEXT | oui | | | lettre de diffusion déclarée par l'utilisateur (`POST /projects/{id}/indice`, A, B… Z, AA…) et date de la déclaration ; les articles modifiés depuis la déclaration précédente prennent la lettre ; **jamais posée par un export** (2026-10-13) |
 
 ### 4.4 `location` — localisation (ADR-0013)
 
@@ -205,7 +207,7 @@ Exemple : `(3, 'CHA-LUD-01', 'product', 10, 4, 9, 'Beat Light Fat', 'BLS01', 'ed
 
 ### 4.12 `project_item_event` — journal
 
-`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `placement`, `other`), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de produit ou d'implantation.
+`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `placement`, `indice`, `other`), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de produit ou d'implantation.
 
 ### 4.13 `item_code_sequence`
 
@@ -228,7 +230,24 @@ PK `(project_id, location_code, prefix)`, `next_value ≥ 1`, FK `project` CASCA
 
 ### 4.15 `project_file` — PDF émis
 
-`project_id` FK RESTRICT, `file_id` FK RESTRICT, `kind` (`sheets_pdf` \| `list_pdf`), `issued_at`, `indice` (lettre des fiches). Chaque émission est conservée telle qu'envoyée.
+`project_id` FK RESTRICT, `file_id` FK RESTRICT, `kind` (`sheets_pdf` \| `list_pdf`), `issued_at`, `indice` (lettre déclarée sur le projet au moment de l'émission, NULL avant la première déclaration). Chaque émission est conservée telle qu'envoyée ; les émissions entre deux déclarations sont des essais, la dernière émise depuis la déclaration courante est la fiche de référence.
+
+### 4.17 `project_indice` — déclarations d'indice
+
+`project_id` FK CASCADE, `indice` (`length > 0`, `UNIQUE (project_id, indice)`), `declared_at`. Une ligne par « Nouvel indice » ; « Retirer l'indice » supprime la dernière, remet le projet sur la précédente et rend aux articles marqués leur lettre d'avant (événements `indice` de `project_item_event`, journal en ajout seul : old_value → new_value puis l'inverse).
+
+### 4.16 `capture` — boîte de réception de l'extension (ADR-0017)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| url | TEXT | non | — | `length > 0` | page envoyée, sans fragment |
+| name, brand, reference, image_url, description | TEXT | oui | | | extraction générique (`captures/extract.py`) |
+| price_cents, currency | INTEGER, TEXT | oui | | `price_cents >= 0` | prix affiché (souvent TTC) |
+| source | TEXT | non | — | `IN ('json-ld','opengraph','title')` | |
+| image_file_id | INTEGER | oui | | FK `file` RESTRICT | photo téléchargée par le serveur ou envoyée par l'extension ; comptée par `unlink_if_orphan` |
+| created_at | TS | non | | | immuable |
+
+Globale (pas de projet) ; supprimée quand l'article est créé (« Utiliser ») ou sur « Supprimer », image retirée si plus référencée.
 
 ---
 
@@ -285,6 +304,5 @@ Ordre fixé : remise, puis change, puis quantité. Les totaux **par article** so
 | Délai et date de besoin | `project_item.lead_time_weeks`, `required_on_site` ; alerte « commander avant le » |
 | TVA et TTC | `project.default_vat_bp`, `project_item.vat_rate_bp` ; `vat_totals` dans `money.py` |
 | Identité légale des fournisseurs, recherche d'entreprises (F3) | `supplier.siren/siret/vat_number/adresse`, `supplier_registry_snapshot` ; jamais de dirigeant |
-| Capture produit (F5–F6) | `product_source`, `capture_inbox`, `setting.api_token` |
 | Multi-utilisateur, bureau | `app_user`, colonnes `*_by`, `public_id` |
 | Autres devises de base | lever `CHECK (base_currency = 'EUR')` |
