@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,9 @@ API_PREFIX = "/api/v1"
 log = logging.getLogger("ffe")
 # DNS-rebinding guard (D4.5): the API only answers to its own names, with or without a port.
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+# ADR-0017: only a Chrome extension (any id) may call the API cross-origin, and only with the
+# shared token checked by the inbox routes; the web app stays same-origin (Vite proxy).
+EXTENSION_ORIGIN_REGEX = r"^chrome-extension://[a-p]{32}$"
 
 
 def create_app(deps: Deps | None = None) -> FastAPI:
@@ -32,6 +36,12 @@ def create_app(deps: Deps | None = None) -> FastAPI:
     app = FastAPI(title="FFE", version="0.1.0", openapi_url="/openapi.json", lifespan=lifespan)
     app.state.deps = deps
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=EXTENSION_ORIGIN_REGEX,
+        allow_methods=["GET", "POST"],
+        allow_headers=["X-FFE-Token", "Content-Type"],
+    )
 
     @app.middleware("http")
     async def log_request(

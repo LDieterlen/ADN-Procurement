@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.errors import ErrorDetail, NotFoundError, PayloadTooLargeError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import File, ProjectFile, ProjectItemFile
+from ffe.models import Capture, File, ProjectFile, ProjectItemFile
 from ffe.services.base import stamp
 
 RESOURCE = "file"
@@ -113,6 +113,10 @@ def unlink_if_orphan(session: Session, files_dir: Path, file_id: int) -> bool:
             )
             if referenced:
                 return False
+        if session.scalar(
+            select(func.count()).select_from(Capture).where(Capture.image_file_id == file_id)
+        ):
+            return False
         content_path(files_dir, file).unlink(missing_ok=True)
         session.delete(file)
     return True

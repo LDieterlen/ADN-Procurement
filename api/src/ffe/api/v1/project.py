@@ -62,6 +62,18 @@ def update_project(
     )
 
 
+@router.post("/{project_id}/indice", operation_id="nextProjectIndice")
+def next_project_indice(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectRead:
+    """Declares the next diffusion letter; the articles changed since the previous one take it."""
+    return ProjectRead.model_validate(service.next_indice(session, project_id, deps.clock))
+
+
+@router.delete("/{project_id}/indice", operation_id="revertProjectIndice")
+def revert_project_indice(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectRead:
+    """Takes the last declaration back (wrong click): previous letter on the project and its articles."""
+    return ProjectRead.model_validate(service.revert_indice(session, project_id, deps.clock))
+
+
 @router.post("/{project_id}/status", operation_id="changeProjectStatus")
 def change_project_status(
     project_id: ProjectId, payload: ProjectStatusChange, session: SessionDep, deps: DepsDep

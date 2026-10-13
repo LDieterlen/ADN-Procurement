@@ -28,3 +28,5 @@ class Setting(TimestampedMixin, Base):
     agency_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     agency_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     agency_phone: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # ADR-0017: shared secret of the browser extension (`X-FFE-Token`); None = extension disabled.
+    extension_token: Mapped[str | None] = mapped_column(Text, nullable=True)

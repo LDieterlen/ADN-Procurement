@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     web_dist: Path = WEB_DIST
     # Upload limit (D6b.1): above it, POST /files answers 413.
     max_upload_bytes: int = 20 * 1024 * 1024
+    # Dev only: contacts CSV re-imported by `reset-dev` (automatic at start when the schema moved);
+    # ignored when the file is absent. Never read on the real database.
+    dev_contacts_csv: Path | None = REPO_ROOT / "references" / "ANNUAIRE FUSION.csv"
 
     @property
     def is_dev_db(self) -> bool:

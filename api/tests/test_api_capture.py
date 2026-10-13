@@ -10,6 +10,7 @@ from conftest import BASE_URL, PNG_BYTES
 from ffe.app import create_app
 from ffe.captures.extract import extract, price_cents
 from ffe.deps import Deps
+from ffe.errors import ErrorDetail, ValidationAppError
 
 JSON_LD_PAGE = """<html><head><title>Santino | Tikamoon</title>
 <meta property="og:title" content="Santino - Chaise">
@@ -146,3 +147,140 @@ def test_the_real_fetcher_is_the_default_and_refuses_bad_schemes(deps: Deps) -> 
     client = TestClient(create_app(deps), base_url=BASE_URL)
     response = client.get("/api/v1/captures/preview", params={"url": "mailto:x@y.z"})
     assert response.status_code == 422
+
+
+# --- extension inbox (ADR-0017) ---------------------------------------------------------------
+
+
+def page(html: str) -> dict[str, Any]:
+    """The HTML travels as a file part (a form field is capped at 1 Mo)."""
+    return {"html": ("page.html", html.encode(), "text/html")}
+
+
+def _token(client: TestClient) -> str:
+    body = client.post("/api/v1/settings/extension-token").json()
+    assert body["extensionToken"]
+    return str(body["extensionToken"])
+
+
+def test_inbox_requires_the_extension_token(capture_client: TestClient) -> None:
+    data = {"url": "https://shop.example.com/santino"}
+    assert (
+        capture_client.post("/api/v1/captures", data=data, files=page(JSON_LD_PAGE)).status_code
+        == 401
+    )
+    assert capture_client.get("/api/v1/settings").json()["extensionToken"] is None
+    token = _token(capture_client)
+    wrong = capture_client.post(
+        "/api/v1/captures", data=data, files=page(JSON_LD_PAGE), headers={"X-FFE-Token": "x"}
+    )
+    assert wrong.status_code == 401 and wrong.json()["code"] == "unauthorized"
+    assert (
+        capture_client.post(
+            "/api/v1/captures", data=data, files=page(JSON_LD_PAGE), headers={"X-FFE-Token": token}
+        ).status_code
+        == 201
+    )
+    renewed = _token(capture_client)
+    assert renewed != token
+    assert (
+        capture_client.post(
+            "/api/v1/captures", data=data, files=page(JSON_LD_PAGE), headers={"X-FFE-Token": token}
+        ).status_code
+        == 401
+    )
+
+
+def test_inbox_keeps_the_sheet_downloads_the_image_and_is_consumed(
+    capture_client: TestClient, settings: Any
+) -> None:
+    token = _token(capture_client)
+    created = capture_client.post(
+        "/api/v1/captures",
+        data={"url": "https://shop.example.com/santino"},
+        files=page(JSON_LD_PAGE),
+        headers={"X-FFE-Token": token},
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    preview = body["preview"]
+    assert preview["name"] == "Santino - Chaise en chêne massif et cuir"
+    assert preview["brand"] == "Tikamoon" and preview["priceCents"] == 39_900
+    assert body["image"] is not None  # downloaded by the server through the fetcher
+    listed = capture_client.get("/api/v1/captures").json()
+    assert [c["id"] for c in listed] == [body["id"]]
+    assert capture_client.delete(f"/api/v1/captures/{body['id']}").status_code == 204
+    assert capture_client.get("/api/v1/captures").json() == []
+    assert capture_client.get(f"/api/v1/files/{body['image']['id']}/content").status_code == 404
+    assert not any(settings.files_dir.iterdir())  # orphan image removed with the capture
+    assert capture_client.delete(f"/api/v1/captures/{body['id']}").status_code == 404
+
+
+def test_inbox_image_comes_from_the_extension_when_the_server_cannot(
+    deps: Deps, settings: Any
+) -> None:
+    def refusing(url: str, _max_bytes: int) -> tuple[bytes, str]:  # a Cloudflare-protected CDN
+        raise ValidationAppError([ErrorDetail("url", f"La page répond 403 ({url}).")])
+
+    deps.fetch_url = refusing
+    client = TestClient(create_app(deps), base_url=BASE_URL)
+    token = _token(client)
+    headers = {"X-FFE-Token": token}
+    data = {"url": "https://shop.example.com/santino"}
+    created = client.post(
+        "/api/v1/captures", data=data, files=page(JSON_LD_PAGE), headers=headers
+    ).json()
+    assert created["image"] is None and created["preview"]["imageUrl"].endswith("7718.jpg")
+    attached = client.post(
+        f"/api/v1/captures/{created['id']}/image",
+        files={"image": ("7718.jpg", PNG_BYTES, "image/jpeg")},
+        headers=headers,
+    )
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["image"]["mimeType"] == "image/png"
+    with_image = client.post(
+        "/api/v1/captures",
+        data=data,
+        files={**page(JSON_LD_PAGE), "image": ("photo.png", PNG_BYTES, "image/png")},
+        headers=headers,
+    ).json()
+    assert with_image["image"]["id"] == attached.json()["image"]["id"]  # same sha256, same file
+    nothing = client.post(
+        "/api/v1/captures",
+        data={"url": "https://shop.example.com/nothing"},
+        files=page("<html><body>rien</body></html>"),
+        headers=headers,
+    )
+    assert nothing.status_code == 422 and nothing.json()["details"][0]["field"] == "url"
+    bad = client.post(
+        f"/api/v1/captures/{created['id']}/image",
+        files={"image": ("x.txt", b"hello", "text/plain")},
+        headers=headers,
+    )
+    assert bad.status_code == 422
+    big = client.post(
+        "/api/v1/captures",
+        data=data,
+        files=page("<html><title>x</title>" + "a" * (5 * 1024 * 1024 + 1)),
+        headers=headers,
+    )
+    assert big.status_code == 422 and big.json()["details"][0]["field"] == "html"
+
+
+def test_only_a_chrome_extension_origin_gets_cors_headers(client: TestClient) -> None:
+    preflight = client.options(
+        "/api/v1/captures",
+        headers={
+            "Origin": "chrome-extension://" + "a" * 32,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "X-FFE-Token",
+        },
+    )
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "chrome-extension://" + "a" * 32
+    assert "x-ffe-token" in preflight.headers["access-control-allow-headers"].lower()
+    other = client.options(
+        "/api/v1/captures",
+        headers={"Origin": "https://evil.example.com", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in other.headers

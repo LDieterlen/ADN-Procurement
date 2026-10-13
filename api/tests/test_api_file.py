@@ -71,12 +71,12 @@ def test_too_large_is_413(settings: Settings, deps: Deps) -> None:
     assert not any(p for p in (settings.files_dir / "tmp").iterdir())
 
 
-def test_content_is_served_with_its_type_and_immutable_cache(client: TestClient) -> None:
+def test_content_is_served_with_its_type_and_revalidated(client: TestClient) -> None:
     file_id = upload(client, PDF_BYTES, name="fiche technique.pdf").json()["id"]
     response = client.get(f"{URL}/{file_id}/content")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
-    assert "immutable" in response.headers["cache-control"]
+    assert response.headers["cache-control"] == "private, no-cache"
     assert "fiche%20technique.pdf" in response.headers["content-disposition"]
     assert response.content == PDF_BYTES
     assert client.get(f"{URL}/99/content").status_code == 404
@@ -105,3 +105,17 @@ def test_verify_hashes_reports_an_altered_file(
     assert verify_hashes(session, settings.files_dir) == []
     (settings.files_dir / name).write_bytes(b"\x89PNG damaged")
     assert verify_hashes(session, settings.files_dir) == [name]
+
+
+def test_content_is_revalidated_by_its_sha256_etag(client: TestClient) -> None:
+    """A dev-database reset can reuse an id for other bytes: never `immutable`, always an ETag."""
+    stored = client.post("/api/v1/files", files={"file": ("a.png", PNG_BYTES, "image/png")}).json()
+    first = client.get(f"/api/v1/files/{stored['id']}/content")
+    assert first.status_code == 200 and first.headers["cache-control"] == "private, no-cache"
+    assert first.headers["etag"] == f'"{stored["sha256"]}"'
+    cached = client.get(
+        f"/api/v1/files/{stored['id']}/content", headers={"If-None-Match": first.headers["etag"]}
+    )
+    assert cached.status_code == 304
+    stale = client.get(f"/api/v1/files/{stored['id']}/content", headers={"If-None-Match": '"old"'})
+    assert stale.status_code == 200

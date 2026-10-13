@@ -14,6 +14,7 @@ from ffe.db.lock import LockError
 from ffe.db.migrate import current_revision, downgrade_base, head_revision
 from ffe.db.startup import StartupError, run_startup
 from ffe.deps import Clock
+from ffe.devreset import reset_dev
 
 
 def test_mount_of_resolves_the_longest_prefix(tmp_path: Path) -> None:
@@ -106,3 +107,46 @@ def test_corrupt_database_stops_the_start_and_is_left_untouched(
     ) as second:  # lock released: same refusal, not LockError
         run_startup(settings, clock)
     assert not isinstance(second.value, LockError)
+
+
+def test_dev_schema_drift_rebuilds_the_database(settings: Settings, clock: Clock) -> None:
+    """Design phase (ADR-0012): a dev database behind the models is backed up and rebuilt."""
+    from sqlalchemy import text
+
+    first = run_startup(settings, clock)
+    first.close()
+    from ffe.db.engine import create_db_engine
+
+    stale = create_db_engine(settings.db_path)
+    with stale.begin() as conn:
+        conn.execute(text("ALTER TABLE project ADD COLUMN stale TEXT"))
+    stale.dispose()
+    with pytest.raises(StartupError, match="reset-dev"):
+        run_startup(settings, clock)  # without the hook: refused with the command to run
+    again = run_startup(settings, clock, on_drift=reset_dev)
+    try:
+        assert again.reset_note and "base de dev recréée" in again.reset_note
+        with again.engine.connect() as conn:
+            columns = [row[1] for row in conn.execute(text("PRAGMA table_info(project)"))]
+            assert "stale" not in columns
+            assert conn.execute(text("SELECT count(*) FROM category")).scalar() == 19
+            assert conn.execute(text("SELECT count(*) FROM project")).scalar() == 1  # demo
+        assert any("pre-reset" in b.path.name for b in list_backups(settings.backups_dir))
+    finally:
+        again.close()
+
+
+def test_prod_schema_drift_stops_the_start(settings: Settings, clock: Clock) -> None:
+    from sqlalchemy import text
+
+    from ffe.db.engine import create_db_engine
+
+    prod = Settings(env="prod", data_dir=settings.data_dir, backup_dir=settings.backup_dir)
+    first = run_startup(prod, clock)
+    first.close()
+    stale = create_db_engine(prod.db_path)
+    with stale.begin() as conn:
+        conn.execute(text("ALTER TABLE project ADD COLUMN stale TEXT"))
+    stale.dispose()
+    with pytest.raises(StartupError, match="base réelle"):
+        run_startup(prod, clock)

@@ -3,7 +3,7 @@
 from collections.abc import Iterator
 from typing import Annotated
 
-from fastapi import APIRouter, Path, Response, UploadFile
+from fastapi import APIRouter, Path, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from ffe.deps import DepsDep, SessionDep
@@ -44,12 +44,21 @@ def upload_file(
 
 
 @router.get("/{file_id}/content", operation_id="getFileContent", response_class=FileResponse)
-def get_file_content(file_id: FileId, session: SessionDep, deps: DepsDep) -> FileResponse:
+def get_file_content(
+    file_id: FileId, request: Request, session: SessionDep, deps: DepsDep
+) -> Response:
     stored = service.get_file(session, file_id)
+    etag = f'"{stored.sha256}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(
+            status_code=304, headers={"ETag": etag, "Cache-Control": "private, no-cache"}
+        )
     return FileResponse(
         service.content_path(deps.settings.files_dir, stored),
         media_type=stored.mime_type,
         filename=stored.original_name,
         content_disposition_type="inline",
-        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+        # Revalidated on every use: after a dev-database reset the same id can name other bytes,
+        # and the ETag (sha256) then tells the browser its cached copy is stale (304 otherwise).
+        headers={"Cache-Control": "private, no-cache", "ETag": etag},
     )

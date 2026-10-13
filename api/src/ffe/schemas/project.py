@@ -64,6 +64,8 @@ class ProjectRead(BaseSchema):
     site_address: str | None
     due_on: str | None
     notes: str | None
+    indice: str | None
+    indice_changed_at: str | None
     created_at: str
     updated_at: str
 

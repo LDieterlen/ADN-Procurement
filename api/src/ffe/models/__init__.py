@@ -2,6 +2,7 @@
 
 from ffe.models.base import Base
 from ffe.models.budget_line import BudgetLine
+from ffe.models.capture import Capture
 from ffe.models.category import Category
 from ffe.models.client import Client
 from ffe.models.file import File
@@ -10,6 +11,7 @@ from ffe.models.location import Location
 from ffe.models.professional import Professional
 from ffe.models.project import Project
 from ffe.models.project_file import ProjectFile
+from ffe.models.project_indice import ProjectIndice
 from ffe.models.project_item import ProjectItem
 from ffe.models.project_item_event import ProjectItemEvent
 from ffe.models.project_item_file import ProjectItemFile
@@ -20,6 +22,7 @@ from ffe.models.supplier import Supplier
 __all__ = [
     "Base",
     "BudgetLine",
+    "Capture",
     "Category",
     "Client",
     "File",
@@ -28,6 +31,7 @@ __all__ = [
     "Professional",
     "Project",
     "ProjectFile",
+    "ProjectIndice",
     "ProjectItem",
     "ProjectItemEvent",
     "ProjectItemFile",

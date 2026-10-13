@@ -35,6 +35,7 @@ from ffe.db.seed import SEED_VERSION, seed_categories
 from ffe.db.startup import prepare_data_dir
 from ffe.demo import seed_demo
 from ffe.deps import Deps, utcnow
+from ffe.devreset import reset_dev
 from ffe.services.contact_import import (
     ContactImportError,
     decode_contacts,
@@ -260,6 +261,20 @@ def import_json_cmd(
             return
         for name, count in imported.items():
             typer.echo(f"  {name:<24} {count} ligne(s)")
+
+
+@db.command("reset-dev")
+def reset_dev_cmd() -> None:
+    """Base de dev seulement : sauvegarde, recréation au schéma des modèles, types, projet d'exemple,
+    annuaire si FFE_DEV_CONTACTS_CSV pointe sur un fichier. Automatique au démarrage quand le schéma
+    a changé (ADR-0012, avant la v1)."""
+    with _opened(False) as (settings, engine):
+        try:
+            _fresh, summary = reset_dev(settings, engine, utcnow)
+        except DbError as error:
+            _fail(error)
+            return
+        typer.echo(summary)
 
 
 @db.command("import-contacts")

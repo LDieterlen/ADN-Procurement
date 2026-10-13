@@ -1,4 +1,6 @@
-"""Installation settings: the single `setting` row (read, partial update)."""
+"""Installation settings: the single `setting` row (read, partial update, extension token)."""
+
+import secrets
 
 from sqlalchemy.orm import Session
 
@@ -19,5 +21,14 @@ def update_settings(session: Session, data: SettingUpdate, clock: Clock) -> Sett
         setting = get_settings(session)
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(setting, key, value)
+        setting.updated_at = stamp(clock)
+    return setting
+
+
+def generate_extension_token(session: Session, clock: Clock) -> Setting:
+    """A new shared secret for the browser extension (ADR-0017); the previous one stops working."""
+    with session.begin():
+        setting = get_settings(session)
+        setting.extension_token = secrets.token_urlsafe(24)
         setting.updated_at = stamp(clock)
     return setting

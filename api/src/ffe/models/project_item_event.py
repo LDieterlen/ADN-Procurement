@@ -9,7 +9,7 @@ from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base
 
-EVENT_KINDS = ("created", "status", "price", "placement", "other")
+EVENT_KINDS = ("created", "status", "price", "placement", "indice", "other")
 
 
 class ProjectItemEvent(Base):

@@ -14,11 +14,12 @@ from ffe.db import DbError
 from ffe.db.scheduler import BackupScheduler
 from ffe.db.startup import run_startup, utcnow
 from ffe.deps import Deps, RuntimeStatus
+from ffe.devreset import reset_dev
 from ffe.logs import configure_logging
 
 settings = load_settings()
 try:
-    started = run_startup(settings)
+    started = run_startup(settings, on_drift=reset_dev)
 except DbError as error:
     print(f"FFE : démarrage refusé — {error}", file=sys.stderr)
     raise SystemExit(1) from None
@@ -26,6 +27,8 @@ except DbError as error:
 log_path = configure_logging(settings.logs_dir)
 log = logging.getLogger("ffe")
 log.info("démarrage : base %s, sauvegarde %s", settings.db_path, started.backup_path or "récente")
+if started.reset_note:
+    log.warning(started.reset_note)
 if started.backup_copy_error:
     log.warning("copie Windows : %s", started.backup_copy_error)
 

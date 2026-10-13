@@ -1,10 +1,10 @@
-"""schéma initial v0 (ADR-0012, ADR-0013, ADR-0016 : une seule migration régénérée depuis les modèles jusqu'à la v1)
+"""schéma initial v0 (ADR-0012, ADR-0013, ADR-0016, ADR-0017 : une seule migration régénérée depuis les modèles jusqu'à la v1)
 
 Revision ID: 0001
 Revises:
 Create Date: 2026-10-13
 
-Générée par `alembic revision --autogenerate` puis relue : 15 tables STRICT (DATA_MODEL §4), CHECK et
+Générée par `alembic revision --autogenerate` puis relue : 17 tables STRICT (DATA_MODEL §4), CHECK et
 UNIQUE des modèles, index partiels rendus par Alembic ; les quatre index d'expression (COALESCE,
 lower) et la ligne unique de `setting` sont écrits à la main en fin d'`upgrade`. Tant que la v1 n'est
 pas déclarée, ce fichier est le seul de l'historique et se régénère à chaque changement de modèle.
@@ -131,6 +131,7 @@ def upgrade() -> None:
         sa.Column("agency_address", sa.Text(), nullable=True),
         sa.Column("agency_email", sa.Text(), nullable=True),
         sa.Column("agency_phone", sa.Text(), nullable=True),
+        sa.Column("extension_token", sa.Text(), nullable=True),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
         sa.CheckConstraint("base_currency = 'EUR'", name=op.f("ck_setting_base_currency_eur")),
@@ -165,6 +166,36 @@ def upgrade() -> None:
         batch_op.create_index("ix_supplier_archived_at", ["archived_at", "name"], unique=False)
 
     op.create_table(
+        "capture",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=True),
+        sa.Column("brand", sa.Text(), nullable=True),
+        sa.Column("reference", sa.Text(), nullable=True),
+        sa.Column("image_url", sa.Text(), nullable=True),
+        sa.Column("price_cents", sa.Integer(), nullable=True),
+        sa.Column("currency", sa.Text(), nullable=True),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("source", sa.Text(), nullable=False),
+        sa.Column("image_file_id", sa.Integer(), nullable=True),
+        sa.Column("created_at", sa.Text(), nullable=False),
+        sa.CheckConstraint(
+            "source IN ('json-ld','opengraph','title')", name=op.f("ck_capture_source_values")
+        ),
+        sa.CheckConstraint("length(url) > 0", name=op.f("ck_capture_url_not_empty")),
+        sa.CheckConstraint(
+            "price_cents IS NULL OR price_cents >= 0", name=op.f("ck_capture_price_cents_min")
+        ),
+        sa.ForeignKeyConstraint(
+            ["image_file_id"],
+            ["file.id"],
+            name=op.f("fk_capture_image_file_id_file"),
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_capture")),
+        sqlite_strict=True,
+    )
+    op.create_table(
         "project",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("code", sa.Text(), nullable=False),
@@ -174,6 +205,8 @@ def upgrade() -> None:
         sa.Column("site_address", sa.Text(), nullable=True),
         sa.Column("due_on", sa.Text(), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("indice", sa.Text(), nullable=True),
+        sa.Column("indice_changed_at", sa.Text(), nullable=True),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
         sa.CheckConstraint(
@@ -278,6 +311,23 @@ def upgrade() -> None:
         batch_op.create_index("ix_project_file_file_id", ["file_id"], unique=False)
         batch_op.create_index("ix_project_file_project_id", ["project_id"], unique=False)
 
+    op.create_table(
+        "project_indice",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("project_id", sa.Integer(), nullable=False),
+        sa.Column("indice", sa.Text(), nullable=False),
+        sa.Column("declared_at", sa.Text(), nullable=False),
+        sa.CheckConstraint("length(indice) > 0", name=op.f("ck_project_indice_indice_not_empty")),
+        sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["project.id"],
+            name=op.f("fk_project_indice_project_id_project"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_project_indice")),
+        sa.UniqueConstraint("project_id", "indice", name="uq_project_indice_letter"),
+        sqlite_strict=True,
+    )
     op.create_table(
         "project_item",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -580,6 +630,7 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_item_category_id")
 
     op.drop_table("project_item")
+    op.drop_table("project_indice")
     with op.batch_alter_table("project_file", schema=None) as batch_op:
         batch_op.drop_index("ix_project_file_project_id")
         batch_op.drop_index("ix_project_file_file_id")
@@ -595,6 +646,7 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_client_id")
 
     op.drop_table("project")
+    op.drop_table("capture")
     with op.batch_alter_table("supplier", schema=None) as batch_op:
         batch_op.drop_index("ix_supplier_archived_at")
 

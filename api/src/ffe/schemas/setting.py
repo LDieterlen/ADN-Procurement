@@ -58,5 +58,6 @@ class SettingRead(BaseSchema):
     agency_address: str | None
     agency_email: str | None
     agency_phone: str | None
+    extension_token: str | None  # ADR-0017, shown once on the settings page
     created_at: str
     updated_at: str

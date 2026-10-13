@@ -141,25 +141,75 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # cover, list, three sheets
 
 
-def test_sheets_pdf_stamps_revision_letters_and_is_kept(
+def test_indice_is_declared_on_the_project_never_by_an_export(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     pid = world["project"].id
+    trial = client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")  # a trial PDF
+    assert trial.status_code == 200 and trial.content.startswith(b"%PDF")
+    assert "-fiches-2026-10-09.pdf" in trial.headers["content-disposition"]
+    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
+        None
+    }
+    declared = client.post(f"/api/v1/projects/{pid}/indice")
+    assert declared.status_code == 200, declared.text
+    assert declared.json()["indice"] == "A" and declared.json()["indiceChangedAt"]
+    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
+        "A"
+    }
     first = client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
-    assert first.status_code == 200, first.text
-    assert first.headers["content-type"] == "application/pdf" and first.content.startswith(b"%PDF")
     assert "-fiches-A-2026-10-09.pdf" in first.headers["content-disposition"]
-    items = client.get(f"/api/v1/projects/{pid}/project-items").json()
-    assert {i["indice"] for i in items} == {"A"}
     client.patch(f"/api/v1/project-items/{world['other']['id']}", json={"finish": "chêne"})
-    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
+    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")  # still A: nothing stamped
+    by_id = {
+        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
+    }
+    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "A"
+    assert client.post(f"/api/v1/projects/{pid}/indice").json()["indice"] == "B"
     by_id = {
         i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
     }
     assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "B"
+    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
     exports = client.get(f"/api/v1/projects/{pid}/exports").json()
-    assert [(e["kind"], e["indice"]) for e in exports] == [("sheets_pdf", "B"), ("sheets_pdf", "A")]
+    assert [e["indice"] for e in exports] == ["B", "A", "A", None]
     assert exports[0]["originalName"].endswith("-fiches-B-2026-10-09.pdf")
+    # A wrong click: the last declaration is taken back, letters restored, journaled.
+    reverted = client.delete(f"/api/v1/projects/{pid}/indice")
+    assert reverted.status_code == 200 and reverted.json()["indice"] == "A"
+    by_id = {
+        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
+    }
+    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "A"
+    events = client.get(f"/api/v1/project-items/{world['other']['id']}/events").json()
+    assert [(e["kind"], e["oldValue"], e["newValue"]) for e in events if e["kind"] == "indice"][
+        -2:
+    ] == [("indice", "A", "B"), ("indice", "B", "A")]
+    assert client.post(f"/api/v1/projects/{pid}/indice").json()["indice"] == "B"  # declared anew
+    assert client.delete(f"/api/v1/projects/{pid}/indice").json()["indice"] == "A"
+    none = client.delete(f"/api/v1/projects/{pid}/indice").json()
+    assert none["indice"] is None and none["indiceChangedAt"] is None
+    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
+        None
+    }
+    assert (
+        client.delete(f"/api/v1/projects/{pid}/indice").status_code == 409
+    )  # nothing to take back
+    client.post(f"/api/v1/projects/{pid}/status", json={"status": "closed"})
+    assert client.post(f"/api/v1/projects/{pid}/indice").status_code == 409  # read-only project
+
+
+def test_next_letter_goes_excel_style() -> None:
+    from ffe.services.project import next_letter
+
+    assert [next_letter(x) for x in (None, "A", "Y", "Z", "AZ", "ZZ")] == [
+        "A",
+        "B",
+        "Z",
+        "AA",
+        "BA",
+        "AAA",
+    ]
 
 
 def test_listing_pdf_shows_amounts_statuses_and_indices(

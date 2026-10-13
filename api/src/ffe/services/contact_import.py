@@ -1,7 +1,7 @@
 """One-shot import of the agency's contacts file (ADR-0015).
 
 `;`-separated CSV with the header `NOM;PRESTATION;SAVOIR-FAIRE;Contact 1;TELEPHONE;PORTABLE;MAIL;
-Contact 2;Telephone 2;Mail 2`. « Fournisseur » rows become suppliers, every other prestation a
+Contact 2;Telephone 2;Mail 2`, plus the optional columns `SITE WEB` and `NOTES`. « Fournisseur » rows become suppliers, every other prestation a
 professional. Idempotent: a name already in the table is skipped; identical rows are read once;
 the same name under two prestations gets the prestation appended to the second one.
 """
@@ -34,6 +34,7 @@ COLUMNS = {
     "contact2_phone": "TELEPHONE 2",
     "contact2_email": "MAIL 2",
 }
+OPTIONAL_COLUMNS = {"website": "SITE WEB", "notes": "NOTES"}
 SUPPLIER_KIND = "fournisseur"
 PROFESSIONAL_KINDS = {
     "fabricant": "manufacturer",
@@ -124,6 +125,13 @@ def parse_contacts(text: str) -> list[ContactRow]:
         email, bad_email = _clean_email(get("email"))
         email2, bad_email2 = _clean_email(get("contact2_email"))
         notes = [fr.CONTACT_IMPORT_EMAIL_NOTE.format(email=e) for e in (bad_email, bad_email2) if e]
+        optional = {
+            key: _clean(record.get(headers[label]))
+            for key, label in OPTIONAL_COLUMNS.items()
+            if label in headers
+        }
+        if note := optional.get("notes"):
+            notes.insert(0, note)
         fields: dict[str, str | None] = {
             "specialty": _clean(get("specialty")),
             "contact_name": _clean(get("contact_name")),
@@ -133,6 +141,7 @@ def parse_contacts(text: str) -> list[ContactRow]:
             "contact2_name": _clean(get("contact2_name")),
             "contact2_phone": _clean(get("contact2_phone")),
             "contact2_email": email2,
+            "website": optional.get("website"),
         }
         rows.append(ContactRow(line, name, kind, fields, "\n".join(notes) or None))
     return rows
@@ -152,9 +161,11 @@ def import_contacts(session: Session, text: str, clock: Clock) -> ContactImportR
             )
             name = f"{row.name} ({label})"
             result.renamed.append((row.name, name))
+        prefix = fr.CONTACT_IMPORT_EMAIL_NOTE.format(email="")
         result.emails_to_check.extend(
-            line.removeprefix(fr.CONTACT_IMPORT_EMAIL_NOTE.format(email=""))
+            line.removeprefix(prefix)
             for line in (row.notes or "").splitlines()
+            if line.startswith(prefix)
         )
         try:
             if row.kind == "supplier":

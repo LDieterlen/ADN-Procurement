@@ -93,6 +93,17 @@ def test_missing_column_is_refused() -> None:
         parse_contacts("NOM;PRESTATION\nFlos;Fournisseur\n")
 
 
+def test_optional_website_and_notes_columns(session: Session, clock: Clock) -> None:
+    text = (
+        HEADER.rstrip("\n")
+        + ";SITE WEB;NOTES\n"
+        + "Flos;Fournisseur;Luminaire;;;;;;;;www.flos.com;Adresse : Paris\n"
+    )
+    import_contacts(session, text, clock)
+    flos = session.scalars(select(Supplier)).one()
+    assert flos.website == "www.flos.com" and flos.notes == "Adresse : Paris"
+
+
 def test_decode_accepts_cp1252_and_utf8() -> None:
     assert decode_contacts("Éditeur".encode("cp1252")) == "Éditeur"
     assert decode_contacts("﻿Éditeur".encode()) == "Éditeur"

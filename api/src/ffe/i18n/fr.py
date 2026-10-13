@@ -10,6 +10,7 @@ RESOURCE_LABELS: dict[str, str] = {
     "location": "localisation",
     "project_item": "article",
     "placement": "implantation",
+    "capture": "capture",
 }
 
 PROFESSIONAL_KIND_LABELS: dict[str, str] = {
@@ -30,6 +31,7 @@ PROJECT_STATUS_LABELS: dict[str, str] = {
 }
 PROJECT_READ_ONLY = "Projet n° {id} {status} : le rouvrir (statut) avant de le modifier."
 PROJECT_CODE_TAKEN = "Ce code de projet est déjà utilisé."
+PROJECT_NO_INDICE = "Aucun indice à retirer sur ce projet."
 PROJECT_CLIENT_MUST_BE_ACTIVE = "Le client est archivé."
 CLIENT_HAS_OPEN_PROJECTS = (
     "Le client n° {id} a {count} projet(s) non clos : les clore ou les annuler avant d'archiver."
@@ -87,6 +89,8 @@ CAPTURE_TOO_LARGE = "Page ou image trop volumineuse (3 Mo au plus)."
 CAPTURE_NOT_HTML = "Cette adresse ne renvoie pas une page web."
 CAPTURE_NOTHING_FOUND = "Aucune fiche produit lisible sur cette page."
 CAPTURE_IMAGE_TYPE = "L'image n'est pas un JPEG, PNG ou WebP."
+CAPTURE_HTML_TOO_LARGE = "Page trop volumineuse (5 Mo au plus)."
+EXTENSION_TOKEN_INVALID = "Jeton de l'extension absent ou invalide : le copier depuis Réglages."
 PAYLOAD_TOO_LARGE = "Fichier trop volumineux : {mb} Mo au plus."
 FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seulement."
 FILE_EMPTY = "Fichier vide."

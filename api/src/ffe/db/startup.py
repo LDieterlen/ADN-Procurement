@@ -12,9 +12,11 @@ from ffe.db.backup import BACKUP_MAX_AGE, backup_and_copy, last_backup_at
 from ffe.db.engine import create_db_engine, foreign_key_check, quick_check
 from ffe.db.fs_check import ensure_ext4
 from ffe.db.lock import InstanceLock
-from ffe.db.migrate import has_pending, head_revision, upgrade_head
+from ffe.db.migrate import has_pending, head_revision, schema_drift, upgrade_head
 
 Clock = Callable[[], datetime]
+# Dev only (ADR-0012): rebuilds the database when the schema moved; `ffe.devreset.reset_dev`.
+OnDrift = Callable[[Settings, Engine, Clock], tuple[Engine, str]]
 
 
 class StartupError(DbError):
@@ -28,6 +30,7 @@ class Started:
     lock: InstanceLock
     backup_path: str | None  # None = skipped (no database yet, or recent backup)
     backup_copy_error: str | None = None  # Windows copy refused (ADR-0002: never fatal)
+    reset_note: str | None = None  # dev only: the database was rebuilt because the schema moved
 
     def close(self) -> None:
         self.engine.dispose()
@@ -45,7 +48,9 @@ def prepare_data_dir(settings: Settings) -> None:
     (settings.backups_dir / "tmp").mkdir(parents=True, exist_ok=True)
 
 
-def run_startup(settings: Settings, clock: Clock = utcnow) -> Started:
+def run_startup(
+    settings: Settings, clock: Clock = utcnow, on_drift: OnDrift | None = None
+) -> Started:
     prepare_data_dir(settings)  # 1
     lock = InstanceLock(settings.lock_path)
     lock.acquire()  # 2
@@ -76,7 +81,16 @@ def run_startup(settings: Settings, clock: Clock = utcnow) -> Started:
         verdict = quick_check(engine)  # 7
         if verdict != "ok":
             raise StartupError(f"quick_check après migration : {verdict}.")
-        return Started(settings, engine, lock, backup_path, copy_error)
+        reset_note: str | None = None
+        if schema_drift(engine):  # 8 (before v1, ADR-0012: the migration is regenerated)
+            if not settings.is_dev_db:
+                raise StartupError(
+                    "schéma en retard sur les modèles : base réelle, migrer à la main."
+                )
+            if on_drift is None:
+                raise StartupError("schéma en retard sur les modèles : lancer `ffe db reset-dev`.")
+            engine, reset_note = on_drift(settings, engine, clock)
+        return Started(settings, engine, lock, backup_path, copy_error, reset_note)
     except BaseException:
         if engine is not None:
             engine.dispose()

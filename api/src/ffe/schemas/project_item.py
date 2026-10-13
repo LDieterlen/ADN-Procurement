@@ -15,7 +15,7 @@ ItemStatus = Literal[
 ItemFamily = Literal["custom", "joinery", "ose", "edition", "gallery", "artwork", "textile"]
 ItemUsage = Literal["indoor", "outdoor"]
 ItemFileKind = Literal["image", "drawing", "other"]
-EventKind = Literal["created", "status", "price", "placement", "other"]
+EventKind = Literal["created", "status", "price", "placement", "indice", "other"]
 
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]

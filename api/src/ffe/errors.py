@@ -48,6 +48,13 @@ class NotFoundError(AppError):
         super().__init__(fr.NOT_FOUND.format(resource=fr.resource_label(resource), id=id))
 
 
+class UnauthorizedError(AppError):
+    """Missing or wrong extension token (ADR-0017)."""
+
+    status_code = 401
+    code = "unauthorized"
+
+
 class ValidationAppError(AppError):
     """A rule attached to one or more fields, outside Pydantic (422)."""
 

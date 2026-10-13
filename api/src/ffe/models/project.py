@@ -34,3 +34,7 @@ class Project(TimestampedMixin, Base):
     site_address: Mapped[str | None] = mapped_column(Text)
     due_on: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
+    # Diffusion letter declared by the user (A, B, C…), never by an export (2026-10-13): the sheets
+    # changed since the previous declaration take it. NULL = nothing diffused yet.
+    indice: Mapped[str | None] = mapped_column(Text)
+    indice_changed_at: Mapped[str | None] = mapped_column(Text)
