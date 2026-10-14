@@ -8,7 +8,6 @@ import { useProjectSummary } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject, type LocationRead } from '../../api/queries/project'
 import {
-  ENGAGED_STATUSES,
   ITEM_STATUS_LABELS,
   useAddPlacement,
   useDeleteItem,
@@ -25,7 +24,7 @@ import { Form } from '../../components/forms/Form'
 import { centsToText } from '../../components/forms/MoneyField'
 import { milliToText, textToMilli } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
-import { Card, PageHeader } from '../../components/ui/Card'
+import { Card, Dot, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
@@ -68,7 +67,7 @@ export function ItemPage() {
     }
   }, [serverErrors, form, item.data])
 
-  if (project.isPending || item.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (project.isPending || item.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (project.isError || item.isError) {
     const message = project.isError ? project.error.message : item.isError ? item.error.message : ''
     return (
@@ -121,80 +120,96 @@ export function ItemPage() {
         }
         subtitle={
           <>
-            <span className="font-mono text-xs">{it.itemCode}</span>
-            <span>·</span>
+            <span className="font-mono text-[12.5px] text-ink-2">{it.itemCode}</span>
+            <Dot />
             <span>{it.kind === 'fee' ? 'Frais' : typeName}</span>
-            <span>·</span>
-            {readOnly ? (
-              <Pill filled={ENGAGED_STATUSES.includes(it.status)}>{ITEM_STATUS_LABELS[it.status]}</Pill>
-            ) : (
-              <StatusSelect item={it} readOnly={readOnly} />
-            )}
+            <Dot />
+            {readOnly ? <Pill status={it.status}>{ITEM_STATUS_LABELS[it.status]}</Pill> : <StatusSelect item={it} readOnly={readOnly} />}
             {amounts && (
               <>
-                <span>·</span>
-                <span>
+                <Dot />
+                <span className="tabular-nums">
                   {milliToText(amounts.totalQtyMilli)} × {centsToText(amounts.netUnitEurCents)} € ={' '}
-                  <strong className="text-neutral-900">{centsToText(amounts.totalHtCents)} € HT</strong>
+                  <strong className="font-semibold text-ink">{centsToText(amounts.totalHtCents)} € HT</strong>
                 </span>
               </>
             )}
             {it.indice && (
               <>
-                <span>·</span>
+                <Dot />
                 <span>Indice {it.indice}</span>
               </>
             )}
           </>
         }
         actions={
-          <>
-            {!readOnly && it.status === 'to_quote' && (
-              <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-                Supprimer
-              </Button>
-            )}
-            <Link to={`/projects/${p.id}`}>
-              <Button variant="ghost">Retour au projet</Button>
-            </Link>
-          </>
+          <Link to={`/projects/${p.id}`}>
+            <Button variant="ghost">Retour au projet</Button>
+          </Link>
         }
       />
-      <div className="space-y-6">
-        <Card title="Photo et dessin">
-          <ItemFiles item={it} readOnly={readOnly} />
-        </Card>
-        <Card title="Article">
+      <div className="grid grid-cols-[340px_1fr] items-start gap-6">
+        <div className="space-y-4">
+          <Card title="Photo et dessin" padding="form">
+            <ItemFiles item={it} readOnly={readOnly} />
+          </Card>
+          {supplier && (
+            <Card label="Représentant" padding="form">
+              <div className="text-[12.5px] font-medium text-ink-2">Représentant {supplier.name}</div>
+              {supplier.contactName || supplier.mobile || supplier.phone || supplier.email ? (
+                <div className="mt-1.5 space-y-0.5 text-sm">
+                  {supplier.contactName && <div className="font-medium">{supplier.contactName}</div>}
+                  {(supplier.mobile ?? supplier.phone) && <div className="text-ink-2">{supplier.mobile ?? supplier.phone}</div>}
+                  {supplier.email && (
+                    <div>
+                      <a href={`mailto:${supplier.email}`}>{supplier.email}</a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-1.5 text-sm text-ink-3">Aucun contact renseigné.</div>
+              )}
+            </Card>
+          )}
+        </div>
+        <div className="space-y-4">
           <Form form={form} onSubmit={submit} banner={banner}>
-            <ItemFields
-              form={form}
-              kind={it.kind}
-              categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
-              suppliers={options(suppliers.data?.items)}
-              onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
-              contact={
-                supplier && (supplier.contactName || supplier.mobile || supplier.phone || supplier.email)
-                  ? [supplier.contactName, supplier.mobile ?? supplier.phone, supplier.email].filter(Boolean).join(' · ')
-                  : undefined
-              }
-            />
+            <Card title="Fiche" label="Fiche" padding="form">
+              <ItemFields
+                form={form}
+                kind={it.kind}
+                categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
+                suppliers={options(suppliers.data?.items)}
+                onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
+              />
+            </Card>
             {!readOnly && (
-              <Button type="submit" variant="primary" disabled={update.isPending}>
-                Enregistrer
-              </Button>
+              <div className="mt-4 flex items-center gap-3">
+                <Button type="submit" variant="primary" disabled={update.isPending}>
+                  Enregistrer
+                </Button>
+                <span className="text-[13px] text-ink-3">Fiche et budget s'enregistrent ensemble.</span>
+              </div>
             )}
           </Form>
-        </Card>
-        {it.kind === 'product' && (
-          <PlacementsCard
-            item={it}
-            locations={(locations.data ?? []).filter((l) => l.archivedAt === null || it.placements.some((pl) => pl.locationId === l.id))}
-            readOnly={readOnly}
-          />
-        )}
-        <Card title="Historique">
-          <History events={events.data ?? []} />
-        </Card>
+          {it.kind === 'product' && (
+            <PlacementsCard
+              item={it}
+              locations={(locations.data ?? []).filter((l) => l.archivedAt === null || it.placements.some((pl) => pl.locationId === l.id))}
+              readOnly={readOnly}
+            />
+          )}
+          <Card title="Historique" padding="form">
+            <History events={events.data ?? []} />
+          </Card>
+          {!readOnly && it.status === 'to_quote' && (
+            <div className="flex justify-end">
+              <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+                Supprimer l'article
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
       <NewSupplierModal
         open={modal === 'supplier'}
@@ -245,15 +260,16 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
   const locationOf = (id: number | null) => locations.find((l) => l.id === id)
 
   return (
-    <Card title="Implantation" label="Implantation">
-      <table className="mb-4 w-full text-sm" aria-label="Implantations de l'article">
+    <Card title="Implantation" label="Implantation" padding="table">
+      <table className="w-full text-sm" aria-label="Implantations de l'article">
         <thead>
-          <tr className="border-b border-neutral-300 text-left text-sm text-neutral-900">
-            <th className="px-2 py-2 font-medium">Localisation</th>
-            <th className="px-2 py-2 text-right font-medium">Quantité</th>
-            <th className="px-2 py-2 text-right font-medium">Nombre</th>
-            <th className="px-2 py-2 text-right font-medium">Total</th>
-            <th className="px-2 py-2"></th>
+          <tr className="border-b border-line text-left text-[12.5px] font-medium text-ink-2">
+            <th className="py-2.5 pl-5">Code</th>
+            <th className="px-3 py-2.5">Localisation</th>
+            <th className="px-3 py-2.5 text-right">Quantité</th>
+            <th className="px-3 py-2.5 text-right">Nombre</th>
+            <th className="px-3 py-2.5 text-right">Total</th>
+            <th className="py-2.5 pr-5"></th>
           </tr>
         </thead>
         <tbody>
@@ -261,9 +277,44 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
             const location = locationOf(placement.locationId)
             const multiplier = location?.multiplier ?? 1
             return (
-              <tr key={placement.id} className="border-b border-neutral-200">
-                <td className="px-2 py-2">{location ? locationLabel(location) : 'Non affecté'}</td>
-                <td className="px-2 py-2 text-right">
+              <tr key={placement.id} className="border-b border-line-soft">
+                <td className="py-2 pl-5 font-mono text-xs font-medium whitespace-nowrap">{placement.code}</td>
+                <td className="px-3 py-2">
+                  {readOnly ? (
+                    location ? (
+                      <>
+                        <span className="mr-2 font-mono text-xs text-ink-2">{location.code}</span>
+                        {location.name}
+                      </>
+                    ) : (
+                      'Non affecté'
+                    )
+                  ) : (
+                    <select
+                      value={placement.locationId ?? ''}
+                      aria-label={`Localisation de l'implantation ${location?.code ?? 'non affecté'}`}
+                      className="control h-[30px] max-w-[260px] text-[13px]"
+                      onChange={(event) => {
+                        const next = event.target.value ? Number(event.target.value) : null
+                        if (next !== placement.locationId) update.mutateAsync({ id: placement.id, data: { locationId: next } }).catch(fail)
+                      }}
+                    >
+                      <option value="">Non affecté</option>
+                      {locations
+                        .filter(
+                          (l) =>
+                            l.id === placement.locationId ||
+                            (l.archivedAt === null && !item.placements.some((other) => other.id !== placement.id && other.locationId === l.id)),
+                        )
+                        .map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {locationLabel(l)}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
                   {readOnly ? (
                     milliToText(placement.qtyMilli)
                   ) : (
@@ -272,7 +323,7 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
                       defaultValue={milliToText(placement.qtyMilli)}
                       inputMode="decimal"
                       aria-label={`Quantité dans ${location?.code ?? 'non affecté'}`}
-                      className="w-20 rounded-lg border border-neutral-300 px-2 py-1 text-right text-sm"
+                      className="control h-[30px] w-16 px-2 text-right tabular-nums"
                       onBlur={(event) => {
                         const milli = textToMilli(event.target.value)
                         if (milli !== undefined && milli !== null && milli !== placement.qtyMilli)
@@ -281,13 +332,13 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
                     />
                   )}
                 </td>
-                <td className="px-2 py-2 text-right">×{multiplier}</td>
-                <td className="px-2 py-2 text-right">{milliToText(placement.qtyMilli * multiplier)}</td>
-                <td className="px-2 py-2 text-right text-xs">
+                <td className="px-3 py-2 text-right text-ink-2">× {multiplier}</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{milliToText(placement.qtyMilli * multiplier)}</td>
+                <td className="py-2 pr-5 text-right text-[13px]">
                   {!readOnly && item.placements.length > 1 && (
                     <button
                       type="button"
-                      className="text-red-700 underline"
+                      className="text-danger hover:underline"
                       onClick={() => remove.mutateAsync(placement.id).catch(fail)}
                       aria-label={`Retirer de ${location?.code ?? 'non affecté'}`}
                     >
@@ -301,14 +352,10 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
         </tbody>
       </table>
       {!readOnly && (
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
+        <div className="flex flex-wrap items-end gap-3 border-t border-line bg-sunken px-5 py-3">
+          <label className="flex flex-1 flex-col gap-1.5 text-[12.5px] font-medium text-ink-2">
             Localisation à ajouter
-            <select
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-normal"
-            >
+            <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="control h-8 font-normal">
               <option value="">Non affecté</option>
               {locations
                 .filter((l) => l.archivedAt === null && !item.placements.some((p) => p.locationId === l.id))
@@ -319,17 +366,13 @@ function PlacementsCard({ item, locations, readOnly }: { item: ProjectItemRead; 
                 ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
+          <label className="flex w-[110px] flex-col gap-1.5 text-[12.5px] font-medium text-ink-2">
             Quantité à ajouter
-            <input
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              inputMode="decimal"
-              className="w-24 rounded-lg border border-neutral-300 px-3 py-2 text-right text-sm font-normal"
-            />
+            <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="control h-8 text-right font-normal tabular-nums" />
           </label>
           <Button
-            variant="primary"
+            variant="secondary"
+            size="xs"
             disabled={add.isPending}
             onClick={() => {
               const milli = textToMilli(qty)
@@ -358,14 +401,14 @@ const EVENT_LABELS: Record<string, string> = {
 }
 
 function History({ events }: { events: EventRead[] }) {
-  if (events.length === 0) return <p className="text-sm text-neutral-500">Aucun événement.</p>
+  if (events.length === 0) return <p className="text-sm text-ink-3">Aucun événement.</p>
   return (
-    <ul className="space-y-1 text-sm" aria-label="Historique de l'article">
+    <ul className="text-[13.5px]" aria-label="Historique de l'article">
       {[...events].reverse().map((e) => (
-        <li key={e.id} className="flex gap-3">
-          <span className="w-40 shrink-0 text-neutral-500">{e.changedAt.replace('T', ' ').slice(0, 16)}</span>
-          <span className="w-24 shrink-0 font-medium">{EVENT_LABELS[e.kind] ?? e.kind}</span>
-          <span>
+        <li key={e.id} className="grid grid-cols-[150px_100px_1fr] gap-3 border-t border-line-soft py-2.5 first:border-t-0">
+          <span className="text-ink-3 tabular-nums">{e.changedAt.replace('T', ' ').slice(0, 16)}</span>
+          <span className="font-medium">{EVENT_LABELS[e.kind] ?? e.kind}</span>
+          <span className="text-ink-2">
             {e.kind === 'status' && e.fromStatus && e.toStatus
               ? `${ITEM_STATUS_LABELS[e.fromStatus as keyof typeof ITEM_STATUS_LABELS] ?? e.fromStatus} → ${ITEM_STATUS_LABELS[e.toStatus as keyof typeof ITEM_STATUS_LABELS] ?? e.toStatus}`
               : e.kind === 'price' && e.newValue

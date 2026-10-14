@@ -18,6 +18,7 @@ type BudgetLineRead = components['schemas']['BudgetLineRead']
 type BudgetLineIn = components['schemas']['BudgetLineIn']
 type SettingRead = components['schemas']['SettingRead']
 type CaptureRead = components['schemas']['CaptureRead']
+type ChoiceRead = components['schemas']['ChoiceRead']
 type ProjectFileRead = components['schemas']['ProjectFileRead']
 type EventRead = components['schemas']['EventRead']
 
@@ -48,6 +49,7 @@ export type FakeApi = {
   budgets: BudgetLineRead[]
   setting: SettingRead
   captures: CaptureRead[]
+  choices: ChoiceRead[]
   indiceHistory: { projectId: number; indice: string | null; changedAt: string | null; stamped: { item: ProjectItemRead; before: string | null }[] }[]
   exports: ProjectFileRead[]
   events: EventRead[]
@@ -150,13 +152,18 @@ export function captureRow(c: Partial<CaptureRead>, id: number): CaptureRead {
       brand: 'AM.PM',
       reference: '602505402',
       imageUrl: null,
+      imageUrls: [],
       priceCents: 89_900,
       currency: 'EUR',
       description: null,
       source: 'json-ld',
+      typeCode: null,
+      dimensions: null,
+      leadTime: null,
+      finish: null,
       ...c.preview,
     },
-    image: null,
+    images: [],
     createdAt: NOW,
     ...c,
   }
@@ -185,7 +192,7 @@ export function locationRow(l: Partial<LocationRead>, id: number): LocationRead 
 }
 
 export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRead {
-  return {
+  const row: ProjectItemRead = {
     id,
     projectId: 1,
     itemCode: `LUD-${String(id).padStart(2, '0')}`,
@@ -193,11 +200,13 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     categoryId: 1,
     supplierId: null,
     name: 'Article',
+    productName: i.name ?? 'Article',
     reference: null,
     family: null,
     usage: null,
     finish: null,
     dimensions: null,
+    leadTime: null,
     sourceUrl: null,
     comments: null,
     unitCostCents: 0,
@@ -216,10 +225,13 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     files: [],
     ...i,
   }
+  row.placements = row.placements.map((p) => (p.code ? p : { ...p, code: row.itemCode }))
+  return row
 }
 
-export function placementRow(itemId: number, locationId: number | null, qtyMilli = 1000) {
-  return { id: placementSeq++, projectItemId: itemId, locationId, qtyMilli, sortOrder: 0, createdAt: NOW, updatedAt: NOW }
+/** `code` empty = the item's code (fixtures); the fake API gives real codes (ADR-0018). */
+export function placementRow(itemId: number, locationId: number | null, qtyMilli = 1000, code = '') {
+  return { id: placementSeq++, projectItemId: itemId, locationId, code, qtyMilli, sortOrder: 0, createdAt: NOW, updatedAt: NOW }
 }
 
 /** Minimal multipart/form-data reader: the first `file` part, as bytes plus its filename. */
@@ -345,6 +357,16 @@ function nextCode(state: FakeApi, projectId: number, locationCode: string, prefi
   return `${locationCode ? `${locationCode}-` : ''}${prefix}-${String(n).padStart(2, '0')}`
 }
 
+/** A new placement code: next number of (location, type) in the project (ADR-0018). */
+function placementCode(state: FakeApi, projectId: number, locationId: number | null, categoryId: number | null): string {
+  const loc = locationId ? (state.locations.find((l) => l.id === locationId)?.code.toUpperCase() ?? '') : ''
+  return nextCode(state, projectId, loc, typeCode(state, categoryId))
+}
+
+function relabel(item: ProjectItemRead) {
+  if (item.kind !== 'fee') item.itemCode = item.placements.map((p) => p.code).join(' · ')
+}
+
 function pushEvent(state: FakeApi, itemId: number, kind: string, extra: Partial<EventRead> = {}) {
   state.events.push({
     id: state.events.length + 1,
@@ -367,8 +389,9 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
   if (kind === 'product' && categoryId === null) return validation('categoryId', 'Un type de produit est nécessaire.')
   if (kind === 'product' && categoryId !== null && !state.categories.some((c) => c.id === categoryId))
     return validation('categoryId', `Type de produit n° ${categoryId} introuvable.`)
-  const name = ((p.name as string | null) ?? '').trim()
-  if (!name) return validation('name', 'Une désignation est nécessaire.')
+  const productName = ((p.productName as string | null) ?? '').trim() || ((p.name as string | null) ?? '').trim()
+  const name = ((p.name as string | null) ?? '').trim() || productName
+  if (!name) return validation('productName', 'Un nom est nécessaire.')
   const supplierId = (p.supplierId as number | null) ?? null
   const supplier = supplierId ? state.suppliers.find((s) => s.id === supplierId) : undefined
   if (supplierId && !supplier) return validation('supplierId', `Fournisseur n° ${supplierId} introuvable.`)
@@ -385,13 +408,11 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
     if (pl.locationId !== null && !state.locations.some((l) => l.id === pl.locationId && l.projectId === project.id))
       return validation('locationId', "La localisation n'appartient pas à ce projet.")
   }
-  const first = placementsIn[0]?.locationId ?? null
-  const locationCode = first ? (state.locations.find((l) => l.id === first)?.code.toUpperCase() ?? '') : ''
-  const itemCode =
-    (p.itemCode as string | null) ??
-    (kind === 'fee' ? nextCode(state, project.id, '', 'FR') : nextCode(state, project.id, locationCode, typeCode(state, categoryId)))
+  if (p.itemCode && kind !== 'fee') return validation('itemCode', "Le code d'un article suit ses localisations ; seuls les frais se codent à la main.")
   if (p.itemCode && state.items.some((i) => i.projectId === project.id && i.itemCode === p.itemCode))
     return validation('itemCode', 'Ce code FF&E est déjà utilisé dans le projet.')
+  const codes = placementsIn.map((pl) => placementCode(state, project.id, pl.locationId, categoryId))
+  const itemCode = kind === 'fee' ? ((p.itemCode as string | null) ?? nextCode(state, project.id, '', 'FR')) : codes.join(' · ')
   const reference = (p.reference as string | null) ?? null
   const created = itemRow(
     {
@@ -401,11 +422,13 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       categoryId: kind === 'fee' ? null : categoryId,
       supplierId,
       name,
+      productName,
       reference,
       family: (p.family as ProjectItemRead['family']) ?? null,
       usage: (p.usage as ProjectItemRead['usage']) ?? null,
       finish: (p.finish as string | null) ?? null,
       dimensions: (p.dimensions as string | null) ?? null,
+      leadTime: (p.leadTime as string | null) ?? null,
       sourceUrl: (p.sourceUrl as string | null) ?? null,
       comments: (p.comments as string | null) ?? null,
       unitCostCents: (p.unitCostCents as number | null) ?? 0,
@@ -415,7 +438,7 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       quoteRef: (p.quoteRef as string | null) ?? null,
       quoteIndice: (p.quoteIndice as string | null) ?? null,
       quoteUrl: (p.quoteUrl as string | null) ?? null,
-      placements: placementsIn.map((pl) => placementRow(id, pl.locationId, pl.qtyMilli)),
+      placements: placementsIn.map((pl, index) => placementRow(id, pl.locationId, pl.qtyMilli, codes[index])),
       files: [],
     },
     id,
@@ -808,13 +831,14 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
     if (typeof payload.fxRateMicro === 'number' && (payload.currency ?? item.currency) === 'EUR' && payload.fxRateMicro !== 1_000_000)
       return validation('fxRateMicro', 'En euros, le taux de change vaut 1 000 000 (parité).')
     if (payload.name === '') return validation('name', 'Au moins 1 caractère(s).')
+    if (payload.productName === '' || payload.productName === null) return validation('productName', 'Ce champ est obligatoire et ne peut pas être vidé.')
     const before = JSON.stringify({ cost: item.unitCostCents, currency: item.currency, fx: item.fxRateMicro, discount: item.discountBp })
-    if ('categoryId' in payload && payload.categoryId !== item.categoryId && item.status === 'to_quote') {
-      const first = item.placements[0]?.locationId ?? null
-      const code = first ? (state.locations.find((l) => l.id === first)?.code.toUpperCase() ?? '') : ''
-      payload.itemCode = nextCode(state, item.projectId, code, typeCode(state, payload.categoryId as number))
+    if ('categoryId' in payload && payload.categoryId !== item.categoryId) {
+      for (const pl of item.placements) pl.code = placementCode(state, item.projectId, pl.locationId, payload.categoryId as number)
+      pushEvent(state, item.id, 'placement')
     }
     Object.assign(item, payload, { updatedAt: LATER })
+    relabel(item)
     if ((payload.currency ?? item.currency) === 'EUR') item.fxRateMicro = 1_000_000
     const after = JSON.stringify({ cost: item.unitCostCents, currency: item.currency, fx: item.fxRateMicro, discount: item.discountBp })
     if (before !== after) pushEvent(state, item.id, 'price', { oldValue: before, newValue: after })
@@ -830,7 +854,8 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
     if (item.kind === 'fee') return error(409, 'conflict', "Une ligne de frais n'a pas d'implantation.")
     const p = payload as { locationId: number | null; qtyMilli: number }
     if (item.placements.some((x) => x.locationId === p.locationId)) return validation('locationId', "L'article est déjà implanté dans cette localisation.")
-    item.placements.push(placementRow(item.id, p.locationId, p.qtyMilli))
+    item.placements.push(placementRow(item.id, p.locationId, p.qtyMilli, placementCode(state, item.projectId, p.locationId, item.categoryId)))
+    relabel(item)
     pushEvent(state, item.id, 'placement')
     return json(201, item)
   }
@@ -857,13 +882,18 @@ function handlePlacements(state: FakeApi, method: string, rest: string | undefin
   const placement = item?.placements.find((p) => p.id === id)
   if (!item || !placement) return error(404, 'not_found', 'Implantation introuvable.')
   if (method === 'PATCH') {
+    const changes = body as { locationId?: number | null }
+    if ('locationId' in changes && changes.locationId !== placement.locationId)
+      placement.code = placementCode(state, item.projectId, changes.locationId ?? null, item.categoryId)
     Object.assign(placement, body)
+    relabel(item)
     pushEvent(state, item.id, 'placement')
     return json(200, item)
   }
   if (method === 'DELETE') {
     if (item.placements.length <= 1) return error(409, 'conflict', 'Un article garde au moins une implantation : modifier celle-ci plutôt que la supprimer.')
     item.placements = item.placements.filter((p) => p.id !== id)
+    relabel(item)
     pushEvent(state, item.id, 'placement')
     return json(200, item)
   }
@@ -1023,6 +1053,23 @@ export function installFakeApi(
     },
     captures: (seed.captures ?? []).map((c, i) => captureRow(c, i + 1)),
     indiceHistory: [],
+    choices: (
+      [
+        ['family', 'custom', 'Pièce sur-mesure'],
+        ['family', 'joinery', 'Agencement'],
+        ['family', 'ose', 'OS&E'],
+        ['family', 'edition', "Pièce d'édition"],
+        ['family', 'gallery', 'Pièce de galerie'],
+        ['family', 'artwork', "Œuvre d'art"],
+        ['family', 'textile', 'Confection'],
+        ['usage', 'indoor', 'Intérieur'],
+        ['usage', 'outdoor', 'Extérieur'],
+        ['prestation', 'manufacturer', 'Fabricant'],
+        ['prestation', 'distributor', 'Distributeur'],
+        ['prestation', 'publisher', 'Éditeur'],
+        ['prestation', 'artisan', 'Artisan'],
+      ] as const
+    ).map(([list, code, name], i) => ({ id: i + 1, list, code, name, sortOrder: (i + 1) * 10, ...base })),
     exports: [],
     lastBackupAt: null,
     backupDirOk: true,
@@ -1060,6 +1107,38 @@ export function installFakeApi(
       state.setting.extensionToken = `tok-${state.requests.length}`
       return json(200, state.setting)
     }
+    if (url.pathname === '/api/v1/choices' && method === 'GET') {
+      const list = url.searchParams.get('list')
+      const archived = url.searchParams.get('includeArchived') === 'true'
+      return json(
+        200,
+        state.choices.filter((c) => (!list || c.list === list) && (archived || c.archivedAt === null)),
+      )
+    }
+    if (url.pathname === '/api/v1/choices' && method === 'POST') {
+      const data = body as { list: ChoiceRead['list']; name: string }
+      if (state.choices.some((c) => c.list === data.list && normalize(c.name) === normalize(data.name)))
+        return validation('name', 'Ce libellé existe déjà dans cette liste.')
+      const created: ChoiceRead = {
+        id: state.choices.length + 1,
+        list: data.list,
+        code: normalize(data.name).replace(/[^a-z0-9]+/g, '-'),
+        name: data.name,
+        sortOrder: 1000,
+        ...base,
+      }
+      state.choices.push(created)
+      return json(201, created)
+    }
+    const choiceMatch = /^\/api\/v1\/choices\/(\d+)(?:\/(archive|unarchive))?$/.exec(url.pathname)
+    if (choiceMatch) {
+      const choice = state.choices.find((c) => c.id === Number(choiceMatch[1]))
+      if (!choice) return error(404, 'not_found', 'Valeur introuvable.')
+      if (choiceMatch[2] === 'archive') choice.archivedAt = NOW
+      else if (choiceMatch[2] === 'unarchive') choice.archivedAt = null
+      else if (method === 'PATCH') Object.assign(choice, body)
+      return json(200, choice)
+    }
     if (url.pathname === '/api/v1/captures' && method === 'GET') return json(200, state.captures)
     const captureMatch = /^\/api\/v1\/captures\/(\d+)$/.exec(url.pathname)
     if (captureMatch && method === 'DELETE') {
@@ -1084,10 +1163,15 @@ export function installFakeApi(
         brand: 'Tikamoon',
         reference: '7718',
         imageUrl: target.includes('noimage') ? null : 'https://media.example.com/7718.jpg',
+        imageUrls: target.includes('noimage') ? [] : ['https://media.example.com/7718.jpg', 'https://media.example.com/7718-2.jpg'],
         priceCents: 39900,
         currency: 'EUR',
         description: 'Cette chaise associe le chêne et le cuir.',
         source: 'json-ld',
+        typeCode: 'AS',
+        dimensions: 'H 78 × L 56.10 × P 60.50 cm',
+        leadTime: '3 semaines',
+        finish: 'Chêne et cuir',
       })
     }
     if (url.pathname === '/api/v1/captures/image' && method === 'POST') {
@@ -1096,7 +1180,9 @@ export function installFakeApi(
       if (existing) return json(201, existing)
       const file: FileRead = {
         id: state.files.length + 1,
-        sha256: 'c'.repeat(64),
+        sha256: String(state.files.length + 1)
+          .repeat(64)
+          .slice(0, 64),
         ext: 'jpg',
         mimeType: 'image/jpeg',
         sizeBytes: 1234,

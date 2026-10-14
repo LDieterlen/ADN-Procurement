@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { installFakeApi, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
+import { designationOf } from './ItemForm'
 
 let api: FakeApi
 
@@ -28,12 +29,15 @@ afterEach(() => api.restore())
 const cellsOf = (row: HTMLElement) => Array.from((row as HTMLTableRowElement).cells).map((c) => c.textContent)
 
 describe('page Nouvel article', () => {
-  test('article dans CHA ×12 : code CHA-LUD-01, arrivée sur la page de l’article', async () => {
+  test('article dans CHA ×12 : code CHA-LUD-01, retour sur le projet', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1')
     await user.click(await screen.findByRole('link', { name: '+ Ajouter un article' }))
     expect(await screen.findByRole('heading', { name: 'Nouvel article' })).toBeTruthy()
-    await user.type(screen.getByLabelText('Désignation'), 'Applique de chevet')
+    await user.click(screen.getByRole('button', { name: "Créer l'article" }))
+    expect(await screen.findByText('Un nom est nécessaire.')).toBeTruthy() // the name, not the designation
+    expect(api.items).toHaveLength(0)
+    await user.type(screen.getByLabelText('Nom'), 'Applique de chevet')
     await screen.findByRole('option', { name: 'LUD — Luminaire décoratif' })
     await user.selectOptions(screen.getByLabelText('Type'), '1')
     await user.type(screen.getByLabelText('Dimensions'), 'L 20 cm')
@@ -44,11 +48,17 @@ describe('page Nouvel article', () => {
     await user.clear(within(placement).getByLabelText('Quantité'))
     await user.type(within(placement).getByLabelText('Quantité'), '2')
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))
-    expect(await screen.findByRole('heading', { name: 'Applique de chevet' })).toBeTruthy()
-    expect(api.items[0]).toMatchObject({ itemCode: 'CHA-LUD-01', unitCostCents: 45_000, dimensions: 'L 20 cm', family: 'edition' })
+    // Back on the project page, the new article in its list.
+    expect(await screen.findByRole('heading', { name: 'Rénovation' })).toBeTruthy()
+    expect(api.items[0]).toMatchObject({
+      name: 'Applique de chevet',
+      productName: 'Applique de chevet',
+      itemCode: 'CHA-LUD-01',
+      unitCostCents: 45_000,
+      dimensions: 'L 20 cm',
+      family: 'edition',
+    })
     expect(api.items[0]?.placements.map((p) => [p.locationId, p.qtyMilli])).toEqual([[2, 2000]])
-    expect(await screen.findByText(/10 800,00 € HT/)).toBeTruthy() // 450 × 2 × 12
-    await user.click(screen.getByRole('link', { name: 'Retour au projet' }))
     const table = await screen.findByRole('table', { name: 'Articles du projet' })
     const row = await within(table).findByRole('row', { name: 'CHA-LUD-01 dans CHA' })
     expect(cellsOf(row).slice(1, 5)).toEqual(['CHA-LUD-01', 'Luminaire décoratif', 'Applique de chevet', '2 × 12'])
@@ -77,27 +87,38 @@ describe('page Nouvel article', () => {
     expect(within(box).getByText(/Tikamoon · réf. 7718 · 399,00 EUR affiché/)).toBeTruthy()
     await user.click(within(box).getByRole('button', { name: 'Utiliser' }))
     await screen.findByText(/Fiche pré-remplie/)
-    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('Santino - Chaise en chêne massif et cuir')
+    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('Santino') // the first part of the name
+    expect((screen.getByLabelText('Nom') as HTMLInputElement).value).toBe('Santino - Chaise en chêne massif et cuir')
     expect((screen.getByLabelText('Référence') as HTMLInputElement).value).toBe('7718')
     expect((screen.getByLabelText('Prix unitaire HT') as HTMLInputElement).value).toBe('399,00')
-    expect((screen.getByLabelText('Lien internet') as HTMLInputElement).value).toBe('https://www.tikamoon.com/art-chaise-7718.htm')
+    expect(screen.getByRole('link', { name: 'tikamoon.com/art-chaise-7718.htm' }).getAttribute('href')).toBe('https://www.tikamoon.com/art-chaise-7718.htm')
+    expect((screen.getByLabelText('Dimensions') as HTMLInputElement).value).toBe('H 78 × L 56.10 × P 60.50 cm')
+    expect((screen.getByLabelText('Délai') as HTMLInputElement).value).toBe('3 semaines')
+    expect((screen.getByLabelText('Finitions') as HTMLInputElement).value).toBe('Chêne et cuir')
+    expect((screen.getByLabelText('Type') as HTMLSelectElement).value).toBe('2') // AS — Assise, guessed
     expect(api.suppliers.some((s) => s.name === 'Tikamoon')).toBe(false) // a brand never creates a supplier
     expect(screen.getByRole('note').textContent).toContain('Marque lue sur la page : Tikamoon. Aucun fournisseur ne lui ressemble')
     expect((screen.getByLabelText('Fournisseur') as HTMLSelectElement).value).toBe('')
-    expect(api.files).toHaveLength(1) // the image was downloaded by the server on « Utiliser »
+    expect(api.files).toHaveLength(2) // every photo of the page downloaded by the server on « Utiliser »
     const photo = within(screen.getByRole('region', { name: 'Article' })).getByRole('img', { name: 'Photo' })
-    expect(photo.getAttribute('src')).toBe('/api/v1/files/1/content?v=cccccccccccc') // visible before « Créer »
-    await screen.findByRole('option', { name: 'AS — Assise' })
-    await user.selectOptions(screen.getByLabelText('Type'), '2')
+    expect(photo.getAttribute('src')).toBe('/api/v1/files/1/content?v=111111111111') // visible before « Créer »
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))
-    await screen.findByRole('heading', { name: 'Santino - Chaise en chêne massif et cuir' })
+    await screen.findByRole('heading', { name: 'Rénovation' })
     expect(api.items[0]).toMatchObject({
+      name: 'Santino',
+      productName: 'Santino - Chaise en chêne massif et cuir',
       reference: '7718',
       unitCostCents: 39_900,
       supplierId: null,
+      categoryId: 2,
+      dimensions: 'H 78 × L 56.10 × P 60.50 cm',
+      leadTime: '3 semaines',
       sourceUrl: 'https://www.tikamoon.com/art-chaise-7718.htm',
     })
-    expect(api.items[0]?.files[0]).toMatchObject({ fileId: 1, isPrimary: true })
+    expect(api.items[0]?.files.map((f) => [f.fileId, f.isPrimary])).toEqual([
+      [1, true],
+      [2, false],
+    ])
   })
 
   test('capture envoyée depuis Chrome : « Utiliser » pré-remplit la fiche, la capture est consommée à la création', async () => {
@@ -111,7 +132,8 @@ describe('page Nouvel article', () => {
       sourceUrl: null,
       createdAt: '2026-10-13T08:00:00Z',
     }
-    api.files.push(image)
+    const second = { ...image, id: 8, sha256: 'e'.repeat(64), originalName: 'armento-2.jpg' }
+    api.files.push(image, second)
     api.captures.push({
       id: 1,
       preview: {
@@ -120,21 +142,13 @@ describe('page Nouvel article', () => {
         brand: 'AM.PM',
         reference: '602505402',
         imageUrl: null,
+        imageUrls: [],
         priceCents: 89_900,
         currency: 'EUR',
         description: null,
         source: 'json-ld',
       },
-      image: {
-        id: 7,
-        sha256: 'd'.repeat(64),
-        ext: 'jpg',
-        mimeType: 'image/jpeg',
-        sizeBytes: 10,
-        originalName: 'armento.jpg',
-        sourceUrl: null,
-        createdAt: '2026-10-13T08:00:00Z',
-      },
+      images: [image, second],
       createdAt: '2026-10-13T08:00:00Z',
     })
     const user = userEvent.setup()
@@ -143,7 +157,8 @@ describe('page Nouvel article', () => {
     expect(within(inbox).getByText(/AM.PM · réf. 602505402 · 899,00 EUR affiché/)).toBeTruthy()
     await user.click(within(inbox).getByRole('button', { name: 'Utiliser' }))
     await screen.findByText(/Fiche pré-remplie/)
-    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('Armento - Canapé')
+    expect((screen.getByLabelText('Désignation') as HTMLInputElement).value).toBe('Armento')
+    expect((screen.getByLabelText('Nom') as HTMLInputElement).value).toBe('Armento - Canapé')
     const note = screen.getByRole('note')
     expect(note.textContent).toContain('Fournisseurs proches')
     expect((screen.getByLabelText('Fournisseur') as HTMLSelectElement).value).toBe('')
@@ -154,8 +169,11 @@ describe('page Nouvel article', () => {
     await screen.findByRole('option', { name: 'AS — Assise' })
     await user.selectOptions(screen.getByLabelText('Type'), '2')
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))
-    await screen.findByRole('heading', { name: 'Armento - Canapé' })
-    expect(api.items[0]?.files[0]).toMatchObject({ fileId: 7, isPrimary: true })
+    await screen.findByRole('heading', { name: 'Rénovation' })
+    expect(api.items[0]?.files.map((f) => [f.fileId, f.isPrimary])).toEqual([
+      [7, true],
+      [8, false],
+    ]) // every photo of the capture, the first as main
     expect(api.captures).toHaveLength(0) // consumed
   })
 
@@ -168,12 +186,13 @@ describe('page Nouvel article', () => {
         brand: null,
         reference: null,
         imageUrl: null,
+        imageUrls: [],
         priceCents: null,
         currency: null,
         description: null,
         source: 'title',
       },
-      image: null,
+      images: [],
       createdAt: '2026-10-13T08:00:00Z',
     })
     const user = userEvent.setup()
@@ -212,10 +231,10 @@ describe('fournisseur parmi une longue liste', () => {
     await user.click(within(list).getByRole('option', { name: 'La Redoute / AM PM' }))
     expect((box as HTMLInputElement).value).toBe('La Redoute / AM PM')
     expect(screen.queryByRole('listbox')).toBeNull()
-    await user.type(screen.getByLabelText('Désignation'), 'Canapé')
+    await user.type(screen.getByLabelText('Nom'), 'Canapé')
     await user.selectOptions(screen.getByLabelText('Type'), '1')
     await user.click(screen.getByRole('button', { name: "Créer l'article" }))
-    await screen.findByRole('heading', { name: 'Canapé' })
+    await screen.findByRole('heading', { name: 'Rénovation' })
     expect(api.items[0]?.supplierId).toBe(1)
   })
 
@@ -239,4 +258,13 @@ describe('fournisseur parmi une longue liste', () => {
     await user.click(screen.getByRole('button', { name: 'Effacer le choix' }))
     expect((box as HTMLInputElement).value).toBe('')
   })
+})
+
+test('la désignation est la première partie du nom, avant une virgule ou un séparateur', () => {
+  expect(designationOf('Banquette modulable 2 places, capitonnée, en velours')).toBe('Banquette modulable 2 places')
+  expect(designationOf('Lampe Bic noir design / LED - H 178 cm - Seletti')).toBe('Lampe Bic noir design')
+  expect(designationOf('Beat Light Fat | Tom Dixon')).toBe('Beat Light Fat')
+  expect(designationOf('Lave-mains Ondine (blanc)')).toBe('Lave-mains Ondine') // a hyphen in a word stays
+  expect(designationOf("Canapé d'angle Armento")).toBe("Canapé d'angle Armento")
+  expect(designationOf('(Édition limitée) Vase')).toBe('(Édition limitée) Vase') // nothing before: the whole name
 })

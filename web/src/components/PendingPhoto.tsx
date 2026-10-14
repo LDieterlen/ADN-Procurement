@@ -23,23 +23,23 @@ export function PendingPhoto({ file, onChange, origin }: { file: FileRead | null
   return (
     <div className="flex items-center gap-4" aria-label="Photo">
       {file ? (
-        <img src={fileContentUrl(file.id, file.sha256)} alt="Photo" className="h-28 w-28 rounded-md border border-neutral-200 object-contain" />
+        <img src={fileContentUrl(file.id, file.sha256)} alt="Photo" className="h-28 w-28 rounded-[6px] border border-line object-cover" />
       ) : (
-        <span className="flex h-28 w-28 items-center justify-center rounded-md border border-dashed border-neutral-300 text-xs text-neutral-400">
+        <span className="flex h-28 w-28 items-center justify-center rounded-[6px] border border-dashed border-line-strong text-[12.5px] text-ink-3">
           Pas de photo
         </span>
       )}
       <div className="space-y-1 text-sm">
         <div className="font-medium">Photo</div>
-        <div className="text-xs text-neutral-500">
+        <div className="text-[12.5px] text-ink-3">
           {file ? (origin ?? 'Jointe à la création.') : 'Une photo peut être déposée maintenant ; elle sera jointe à la création.'}
         </div>
-        <div className="flex gap-3 text-xs">
-          <button type="button" className="underline" onClick={() => input.current?.click()} disabled={upload.isPending}>
+        <div className="flex gap-3 text-[12.5px]">
+          <button type="button" className="font-medium text-accent hover:text-accent-hover" onClick={() => input.current?.click()} disabled={upload.isPending}>
             {file ? 'Remplacer' : 'Déposer une photo'}
           </button>
           {file && (
-            <button type="button" className="text-red-700 underline" onClick={() => onChange(null)}>
+            <button type="button" className="text-danger hover:underline" onClick={() => onChange(null)}>
               Retirer
             </button>
           )}

@@ -1,5 +1,5 @@
 // Quantity in thousandths (integer) shown as "12,5"; piece units stay whole (the API enforces it too).
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
 import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
@@ -27,6 +27,13 @@ export function QuantityField({ name, label, unit, hint, compact }: { name: stri
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
   const fieldId = useFieldId(name)
+  // The value can change from outside (form.reset once the article is loaded): the text follows it,
+  // except while the user is typing something not yet valid.
+  const value = field.value as number | null | undefined
+  useEffect(() => {
+    if (!invalid && textToMilli(text) !== (value ?? null)) setText(milliToText(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   const input = (
     <input
       id={fieldId}
@@ -49,7 +56,7 @@ export function QuantityField({ name, label, unit, hint, compact }: { name: stri
     <Field name={name} label={label} hint={invalid ? 'Quantité attendue (ex. 12,5), trois décimales au plus.' : hint}>
       <div className="flex items-center gap-2">
         {input}
-        {unit && <span className="text-sm text-neutral-500">{unit}</span>}
+        {unit && <span className="text-sm text-ink-3">{unit}</span>}
       </div>
     </Field>
   )

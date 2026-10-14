@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             role={toast.kind === 'error' ? 'alert' : 'status'}
-            className={`rounded border px-3 py-2 text-sm shadow ${toast.kind === 'error' ? 'border-red-300 bg-red-50 text-red-800' : 'border-green-300 bg-green-50 text-green-800'}`}
+            className={`rounded-lg px-3.5 py-2.5 text-sm shadow-[0_8px_24px_-8px_rgba(27,30,35,.35)] ${toast.kind === 'error' ? 'border border-line bg-surface text-danger' : 'bg-ink text-white'}`}
           >
             <div className="flex items-start justify-between gap-2">
               <span>{toast.message}</span>

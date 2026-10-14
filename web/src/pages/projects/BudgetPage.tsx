@@ -17,24 +17,28 @@ import {
   type SummaryRowRead,
 } from '../../api/queries/budget'
 import { CLOSED_STATUSES, useLocations, useProject } from '../../api/queries/project'
-import { ITEM_FAMILY_LABELS, ITEM_STATUS_LABELS, type ItemFamily, type ItemStatus } from '../../api/queries/projectItem'
+import { useChoiceLabels } from '../../api/queries/choice'
+import { ITEM_STATUS_LABELS, type ItemStatus } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { bpToText } from '../../components/forms/BpField'
 import { centsToText, textToCents } from '../../components/forms/MoneyField'
 import { Button } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
+import { pillStyle } from '../../components/ui/Pill'
+import { Segmented } from '../../components/ui/Segmented'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { BudgetStrip } from './BudgetStrip'
 
 const AXES: SummaryAxis[] = ['location', 'zone', 'family', 'type', 'supplier']
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
-const ALERT_TEXT = { none: '', warning: 'text-amber-700', over: 'font-semibold text-red-700' } as const
+const ALERT_TEXT = { none: 'font-medium text-ok', warning: 'font-medium text-warn', over: 'font-medium text-danger' } as const
 
 export function BudgetPage() {
   const params = useParams<{ id: string }>()
   const id = Number(params.id)
   const project = useProject(id)
+  const families = useChoiceLabels('family')
   const [axis, setAxis] = useState<SummaryAxis>('zone')
   const [filters, setFilters] = useState<SummaryFilters>(NO_SUMMARY_FILTERS)
   const summary = useProjectSummary(id, filters)
@@ -44,7 +48,7 @@ export function BudgetPage() {
   const put = usePutBudgetLines()
   const toast = useToast()
 
-  if (project.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (project.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (project.isError) {
     return (
       <EmptyState title={project.error.message}>
@@ -130,62 +134,59 @@ export function BudgetPage() {
       <BudgetStrip projectId={p.id} readOnly={readOnly} />
       <div className="space-y-6">
         <Card title="Répartition par état" label="Répartition par état">
-          {summary.data && (
-            <table className="w-full text-sm" aria-label="Répartition par état">
-              <thead>
-                <tr className="border-b border-neutral-300 text-left text-neutral-900">
-                  <th className="px-2 py-2 font-medium">État</th>
-                  <th className="px-2 py-2 text-right font-medium">Articles</th>
-                  <th className="px-2 py-2 text-right font-medium">Montant HT</th>
-                  <th className="px-2 py-2 font-medium">Part</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.data.byStatus.map((row) => (
-                  <tr key={row.status} className="border-b border-neutral-200">
-                    <td className="px-2 py-2">{ITEM_STATUS_LABELS[row.status as ItemStatus] ?? row.status}</td>
-                    <td className="px-2 py-2 text-right">{row.count}</td>
-                    <td className="px-2 py-2 text-right">{centsToText(row.amountCents)} €</td>
-                    <td className="px-2 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-48 overflow-hidden rounded-full bg-neutral-200">
-                          <div className="h-2 bg-neutral-900" style={{ width: `${Math.min(100, row.shareBp / 100)}%` }} />
+          {summary.data &&
+            (() => {
+              const data = summary.data
+              const rows = data.byStatus.filter((r) => r.status !== 'cancelled')
+              const total = rows.reduce((sum, r) => sum + r.amountCents, 0)
+              return (
+                <>
+                  <div className="flex h-7 gap-0.5 overflow-hidden rounded-[5px]" aria-hidden="true">
+                    {rows.map((r) => (
+                      <div
+                        key={r.status}
+                        style={{ ...pillStyle(r.status as ItemStatus), flex: `${Math.max(r.amountCents, total * 0.01, 1)} 1 0%`, boxShadow: 'none' }}
+                        title={ITEM_STATUS_LABELS[r.status as ItemStatus] ?? r.status}
+                      />
+                    ))}
+                  </div>
+                  <ul className="mt-4 grid grid-cols-6 gap-4" aria-label="Parts par état">
+                    {rows.map((row) => (
+                      <li key={row.status}>
+                        <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-ink-2">
+                          <span
+                            className="inline-block h-2 w-2 rounded-[2px]"
+                            style={{ background: pillStyle(row.status as ItemStatus).background as string, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.08)' }}
+                            aria-hidden="true"
+                          />
+                          {`${ITEM_STATUS_LABELS[row.status as ItemStatus] ?? row.status} · ${row.count}`}
                         </div>
-                        <span className="w-14 text-right text-xs text-neutral-600">{bpToText(row.shareBp)} %</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                        <div className="mt-1 text-base font-semibold tabular-nums">{centsToText(row.amountCents)} €</div>
+                        <div className="text-[12.5px] text-ink-3">{bpToText(row.shareBp)} %</div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )
+            })()}
         </Card>
         <Card
           title="Compilation"
           label="Compilation"
           actions={
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              <label className="flex items-center gap-1 text-neutral-600">
-                Par
-                <select
-                  value={axis}
-                  onChange={(e) => setAxis(e.target.value as SummaryAxis)}
-                  className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5"
-                  aria-label="Axe de compilation"
-                >
-                  {AXES.map((a) => (
-                    <option key={a} value={a}>
-                      {AXIS_LABELS[a]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center gap-1 text-neutral-600">
+              <Segmented
+                label="Axe de compilation"
+                value={axis}
+                onChange={(value) => setAxis(value)}
+                options={AXES.map((a) => ({ value: a, label: AXIS_LABELS[a] }))}
+              />
+              <label className="flex items-center gap-1.5 text-[13px] text-ink-2">
                 Zone
                 <select
                   value={filters.zone ?? ''}
                   onChange={(e) => setFilters({ ...filters, zone: e.target.value || null })}
-                  className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5"
+                  className="control h-8 text-[13px]"
                   aria-label="Filtrer par zone"
                 >
                   <option value="">Toutes</option>
@@ -196,12 +197,12 @@ export function BudgetPage() {
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-1 text-neutral-600">
+              <label className="flex items-center gap-1.5 text-[13px] text-ink-2">
                 Fournisseur
                 <select
                   value={filters.supplierId ?? ''}
                   onChange={(e) => setFilters({ ...filters, supplierId: e.target.value ? Number(e.target.value) : null })}
-                  className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5"
+                  className="control h-8 text-[13px]"
                   aria-label="Filtrer par fournisseur"
                 >
                   <option value="">Tous</option>
@@ -212,18 +213,18 @@ export function BudgetPage() {
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-1 text-neutral-600">
+              <label className="flex items-center gap-1.5 text-[13px] text-ink-2">
                 Famille
                 <select
                   value={filters.family ?? ''}
                   onChange={(e) => setFilters({ ...filters, family: e.target.value || null })}
-                  className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5"
+                  className="control h-8 text-[13px]"
                   aria-label="Filtrer par famille"
                 >
                   <option value="">Toutes</option>
-                  {(Object.keys(ITEM_FAMILY_LABELS) as ItemFamily[]).map((f) => (
-                    <option key={f} value={f}>
-                      {ITEM_FAMILY_LABELS[f]}
+                  {families.options.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
                     </option>
                   ))}
                 </select>
@@ -237,13 +238,13 @@ export function BudgetPage() {
           }
         >
           {filtered && (
-            <p className="mb-2 text-xs text-neutral-500">
+            <p className="mb-2 text-[12.5px] text-ink-3">
               Filtres actifs : les montants sont restreints aux articles et implantations qui correspondent ; le prévisionnel ne s'édite pas sous filtre.
             </p>
           )}
           <table className="w-full text-sm" aria-label={`Compilation par ${AXIS_LABELS[axis].toLowerCase()}`}>
             <thead>
-              <tr className="border-b border-neutral-300 text-left text-neutral-900">
+              <tr className="border-b border-line text-left text-[12.5px] font-medium text-ink-2">
                 <th className="px-2 py-2 font-medium">{AXIS_LABELS[axis]}</th>
                 <th className="px-2 py-2 text-right font-medium">Prévisionnel HT</th>
                 <th className="px-2 py-2 text-right font-medium">Prescrit HT</th>
@@ -255,13 +256,13 @@ export function BudgetPage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-2 py-3 text-neutral-500">
+                  <td colSpan={6} className="px-2 py-3 text-ink-3">
                     Rien à compiler.
                   </td>
                 </tr>
               )}
               {rows.map((row) => (
-                <tr key={row.key} className="border-b border-neutral-200">
+                <tr key={row.key} className="border-b border-line-soft">
                   <td className="px-2 py-2 font-medium">{row.label}</td>
                   <td className="px-2 py-2 text-right">
                     {canEdit && editableKey(row) ? (
@@ -271,7 +272,7 @@ export function BudgetPage() {
                         inputMode="decimal"
                         placeholder="—"
                         aria-label={`Prévisionnel ${row.label}`}
-                        className="w-32 rounded-lg border border-neutral-300 px-2 py-1 text-right text-sm"
+                        className="control h-8 w-[130px] text-right tabular-nums"
                         onBlur={(event) => {
                           const cents = textToCents(event.target.value)
                           if (cents !== undefined && cents !== (row.budgetCents ?? null)) void setEnvelope(row, event.target.value)

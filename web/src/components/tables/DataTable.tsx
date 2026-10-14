@@ -20,10 +20,10 @@ export function DataTable<T>({
 }) {
   if (rows.length === 0) return <>{empty}</>
   return (
-    <table className="w-full border-collapse text-sm">
+    <table className="w-full border-collapse text-sm [&_td:first-child]:pl-5 [&_td:last-child]:pr-5 [&_th:first-child]:pl-5 [&_th:last-child]:pr-5">
       {caption && <caption className="sr-only">{caption}</caption>}
       <thead>
-        <tr className="border-b border-neutral-300 text-left text-sm text-neutral-900">
+        <tr className="border-b border-line text-left text-[12.5px] text-ink-2">
           {columns.map((column) => (
             <th key={column.key} scope="col" className={`px-3 py-2.5 font-medium ${column.className ?? ''}`}>
               {column.header}
@@ -36,10 +36,10 @@ export function DataTable<T>({
           <tr
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className={`border-b border-neutral-200 ${onRowClick ? 'cursor-pointer hover:bg-neutral-50' : ''}`}
+            className={`border-b border-line-soft transition-colors duration-[120ms] ${onRowClick ? 'cursor-pointer hover:bg-sunken' : ''}`}
           >
             {columns.map((column) => (
-              <td key={column.key} className={`px-3 py-3 ${column.className ?? ''}`}>
+              <td key={column.key} className={`px-3 py-3.5 ${column.className ?? ''}`}>
                 {column.render(row)}
               </td>
             ))}

@@ -14,8 +14,8 @@ import {
   type ProjectStatus,
 } from '../../api/queries/project'
 import { EXPORT_KIND_LABELS, listExportUrl, sheetsExportUrl, useProjectExports } from '../../api/queries/projectFile'
-import { Button } from '../../components/ui/Button'
-import { Card, PageHeader } from '../../components/ui/Card'
+import { Button, linkButtonClass } from '../../components/ui/Button'
+import { Card, Dot, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
@@ -60,13 +60,13 @@ export function ProjectPage() {
   function askIndice(current: string | null) {
     const next = nextLetter(current)
     errors.setDialog({
-      title: `Passer à l'indice ${next} ?`,
+      title: current ? `Passer à l'indice ${next} ?` : 'Première diffusion : indice A ?',
       message: current
         ? `Les fiches modifiées depuis l'indice ${current} prendront la lettre ${next} ; les PDF émis ensuite porteront l'indice ${next}. Les PDF émis entre deux indices sont des essais.`
-        : `Toutes les fiches prendront la lettre ${next} ; les PDF émis ensuite porteront l'indice ${next}.`,
+        : 'Toutes les fiches du projet reçoivent l’indice A. Les fiches PDF émises ensuite le portent ; celles émises jusqu’ici restent des essais.',
       actions: [
         {
-          label: `Passer à l'indice ${next}`,
+          label: current ? `Passer à l'indice ${next}` : 'Déclarer l’indice A',
           variant: 'primary',
           onClick: () =>
             void nextIndice
@@ -104,7 +104,7 @@ export function ProjectPage() {
     })
   }
 
-  if (project.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (project.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (project.isError) {
     return (
       <EmptyState title={project.error.message}>
@@ -132,28 +132,20 @@ export function ProjectPage() {
         subtitle={
           <>
             <span>{client.data?.name ?? ''}</span>
-            <span>·</span>
-            <span className="font-mono text-xs">{p.code}</span>
-            <span>·</span>
-            <StatusBadge status={p.status} />
-            <span>·</span>
-            <Pill filled={Boolean(p.indice)}>{p.indice ? `Indice ${p.indice}` : 'Sans indice'}</Pill>
-            {p.dueOn && (
-              <>
-                <span>·</span>
-                <span>Échéance : {p.dueOn}</span>
-              </>
-            )}
-          </>
-        }
-        actions={
-          <>
-            <label className="flex items-center gap-1 text-sm text-neutral-600">
-              Statut
+            <Dot />
+            <span className="font-mono text-[12.5px] text-ink-2">{p.code}</span>
+            <Dot />
+            <label className="relative inline-flex items-center">
+              <StatusBadge status={p.status} />
+              {!readOnly && (
+                <svg width="8" height="5" viewBox="0 0 8 5" className="ml-1.5 opacity-60" aria-hidden="true">
+                  <path d="M1 1l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+              )}
               <select
                 value={p.status}
                 onChange={(event) => askStatus(event.target.value as ProjectStatus)}
-                className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+                className="absolute inset-0 cursor-pointer opacity-0"
                 aria-label="Changer le statut"
               >
                 {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
@@ -163,6 +155,18 @@ export function ProjectPage() {
                 ))}
               </select>
             </label>
+            <Dot />
+            <Pill status={p.indice ? 'indice' : 'none'}>{p.indice ? `Indice ${p.indice}` : 'Sans indice'}</Pill>
+            {p.dueOn && (
+              <>
+                <Dot />
+                <span>Échéance {p.dueOn}</span>
+              </>
+            )}
+          </>
+        }
+        actions={
+          <>
             {!readOnly && (
               <Button onClick={() => askIndice(p.indice)} disabled={nextIndice.isPending}>
                 Nouvel indice
@@ -173,23 +177,12 @@ export function ProjectPage() {
                 Retirer l'indice {p.indice}
               </Button>
             )}
-            <a
-              href={sheetsExportUrl(p.id)}
-              download
-              className="rounded-lg border border-neutral-300 bg-white px-3.5 py-2 text-sm font-medium hover:bg-neutral-50"
-            >
+            <a href={sheetsExportUrl(p.id)} download className={linkButtonClass}>
               Fiches PDF
             </a>
-            <a
-              href={listExportUrl(p.id)}
-              download
-              className="rounded-lg border border-neutral-300 bg-white px-3.5 py-2 text-sm font-medium hover:bg-neutral-50"
-            >
+            <a href={listExportUrl(p.id)} download className={linkButtonClass}>
               Listing PDF
             </a>
-            <Link to={`/projects/${p.id}/budget`}>
-              <Button>Budget</Button>
-            </Link>
             <Link to={`/projects/${p.id}/edit`}>
               <Button variant="primary">Modifier</Button>
             </Link>
@@ -198,34 +191,54 @@ export function ProjectPage() {
       />
       <BudgetStrip projectId={p.id} readOnly={readOnly} />
       {readOnly && (
-        <p className="mb-4 text-sm text-neutral-600">
+        <p className="mb-6 rounded-lg bg-sunken px-4 py-2.5 text-[13.5px] text-ink-2">
           Projet {PROJECT_STATUS_LABELS[p.status].toLowerCase()} : lecture seule, changer le statut pour modifier.
         </p>
       )}
       <div className="space-y-6">
-        <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
         <ItemsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
-        {exports.data && exports.data.length > 0 && (
-          <Card title="Documents émis" label="Documents émis">
-            <ul className="space-y-1 text-sm" aria-label="Documents émis">
-              {exports.data.map((e) => {
-                const reference = e.id === referenceId
-                return (
-                  <li key={e.id} className={`flex items-center gap-3 ${reference ? 'rounded-lg bg-neutral-100 px-2 py-1' : ''}`}>
-                    <a href={fileContentUrl(e.fileId)} download={e.originalName} className="underline">
-                      {e.originalName}
-                    </a>
-                    <span className="text-neutral-500">
-                      {EXPORT_KIND_LABELS[e.kind]}
-                      {e.indice ? ` · indice ${e.indice}` : e.kind === 'sheets_pdf' ? ' · sans indice' : ''} · {e.issuedAt.slice(0, 10)}
-                    </span>
-                    {reference && <Pill filled>{`Fiches de référence, indice ${p.indice}`}</Pill>}
-                  </li>
-                )
-              })}
-            </ul>
+        <div className="grid grid-cols-[1.4fr_1fr] items-start gap-6">
+          <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
+          <Card title="Documents émis" label="Documents émis" padding="table">
+            {exports.data && exports.data.length > 0 ? (
+              <ul className="p-2 text-sm" aria-label="Documents émis">
+                {exports.data.map((e) => {
+                  const reference = e.id === referenceId
+                  return (
+                    <li
+                      key={e.id}
+                      className={`flex items-center justify-between gap-3 px-3 py-2.5 ${reference ? 'rounded-[7px] bg-accent-soft text-accent-ink' : ''}`}
+                    >
+                      <div className="min-w-0">
+                        <a
+                          href={fileContentUrl(e.fileId)}
+                          download={e.originalName}
+                          className={`block truncate font-medium ${reference ? 'text-accent-ink' : 'text-ink'}`}
+                        >
+                          {e.originalName}
+                        </a>
+                        <div className={`text-[12.5px] ${reference ? 'text-accent-ink/80' : 'text-ink-3'}`}>
+                          {EXPORT_KIND_LABELS[e.kind]}
+                          {e.indice ? ` · indice ${e.indice}` : e.kind === 'sheets_pdf' ? ' · sans indice' : ''} · {e.issuedAt.slice(0, 10)}
+                        </div>
+                      </div>
+                      {reference && (
+                        <span
+                          className="rounded-[4px] bg-accent px-1.5 py-0.5 text-[11.5px] font-medium whitespace-nowrap text-white"
+                          title={`Fiches de référence, indice ${p.indice}`}
+                        >
+                          {`Fiches de référence, indice ${p.indice}`}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="px-5 py-5 text-sm text-ink-3">Aucun document émis. « Fiches PDF » et « Listing PDF » émettent et conservent ici chaque version.</p>
+            )}
           </Card>
-        )}
+        </div>
       </div>
       <ConfirmDialog open={errors.dialog !== null} title={errors.dialog?.title ?? ''} actions={errors.dialog?.actions ?? []}>
         {errors.dialog?.message}

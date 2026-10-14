@@ -82,7 +82,7 @@ export function CategoryEditPage() {
     }
   }
 
-  if (id !== undefined && existing.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (id !== undefined && existing.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (id !== undefined && existing.isError) {
     return (
       <EmptyState title={existing.error.message}>
@@ -111,7 +111,7 @@ export function CategoryEditPage() {
       />
       <Card>
         {category?.archivedAt ? (
-          <p className="text-sm text-neutral-600">Type archivé : le restaurer depuis la liste pour le modifier.</p>
+          <p className="text-sm text-ink-2">Type archivé : le restaurer depuis la liste pour le modifier.</p>
         ) : (
           <CategoryForm
             key={category?.updatedAt ?? 'new'}

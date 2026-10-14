@@ -85,7 +85,7 @@ export interface paths {
         put?: never;
         /**
          * Attach Capture Image
-         * @description From the extension, when the server could not download the image itself.
+         * @description From the extension, for each photo the server could not download (`url` = its address).
          */
         post: operations["attachCaptureImage"];
         delete?: never;
@@ -158,6 +158,75 @@ export interface paths {
         put?: never;
         /** Unarchive Category */
         post: operations["unarchiveCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Choices */
+        get: operations["listChoices"];
+        put?: never;
+        /** Create Choice */
+        post: operations["createChoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/choices/{choice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Choice */
+        patch: operations["updateChoice"];
+        trace?: never;
+    };
+    "/api/v1/choices/{choice_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Choice */
+        post: operations["archiveChoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/choices/{choice_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Choice */
+        post: operations["unarchiveChoice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -927,6 +996,8 @@ export interface components {
         Body_attachCaptureImage: {
             /** Image */
             image: string;
+            /** Url */
+            url?: string | null;
         };
         /** Body_createCapture */
         Body_createCapture: {
@@ -1008,8 +1079,19 @@ export interface components {
             currency: string | null;
             /** Description */
             description: string | null;
+            /** Dimensions */
+            dimensions?: string | null;
+            /** Finish */
+            finish?: string | null;
             /** Imageurl */
             imageUrl: string | null;
+            /**
+             * Imageurls
+             * @default []
+             */
+            imageUrls: string[];
+            /** Leadtime */
+            leadTime?: string | null;
             /** Name */
             name: string | null;
             /** Pricecents */
@@ -1021,6 +1103,8 @@ export interface components {
              * @enum {string}
              */
             source: "json-ld" | "opengraph" | "title";
+            /** Typecode */
+            typeCode?: string | null;
             /** Url */
             url: string;
         };
@@ -1033,7 +1117,8 @@ export interface components {
             createdAt: string;
             /** Id */
             id: number;
-            image: components["schemas"]["FileRead"] | null;
+            /** Images */
+            images: components["schemas"]["FileRead"][];
             preview: components["schemas"]["CapturePreviewRead"];
         };
         /** CategoryCreate */
@@ -1070,6 +1155,50 @@ export interface components {
          * @description Name and order only: the code is immutable (item codes depend on it).
          */
         CategoryUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
+        };
+        /** ChoiceCreate */
+        ChoiceCreate: {
+            /**
+             * List
+             * @enum {string}
+             */
+            list: "family" | "usage" | "prestation";
+            /** Name */
+            name: string;
+            /** Sortorder */
+            sortOrder?: number | null;
+        };
+        /** ChoiceRead */
+        ChoiceRead: {
+            /** Archivedat */
+            archivedAt: string | null;
+            /** Code */
+            code: string;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /**
+             * List
+             * @enum {string}
+             */
+            list: "family" | "usage" | "prestation";
+            /** Name */
+            name: string;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /**
+         * ChoiceUpdate
+         * @description Label and order only: the code is kept by articles, envelopes and professionals.
+         */
+        ChoiceUpdate: {
             /** Name */
             name?: string | null;
             /** Sortorder */
@@ -1435,6 +1564,8 @@ export interface components {
         };
         /** PlacementRead */
         PlacementRead: {
+            /** Code */
+            code: string;
             /** Createdat */
             createdAt: string;
             /** Id */
@@ -1474,9 +1605,8 @@ export interface components {
             /**
              * Kind
              * @default manufacturer
-             * @enum {string}
              */
-            kind: "manufacturer" | "distributor" | "publisher" | "artisan";
+            kind: string;
             /** Mobile */
             mobile?: string | null;
             /** Name */
@@ -1508,11 +1638,8 @@ export interface components {
             email: string | null;
             /** Id */
             id: number;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "manufacturer" | "distributor" | "publisher" | "artisan";
+            /** Kind */
+            kind: string;
             /** Mobile */
             mobile: string | null;
             /** Name */
@@ -1541,7 +1668,7 @@ export interface components {
             /** Email */
             email?: string | null;
             /** Kind */
-            kind?: ("manufacturer" | "distributor" | "publisher" | "artisan") | null;
+            kind?: string | null;
             /** Mobile */
             mobile?: string | null;
             /** Name */
@@ -1610,7 +1737,7 @@ export interface components {
             /** Discountbp */
             discountBp?: number | null;
             /** Family */
-            family?: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
+            family?: string | null;
             /** Finish */
             finish?: string | null;
             /** Fxratemicro */
@@ -1623,10 +1750,14 @@ export interface components {
              * @enum {string}
              */
             kind: "product" | "fee";
+            /** Leadtime */
+            leadTime?: string | null;
             /** Name */
             name?: string | null;
             /** Placements */
             placements?: components["schemas"]["PlacementCreate"][] | null;
+            /** Productname */
+            productName?: string | null;
             /** Quoteindice */
             quoteIndice?: string | null;
             /** Quoteref */
@@ -1647,7 +1778,7 @@ export interface components {
             /** Unitcostcents */
             unitCostCents?: number | null;
             /** Usage */
-            usage?: ("indoor" | "outdoor") | null;
+            usage?: string | null;
         };
         /** ProjectItemRead */
         ProjectItemRead: {
@@ -1664,7 +1795,7 @@ export interface components {
             /** Discountbp */
             discountBp: number;
             /** Family */
-            family: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
+            family: string | null;
             /** Files */
             files: components["schemas"]["ItemFileRead"][];
             /** Finish */
@@ -1682,10 +1813,14 @@ export interface components {
              * @enum {string}
              */
             kind: "product" | "fee";
+            /** Leadtime */
+            leadTime: string | null;
             /** Name */
             name: string;
             /** Placements */
             placements: components["schemas"]["PlacementRead"][];
+            /** Productname */
+            productName: string;
             /** Projectid */
             projectId: number;
             /** Quoteindice */
@@ -1712,7 +1847,7 @@ export interface components {
             /** Updatedat */
             updatedAt: string;
             /** Usage */
-            usage: ("indoor" | "outdoor") | null;
+            usage: string | null;
         };
         /**
          * ProjectItemUpdate
@@ -1730,15 +1865,19 @@ export interface components {
             /** Discountbp */
             discountBp?: number | null;
             /** Family */
-            family?: ("custom" | "joinery" | "ose" | "edition" | "gallery" | "artwork" | "textile") | null;
+            family?: string | null;
             /** Finish */
             finish?: string | null;
             /** Fxratemicro */
             fxRateMicro?: number | null;
             /** Itemcode */
             itemCode?: string | null;
+            /** Leadtime */
+            leadTime?: string | null;
             /** Name */
             name?: string | null;
+            /** Productname */
+            productName?: string | null;
             /** Quoteindice */
             quoteIndice?: string | null;
             /** Quoteref */
@@ -1756,7 +1895,7 @@ export interface components {
             /** Unitcostcents */
             unitCostCents?: number | null;
             /** Usage */
-            usage?: ("indoor" | "outdoor") | null;
+            usage?: string | null;
         };
         /**
          * ProjectListRead
@@ -2459,6 +2598,168 @@ export interface operations {
             };
         };
     };
+    listChoices: {
+        parameters: {
+            query?: {
+                list?: ("family" | "usage" | "prestation") | null;
+                includeArchived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createChoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateChoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                choice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoiceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archiveChoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                choice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchiveChoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                choice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listClients: {
         parameters: {
             query?: {
@@ -2976,7 +3277,7 @@ export interface operations {
                 limit?: number;
                 offset?: number;
                 specialty?: string | null;
-                kind?: ("manufacturer" | "distributor" | "publisher" | "artisan") | null;
+                kind?: string | null;
             };
             header?: never;
             path?: never;

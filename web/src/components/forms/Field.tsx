@@ -22,21 +22,20 @@ export function Field({ name, label, hint, children }: { name: string; label: st
   const error = useFieldError(name)
   const fieldId = useFieldId(name)
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={fieldId} className="text-sm font-medium text-neutral-700">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={fieldId} className="text-[12.5px] font-medium text-ink-2">
         {label}
       </label>
       {children}
       {error ? (
-        <p id={`${fieldId}-error`} role="alert" className="text-xs text-red-700">
+        <p id={`${fieldId}-error`} role="alert" className="text-[12.5px] text-danger">
           {error}
         </p>
       ) : (
-        hint && <p className="text-xs text-neutral-500">{hint}</p>
+        hint && <p className="text-[12.5px] text-ink-3">{hint}</p>
       )}
     </div>
   )
 }
 
-export const controlClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-700 focus:outline-none aria-[invalid=true]:border-red-500'
+export const controlClass = 'control w-full min-w-0'

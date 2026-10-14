@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { installFakeApi, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
 
@@ -68,5 +68,11 @@ describe('page Réglages', () => {
     await within(card).findByText(/^tok-/)
     expect(api.setting.extensionToken).toMatch(/^tok-/)
     expect(within(card).getByRole('button', { name: 'Régénérer le jeton' })).toBeTruthy()
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await user.click(within(card).getByRole('button', { name: 'Copier' }))
+    expect(writeText).toHaveBeenCalledWith(api.setting.extensionToken)
+    expect(await screen.findByText(/Jeton copié/)).toBeTruthy()
   })
 })

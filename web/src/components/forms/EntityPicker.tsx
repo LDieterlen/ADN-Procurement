@@ -38,7 +38,7 @@ export function EntityPicker({
     <button
       type="button"
       onClick={onCreate}
-      className="whitespace-nowrap rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100"
+      className="whitespace-nowrap rounded border border-line-strong px-2 py-1 text-xs hover:bg-track"
       aria-label={`Nouveau : ${label.toLowerCase()}`}
     >
       + Nouveau
@@ -183,7 +183,7 @@ function Combobox({
         <button
           type="button"
           aria-label="Effacer le choix"
-          className="absolute top-1/2 right-2 -translate-y-1/2 text-neutral-400 hover:text-neutral-800"
+          className="absolute top-1/2 right-2 -translate-y-1/2 text-ink-3 hover:text-ink"
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => choose(null)}
         >
@@ -194,26 +194,24 @@ function Combobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-neutral-300 bg-white py-1 text-sm shadow-lg"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-line-strong bg-white py-1 text-sm shadow-lg"
         >
-          {shown.length === 0 && <li className="px-3 py-1.5 text-neutral-500">Aucun résultat.</li>}
+          {shown.length === 0 && <li className="px-3 py-1.5 text-ink-3">Aucun résultat.</li>}
           {shown.map((option, index) => (
             <li
               key={option.id}
               role="option"
               aria-selected={option.id === value}
-              className={`cursor-pointer px-3 py-1.5 ${index === active ? 'bg-neutral-100' : ''} ${option.id === value ? 'font-medium' : ''}`}
+              className={`cursor-pointer px-3 py-1.5 ${index === active ? 'bg-track' : ''} ${option.id === value ? 'font-medium' : ''}`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setActive(index)}
               onClick={() => choose(option)}
             >
               {option.label}
-              {option.hint && <span className="ml-1 text-xs text-neutral-500">{option.hint}</span>}
+              {option.hint && <span className="ml-1 text-xs text-ink-3">{option.hint}</span>}
             </li>
           ))}
-          {matches.length > MAX_SHOWN && (
-            <li className="px-3 py-1.5 text-xs text-neutral-500">… et {matches.length - MAX_SHOWN} autres : préciser la recherche.</li>
-          )}
+          {matches.length > MAX_SHOWN && <li className="px-3 py-1.5 text-xs text-ink-3">… et {matches.length - MAX_SHOWN} autres : préciser la recherche.</li>}
         </ul>
       )}
     </div>

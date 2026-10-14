@@ -83,6 +83,11 @@ export function SettingsPage() {
   const update = useUpdateSettings()
   const backup = useCreateBackup()
   const generateToken = useGenerateExtensionToken()
+  function copyToken(token: string) {
+    void copyText(token)
+      .then(() => toast.show({ kind: 'success', message: 'Jeton copié ; le coller dans les options de l’extension.' }))
+      .catch(() => toast.show({ kind: 'error', message: 'Copie impossible : sélectionner le jeton et le copier à la main.' }))
+  }
   const toast = useToast()
   const [serverErrors, setServerErrors] = useState<ErrorDetail[]>([])
   const [banner, setBanner] = useState<string | null>(null)
@@ -121,7 +126,7 @@ export function SettingsPage() {
     <section className="space-y-6">
       <PageHeader title="Réglages" subtitle="Agence imprimée en tête des PDF, codes projet, sauvegardes" />
       <Card title="Agence">
-        {settings.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
+        {settings.isPending && <p className="text-sm text-ink-3">Chargement…</p>}
         {settings.isError && <EmptyState title="Impossible de charger les réglages">{settings.error.message}</EmptyState>}
         {settings.data && (
           <SettingsForm
@@ -135,15 +140,20 @@ export function SettingsPage() {
         )}
       </Card>
       <Card title="Extension Chrome" label="Extension Chrome" className="max-w-3xl">
-        <p className="mb-3 text-sm text-neutral-600">
+        <p className="mb-3 text-sm text-ink-2">
           Le bouton « Envoyer à FFE » de l'extension lit la page produit dans ton navigateur (utile sur les sites qui refusent « Coller une adresse ») et la
           dépose ici, en attente sur « Nouvel article ». L'extension s'authentifie avec ce jeton, à coller dans ses options.
         </p>
         <dl className="mb-3 grid grid-cols-[14rem_1fr] gap-y-1 text-sm">
-          <dt className="text-neutral-500">Jeton</dt>
+          <dt className="text-ink-3">Jeton</dt>
           <dd>
             {settings.data?.extensionToken ? (
-              <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs">{settings.data.extensionToken}</code>
+              <span className="inline-flex items-center gap-2">
+                <code className="rounded bg-track px-1.5 py-0.5 text-xs">{settings.data.extensionToken}</code>
+                <Button size="xs" variant="ghost" onClick={() => copyToken(settings.data?.extensionToken ?? '')}>
+                  Copier
+                </Button>
+              </span>
             ) : (
               'aucun (extension désactivée)'
             )}
@@ -163,20 +173,20 @@ export function SettingsPage() {
       </Card>
       <Card title="Sauvegardes" label="Sauvegardes" className="max-w-3xl">
         <dl className="mb-3 grid grid-cols-[14rem_1fr] gap-y-1 text-sm">
-          <dt className="text-neutral-500">Base</dt>
+          <dt className="text-ink-3">Base</dt>
           <dd>{health.data?.dbPath ?? '—'}</dd>
-          <dt className="text-neutral-500">Dossier de copie Windows</dt>
+          <dt className="text-ink-3">Dossier de copie Windows</dt>
           <dd>
             {health.data?.backupDir ?? '—'}{' '}
             {health.data && !health.data.backupDirOk && (
-              <span className="rounded-full border border-amber-300 bg-amber-50 px-2 text-xs text-amber-900">absent ou non accessible (FFE_BACKUP_DIR)</span>
+              <span className="rounded-full border border-warn-soft bg-warn-soft px-2 text-xs text-warn">absent ou non accessible (FFE_BACKUP_DIR)</span>
             )}
           </dd>
-          <dt className="text-neutral-500">Dernière sauvegarde</dt>
+          <dt className="text-ink-3">Dernière sauvegarde</dt>
           <dd>{health.data?.lastBackupAt ?? 'aucune'}</dd>
-          <dt className="text-neutral-500">Dernier quick_check</dt>
+          <dt className="text-ink-3">Dernier quick_check</dt>
           <dd>{health.data?.lastQuickCheck ?? '—'}</dd>
-          <dt className="text-neutral-500">Journal</dt>
+          <dt className="text-ink-3">Journal</dt>
           <dd>{health.data?.logPath ?? '—'}</dd>
         </dl>
         <div className="flex items-center gap-3">
@@ -188,7 +198,7 @@ export function SettingsPage() {
           </Link>
         </div>
         {lastBackup && (
-          <p className="mt-2 text-xs text-neutral-600">
+          <p className="mt-2 text-xs text-ink-2">
             Écrit : {lastBackup.path}
             {lastBackup.copiedTo ? ` ; copie : ${lastBackup.copiedTo}` : ''} ; quick_check {lastBackup.quickCheck}.
           </p>
@@ -196,4 +206,18 @@ export function SettingsPage() {
       </Card>
     </section>
   )
+}
+
+/** The clipboard API needs a secure page (localhost); from Windows over the network, the old copy command. */
+async function copyText(text: string): Promise<void> {
+  if (window.isSecureContext && navigator.clipboard) return navigator.clipboard.writeText(text)
+  const area = document.createElement('textarea')
+  area.value = text
+  area.style.position = 'fixed'
+  area.style.opacity = '0'
+  document.body.append(area)
+  area.select()
+  const copied = document.execCommand('copy')
+  area.remove()
+  if (!copied) throw new Error('copy refused')
 }

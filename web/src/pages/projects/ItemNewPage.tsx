@@ -40,8 +40,10 @@ export function ItemNewPage() {
   const deleteCapture = useDeleteCapture()
   const toast = useToast()
   const [captureId, setCaptureId] = useState<number | null>(null)
-  const [captured, setCaptured] = useState<Captured | null>(null)
-  const [photo, setPhoto] = useState<{ file: FileRead; origin: string } | null>(null)
+  const [prefilled, setPrefilled] = useState(false)
+  // Photos joined at creation, first = main photo (« Coller une adresse » and Chrome: every photo of the page).
+  const [photos, setPhotos] = useState<FileRead[]>([])
+  const [photoOrigin, setPhotoOrigin] = useState<string | undefined>(undefined)
   const [modal, setModal] = useState<'supplier' | null>(null)
   const [locationId, setLocationId] = useState<string>('')
   const [qty, setQty] = useState('1')
@@ -54,20 +56,28 @@ export function ItemNewPage() {
   const suggestions = brand ? similarSuppliers(brand, suppliers.data?.items ?? []) : []
 
   function useCapture(result: Captured, fromInbox: number | null = null) {
-    setCaptured(result)
     setCaptureId(fromInbox)
-    if (result.image) setPhoto({ file: result.image, origin: 'Photo lue sur la page ; jointe à la création.' })
+    if (result.images.length) {
+      setPhotos(result.images)
+      setPhotoOrigin(
+        result.images.length > 1
+          ? `${result.images.length} photos lues sur la page ; toutes jointes à la création.`
+          : 'Photo lue sur la page ; jointe à la création.',
+      )
+    }
     const found = result.preview.brand ? similarSuppliers(result.preview.brand, suppliers.data?.items ?? []) : []
     setBrand(result.preview.brand)
-    form.reset(fromCapture(result.preview, form.getValues(), found.length === 1 && found[0] ? found[0].id : null))
+    const type = result.preview.typeCode ? (categories.data ?? []).find((c) => c.code === result.preview.typeCode) : undefined
+    form.reset(fromCapture(result.preview, form.getValues(), found.length === 1 && found[0] ? found[0].id : null, type?.id ?? null))
     setFormKey((k) => k + 1)
-    toast.show({ kind: 'success', message: 'Fiche pré-remplie depuis la page ; vérifier le prix (souvent TTC) et choisir le type.' })
+    setPrefilled(true)
   }
 
   async function submit(values: ItemFormValues) {
     setBanner(null)
     const milli = textToMilli(qty)
     if (milli === undefined || milli === null) return setBanner('Quantité invalide.')
+    if (!values.productName.trim()) return form.setError('productName', { type: 'required', message: 'Un nom est nécessaire.' })
     try {
       const created = await create.mutateAsync({
         projectId,
@@ -76,14 +86,17 @@ export function ItemNewPage() {
           qtyMilli: milli,
         }),
       })
-      if (captured?.image) {
+      for (const [index, file] of photos.entries()) {
         await attach
-          .mutateAsync({ itemId: created.id, data: { fileId: captured.image.id, kind: 'image', isPrimary: true, caption: null, sortOrder: 0 } })
+          .mutateAsync({ itemId: created.id, data: { fileId: file.id, kind: 'image', isPrimary: index === 0, caption: null, sortOrder: index } })
           .catch(() => undefined)
       }
       if (captureId !== null) await deleteCapture.mutateAsync(captureId).catch(() => undefined) // consumed
-      toast.show({ kind: 'success', message: `${created.itemCode} ajouté${captured?.image ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.` })
-      navigate(`/projects/${projectId}/items/${created.id}`)
+      toast.show({
+        kind: 'success',
+        message: `${created.itemCode} ajouté${photos.length > 1 ? ` avec ${photos.length} photos` : photos.length ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.`,
+      })
+      navigate(`/projects/${projectId}`) // back to the project: the article is in its list
     } catch (error) {
       if (!isApiError(error)) throw error
       if (error.code === 'validation_error') {
@@ -96,7 +109,7 @@ export function ItemNewPage() {
     }
   }
 
-  if (project.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (project.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (project.isError) {
     return (
       <EmptyState title={project.error.message}>
@@ -119,7 +132,7 @@ export function ItemNewPage() {
   const options = (rows: { id: number; name: string }[] | undefined) => (rows ?? []).map((r) => ({ id: r.id, label: r.name }))
 
   return (
-    <section>
+    <section className="max-w-[960px]">
       <PageHeader
         title="Nouvel article"
         crumbs={
@@ -150,23 +163,49 @@ export function ItemNewPage() {
                 <InboxRow
                   key={c.id}
                   capture={c}
-                  onUse={() => useCapture({ preview: c.preview, image: c.image }, c.id)}
+                  onUse={() => useCapture({ preview: c.preview, images: c.images }, c.id)}
                   onDismiss={() => void deleteCapture.mutateAsync(c.id)}
                 />
               ))}
             </ul>
           </Card>
         )}
+        {prefilled && (
+          <div role="status" className="rounded-lg bg-warn-soft px-3.5 py-2.5 text-[13.5px] text-warn">
+            <strong className="font-semibold">Fiche pré-remplie depuis la page — à vérifier :</strong> prix souvent TTC sur les sites marchands, type,
+            dimensions et délai.
+          </div>
+        )}
         <Form form={form} onSubmit={submit} banner={banner}>
           <Card title="Article" label="Article">
             <div className="space-y-4">
               <PendingPhoto
-                file={photo?.file ?? null}
-                origin={photo?.origin}
-                onChange={(file) => setPhoto(file ? { file, origin: 'Déposée ici ; jointe à la création.' } : null)}
+                file={photos[0] ?? null}
+                origin={photoOrigin}
+                onChange={(file) => {
+                  setPhotos((current) => (file ? [file, ...current.slice(1)] : current.slice(1)))
+                  setPhotoOrigin(file ? 'Déposée ici ; jointe à la création.' : undefined)
+                }}
               />
+              {photos.length > 1 && (
+                <ul className="flex flex-wrap gap-2" aria-label="Autres photos">
+                  {photos.slice(1).map((file) => (
+                    <li key={file.id} className="relative">
+                      <img src={fileContentUrl(file.id, file.sha256)} alt="" className="h-14 w-14 rounded-[5px] border border-line object-cover" />
+                      <button
+                        type="button"
+                        aria-label={`Retirer la photo ${file.originalName}`}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full border border-line bg-surface text-xs leading-none text-ink-2 hover:text-danger"
+                        onClick={() => setPhotos((current) => current.filter((f) => f.id !== file.id))}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {brand && (
-                <p className="text-sm text-neutral-600" role="note">
+                <p className="text-sm text-ink-2" role="note">
                   Marque lue sur la page : <span className="font-medium">{brand}</span>.{' '}
                   {suggestions.length === 0 && 'Aucun fournisseur ne lui ressemble : choisir dans la liste ou « + Nouveau ».'}
                   {suggestions.length === 1 && suggestions[0] && `Fournisseur proposé : ${suggestions[0].name}.`}
@@ -177,7 +216,7 @@ export function ItemNewPage() {
                         <button
                           key={s.id}
                           type="button"
-                          className="mr-1 rounded-full border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-100"
+                          className="mr-1 rounded-full border border-line-strong px-2 py-0.5 text-xs hover:bg-track"
                           onClick={() => form.setValue('supplierId', s.id, { shouldDirty: true })}
                         >
                           {s.name}
@@ -199,12 +238,12 @@ export function ItemNewPage() {
           </Card>
           <Card title="Implantation" label="Implantation" className="mt-6">
             <div className="flex flex-wrap items-end gap-4">
-              <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
+              <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
                 Localisation
                 <select
                   value={locationId}
                   onChange={(e) => setLocationId(e.target.value)}
-                  className="min-w-64 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-normal"
+                  className="min-w-64 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-normal"
                 >
                   <option value="">Non affecté</option>
                   {(locations.data ?? []).map((l) => (
@@ -214,16 +253,16 @@ export function ItemNewPage() {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-sm font-medium text-neutral-700">
+              <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
                 Quantité
                 <input
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
                   inputMode="decimal"
-                  className="w-24 rounded-lg border border-neutral-300 px-3 py-2 text-right text-sm font-normal"
+                  className="w-24 rounded-lg border border-line-strong px-3 py-2 text-right text-sm font-normal"
                 />
               </label>
-              <span className="pb-2 text-xs text-neutral-500">Par localisation ; d'autres implantations s'ajoutent ensuite sur la page de l'article.</span>
+              <span className="pb-2 text-xs text-ink-3">Par localisation ; d'autres implantations s'ajoutent ensuite sur la page de l'article.</span>
             </div>
           </Card>
           <div className="mt-6 flex gap-2">
@@ -256,14 +295,17 @@ function InboxRow({ capture, onUse, onDismiss }: { capture: CaptureRead; onUse: 
     .join(' · ')
   return (
     <li className="flex items-center gap-4 py-3">
-      {capture.image ? (
-        <img src={fileContentUrl(capture.image.id, capture.image.sha256)} alt="" className="h-14 w-14 rounded-md border border-neutral-200 object-contain" />
+      {capture.images[0] ? (
+        <img src={fileContentUrl(capture.images[0].id, capture.images[0].sha256)} alt="" className="h-14 w-14 rounded-md border border-line object-contain" />
       ) : (
-        <div className="h-14 w-14 rounded-md border border-dashed border-neutral-300" />
+        <div className="h-14 w-14 rounded-md border border-dashed border-line-strong" />
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{p.name}</p>
-        <p className="truncate text-xs text-neutral-500">{facts || p.url}</p>
+        <p className="truncate text-xs text-ink-3">
+          {facts || p.url}
+          {capture.images.length > 1 ? ` · ${capture.images.length} photos` : ''}
+        </p>
       </div>
       <Button variant="primary" onClick={onUse}>
         Utiliser

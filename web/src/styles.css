@@ -1,9 +1,93 @@
 @import 'tailwindcss';
 
-/* Look of the earlier tool (ADR-0013): white page, thin top bar, cards with a hairline border. */
+/* Design tokens of the 2026-10-13 refonte (references/Model site, hors dépôt) : page « paper »,
+   cartes blanches à bord fin, accent bleu ardoise, police Geist servie en local (SIL OFL). */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist[wght].woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono[wght].woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --color-paper: #f6f5f2;
+  --color-surface: #ffffff;
+  --color-sunken: #faf9f7;
+  --color-track: #eceae5;
+  --color-line: #e4e2dc;
+  --color-line-soft: #efede8;
+  --color-line-strong: #cfccc4;
+  --color-ink: #1b1e23;
+  --color-ink-2: #5b6068;
+  --color-ink-3: #8a8f96;
+
+  --color-accent: #3d5a7a;
+  --color-accent-hover: #2c4560;
+  --color-accent-soft: #e7edf3;
+  --color-accent-ink: #2c4560;
+  --color-bar-spec: #b9c7d6;
+  --color-bar-quoted: #7b93ad;
+
+  --color-ok: #2f5b3e;
+  --color-ok-soft: #dce9e0;
+  --color-warn: #7a5216;
+  --color-warn-soft: #f6ebd6;
+  --color-danger: #a4442f;
+}
+
 body {
-  background: #fff;
-  color: #111;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+@layer base {
+  a {
+    color: var(--color-accent);
+  }
+  a:hover {
+    color: var(--color-accent-hover);
+  }
+}
+
+/* Shared control look (fields, selects): 36 px, radius 6, strong hairline, accent focus halo. */
+.control {
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  padding: 0 10px;
+  font-size: 14px;
+  color: var(--color-ink);
+  transition: border-color 120ms ease;
+}
+.control:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+.control[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+textarea.control {
+  height: auto;
+  padding: 8px 10px;
+}
+select.control {
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238A8F96' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
 }
 
 @media print {

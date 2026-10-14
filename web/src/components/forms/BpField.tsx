@@ -1,6 +1,6 @@
 // Basis points (10 000 = 100 %) shown and typed as a percentage with up to two decimals.
 // Form value stays an integer (or null when empty); the text the user types never becomes a float in the API.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
 import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
@@ -27,6 +27,13 @@ export function BpField({ name, label, hint }: { name: string; label: string; hi
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
   const fieldId = useFieldId(name)
+  // The value can change from outside (form.reset once the article is loaded): the text follows it,
+  // except while the user is typing something not yet valid.
+  const value = field.value as number | null | undefined
+  useEffect(() => {
+    if (!invalid && textToBp(text) !== (value ?? null)) setText(bpToText(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   return (
     <Field name={name} label={label} hint={invalid ? 'Pourcentage attendu, deux décimales au plus (ex. 12,5).' : hint}>
       <div className="flex items-center gap-2">
@@ -44,7 +51,7 @@ export function BpField({ name, label, hint }: { name: string; label: string; hi
           }}
           onBlur={field.onBlur}
         />
-        <span className="text-sm text-neutral-500">%</span>
+        <span className="text-sm text-ink-3">%</span>
       </div>
     </Field>
   )

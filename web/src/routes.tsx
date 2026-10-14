@@ -43,7 +43,7 @@ export function AppRoutes() {
         <Route path="/categories/:id" element={<CategoryEditPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/health" element={<HealthPage />} />
-        <Route path="*" element={<p className="text-neutral-600">Page introuvable.</p>} />
+        <Route path="*" element={<p className="text-ink-2">Page introuvable.</p>} />
       </Route>
     </Routes>
   )

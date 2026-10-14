@@ -61,7 +61,7 @@ export function SupplierEditPage() {
     })
   }
 
-  if (id !== undefined && existing.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (id !== undefined && existing.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (id !== undefined && existing.isError) {
     return (
       <EmptyState title={existing.error.message}>
@@ -77,9 +77,9 @@ export function SupplierEditPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">
           {supplier ? supplier.name : 'Nouveau fournisseur'}
-          {archived && <span className="ml-3 rounded bg-neutral-200 px-2 py-0.5 align-middle text-xs">Archivé</span>}
+          {archived && <span className="ml-3 rounded bg-track px-2 py-0.5 align-middle text-xs">Archivé</span>}
         </h1>
         <div className="flex gap-2">
           <Link to="/suppliers">
@@ -102,7 +102,7 @@ export function SupplierEditPage() {
         </div>
       </div>
       {archived ? (
-        <p className="text-sm text-neutral-600">Fournisseur archivé : restaurer pour modifier.</p>
+        <p className="text-sm text-ink-2">Fournisseur archivé : restaurer pour modifier.</p>
       ) : (
         <SupplierForm
           key={supplier?.updatedAt ?? 'new'}

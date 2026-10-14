@@ -3,24 +3,16 @@ import { useEffect } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import type { ErrorDetail } from '../../api/errors'
 import type { ProfessionalCreate, ProfessionalRead } from '../../api/queries/professional'
+import { useChoiceLabels } from '../../api/queries/choice'
 import { Form } from '../../components/forms/Form'
 import { Select } from '../../components/forms/Select'
 import { TextArea } from '../../components/forms/TextArea'
 import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
 
-export type ProfessionalKind = ProfessionalRead['kind']
-export const KIND_LABELS: Record<ProfessionalKind, string> = {
-  manufacturer: 'Fabricant',
-  distributor: 'Distributeur',
-  publisher: 'Éditeur',
-  artisan: 'Artisan',
-}
-const KINDS = (Object.keys(KIND_LABELS) as ProfessionalKind[]).map((value) => ({ value, label: KIND_LABELS[value] }))
-
 export type ProfessionalFormValues = {
   name: string
-  kind: ProfessionalKind
+  kind: string
   specialty: string
   contactName: string
   phone: string
@@ -93,6 +85,7 @@ export function ProfessionalForm({
   banner: string | null
   serverErrors: ErrorDetail[]
 }) {
+  const prestations = useChoiceLabels('prestation')
   const form = useForm<ProfessionalFormValues>({ defaultValues: initial ? fromProfessional(initial) : EMPTY })
   useEffect(() => {
     for (const detail of serverErrors)
@@ -102,7 +95,7 @@ export function ProfessionalForm({
     <Form form={form} onSubmit={onSubmit} banner={banner}>
       <div className="grid max-w-3xl grid-cols-2 gap-4">
         <TextInput name="name" label="Nom" autoFocus />
-        <Select name="kind" label="Prestation" options={KINDS} />
+        <Select name="kind" label="Prestation" options={prestations.options} />
         <TextInput name="specialty" label="Savoir-faire" />
         <TextInput name="website" label="Site web" />
       </div>

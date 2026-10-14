@@ -1,35 +1,41 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useProfessionalSpecialties, useProfessionals, type ProfessionalKind, type ProfessionalRead } from '../../api/queries/professional'
+import { useProfessionalSpecialties, useProfessionals, type ProfessionalRead } from '../../api/queries/professional'
 import { FilterSelect } from '../../components/forms/FilterSelect'
-import { DataTable, type Column } from '../../components/tables/DataTable'
+import { type Column } from '../../components/tables/DataTable'
+import { ListToolbar } from '../../components/tables/ListToolbar'
+import { TableCard, archivedColumn } from '../../components/tables/TableCard'
+import { PageHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { EmptyState } from '../../components/ui/EmptyState'
-import { Pagination } from '../../components/ui/Pagination'
 import { Pill } from '../../components/ui/Pill'
-import { KIND_LABELS } from './ProfessionalForm'
+import { useChoiceLabels } from '../../api/queries/choice'
 import { useToast } from '../../components/ui/Toast'
 
 const LIMIT = 50
 
 const COLUMNS: Column<ProfessionalRead>[] = [
   { key: 'name', header: 'Nom', render: (m) => <span className="font-medium">{m.name}</span> },
-  { key: 'kind', header: 'Prestation', render: (m) => <Pill>{KIND_LABELS[m.kind]}</Pill> },
-  { key: 'specialty', header: 'Savoir-faire', render: (m) => m.specialty ?? '' },
-  { key: 'contact', header: 'Contact', render: (m) => m.contactName ?? '' },
-  { key: 'phone', header: 'Téléphone', render: (m) => m.mobile ?? m.phone ?? '' },
-  { key: 'email', header: 'E-mail', render: (m) => m.email ?? '' },
-  { key: 'website', header: 'Site web', render: (m) => m.website ?? '' },
-  { key: 'status', header: '', render: (m) => (m.archivedAt ? <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs">Archivé</span> : null) },
+  { key: 'specialty', className: 'text-ink-2', header: 'Savoir-faire', render: (m) => m.specialty ?? '' },
+  { key: 'contact', className: 'text-ink-2', header: 'Contact', render: (m) => m.contactName ?? '' },
+  { key: 'phone', className: 'text-ink-2', header: 'Téléphone', render: (m) => m.mobile ?? m.phone ?? '' },
+  { key: 'email', className: 'text-ink-2', header: 'E-mail', render: (m) => m.email ?? '' },
+  { key: 'website', className: 'text-ink-2', header: 'Site web', render: (m) => m.website ?? '' },
+  archivedColumn<ProfessionalRead>(),
 ]
 
 export function ProfessionalsPage() {
+  const prestations = useChoiceLabels('prestation')
+  const columns: Column<ProfessionalRead>[] = [
+    COLUMNS[0]!,
+    { key: 'kind', header: 'Prestation', render: (m) => <Pill>{prestations.label(m.kind)}</Pill> },
+    ...COLUMNS.slice(1),
+  ]
   const [q, setQ] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [offset, setOffset] = useState(0)
   const [specialty, setSpecialty] = useState('')
   const [kind, setKind] = useState('')
-  const professionals = useProfessionals({ q, includeArchived, limit: LIMIT, offset, specialty, kind: (kind || null) as ProfessionalKind | null })
+  const professionals = useProfessionals({ q, includeArchived, limit: LIMIT, offset, specialty, kind: kind || null })
   const specialties = useProfessionalSpecialties()
   const navigate = useNavigate()
   const toast = useToast()
@@ -40,78 +46,68 @@ export function ProfessionalsPage() {
   }, [professionals.isError, professionals.error, toast])
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Professionnels</h1>
-        <Link to="/professionals/new">
-          <Button variant="primary">Nouveau professionnel</Button>
-        </Link>
-      </div>
-      <div className="flex items-center gap-4">
-        <input
-          type="search"
-          value={q}
-          onChange={(event) => {
-            setQ(event.target.value)
-            setOffset(0)
-          }}
-          placeholder="Rechercher un nom, un savoir-faire, un contact…"
-          aria-label="Rechercher"
-          className="w-64 rounded border border-neutral-300 px-2 py-1.5 text-sm"
-        />
-        <FilterSelect
-          label="Prestation"
-          all="Toutes"
-          value={kind}
-          onChange={(value) => {
-            setKind(value)
-            setOffset(0)
-          }}
-          options={(Object.keys(KIND_LABELS) as ProfessionalKind[]).map((k) => ({ value: k, label: KIND_LABELS[k] }))}
-        />
-        <FilterSelect
-          label="Savoir-faire"
-          value={specialty}
-          onChange={(value) => {
-            setSpecialty(value)
-            setOffset(0)
-          }}
-          options={(specialties.data ?? []).map((s) => ({ value: s, label: s }))}
-        />
-        <label className="flex items-center gap-1.5 text-sm text-neutral-700">
-          <input
-            type="checkbox"
-            checked={includeArchived}
-            onChange={(event) => {
-              setIncludeArchived(event.target.checked)
-              setOffset(0)
-            }}
-          />
-          Afficher les archivés
-        </label>
-      </div>
-      {professionals.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
-      {professionals.isError && (
-        <EmptyState title="Impossible de charger les professionnels">
-          {professionals.error.message}{' '}
-          <Link to="/health" className="underline">
-            Voir la page Santé
+    <section>
+      <PageHeader
+        title="Professionnels"
+        subtitle={professionals.data ? `${professionals.data.total} professionnel${professionals.data.total > 1 ? 's' : ''}` : undefined}
+        actions={
+          <Link to="/professionals/new">
+            <Button variant="primary">Nouveau professionnel</Button>
           </Link>
-        </EmptyState>
-      )}
-      {professionals.data && (
-        <>
-          <DataTable
-            caption="Liste des professionnels"
-            columns={COLUMNS}
-            rows={professionals.data.items}
-            rowKey={(m) => m.id}
-            onRowClick={(m) => navigate(`/professionals/${m.id}`)}
-            empty={<EmptyState title={q ? 'Aucun professionnel ne correspond.' : 'Aucun professionnel pour l’instant.'} />}
-          />
-          <Pagination offset={offset} limit={LIMIT} total={professionals.data.total} onChange={setOffset} />
-        </>
-      )}
+        }
+      />
+      <ListToolbar
+        search={{
+          value: q,
+          onChange: (value) => {
+            setQ(value)
+            setOffset(0)
+          },
+          placeholder: 'Rechercher un nom, un savoir-faire, un contact…',
+        }}
+        filters={
+          <>
+            <FilterSelect
+              label="Prestation"
+              all="Toutes"
+              value={kind}
+              onChange={(value) => {
+                setKind(value)
+                setOffset(0)
+              }}
+              options={prestations.options}
+            />
+            <FilterSelect
+              label="Savoir-faire"
+              value={specialty}
+              onChange={(value) => {
+                setSpecialty(value)
+                setOffset(0)
+              }}
+              options={(specialties.data ?? []).map((s) => ({ value: s, label: s }))}
+            />
+          </>
+        }
+        archived={{
+          value: includeArchived,
+          onChange: (value) => {
+            setIncludeArchived(value)
+            setOffset(0)
+          },
+        }}
+      />
+      <TableCard
+        label="Professionnels"
+        caption="Liste des professionnels"
+        columns={columns}
+        rows={professionals.data?.items}
+        rowKey={(m) => m.id}
+        onRowClick={(m) => navigate(`/professionals/${m.id}`)}
+        loading={professionals.isPending}
+        error={professionals.isError ? { title: 'Impossible de charger les professionnels', message: professionals.error.message } : null}
+        empty={q ? 'Aucun professionnel ne correspond.' : 'Aucun professionnel pour l’instant.'}
+        page={professionals.data ? { offset, limit: LIMIT, total: professionals.data.total, onChange: setOffset } : undefined}
+      />
     </section>
   )
 }

@@ -20,7 +20,7 @@ export function Form<T extends FieldValues>({
       <FieldIdContext.Provider value={prefix}>
         <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
           {banner && (
-            <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <div role="alert" className="rounded border border-line-strong bg-surface px-3 py-2 text-sm text-red-800">
               {banner}
             </div>
           )}

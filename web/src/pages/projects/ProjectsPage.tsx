@@ -3,20 +3,24 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useClients } from '../../api/queries/client'
 import { PROJECT_STATUS_LABELS, useProjects, type ProjectListRead, type ProjectStatus } from '../../api/queries/project'
-import { centsToText } from '../../components/forms/MoneyField'
-import { DataTable, type Column } from '../../components/tables/DataTable'
+import { type Column } from '../../components/tables/DataTable'
+import { ListToolbar } from '../../components/tables/ListToolbar'
+import { TableCard } from '../../components/tables/TableCard'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/Card'
-import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
+import { Segmented } from '../../components/ui/Segmented'
 import { useToast } from '../../components/ui/Toast'
 
 export function StatusBadge({ status }: { status: ProjectStatus }) {
-  return (
-    <Pill filled={status === 'active'} tone={status === 'cancelled' ? 'red' : 'neutral'}>
-      {PROJECT_STATUS_LABELS[status]}
-    </Pill>
-  )
+  return <Pill status={status}>{PROJECT_STATUS_LABELS[status]}</Pill>
+}
+
+/** Amounts of the list are rounded to the euro: « 12 800 € ». */
+export function euro0(cents: number): string {
+  return `${Math.round(cents / 100)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} €`
 }
 
 export function ProjectsPage() {
@@ -32,13 +36,38 @@ export function ProjectsPage() {
 
   const clientName = (id: number) => clients.data?.find((c) => c.id === id)?.name ?? ''
   const columns: Column<ProjectListRead>[] = [
-    { key: 'name', header: 'Projet', render: (p) => <span className="font-medium">{p.name}</span> },
-    { key: 'client', header: 'Client', render: (p) => clientName(p.clientId) },
+    {
+      key: 'name',
+      header: 'Projet',
+      render: (p) => (
+        <>
+          <div className="font-medium">{p.name}</div>
+          <div className="font-mono text-xs text-ink-3">{p.code}</div>
+        </>
+      ),
+    },
+    { key: 'client', header: 'Client', className: 'text-ink-2', render: (p) => clientName(p.clientId) },
     { key: 'status', header: 'Statut', render: (p) => <StatusBadge status={p.status} /> },
-    { key: 'due', header: 'Échéance', render: (p) => p.dueOn ?? '—' },
-    { key: 'budget', header: 'Budget HT', className: 'text-right', render: (p) => (p.budgetCents === null ? '—' : `${centsToText(p.budgetCents)} €`) },
-    { key: 'specified', header: 'Prescrit HT', className: 'text-right', render: (p) => `${centsToText(p.specifiedCents)} €` },
-    { key: 'items', header: 'Articles', className: 'text-right', render: (p) => String(p.itemCount) },
+    { key: 'due', header: 'Échéance', className: 'text-ink-2', render: (p) => p.dueOn ?? '—' },
+    { key: 'budget', header: 'Budget HT', className: 'text-right tabular-nums', render: (p) => (p.budgetCents === null ? '—' : euro0(p.budgetCents)) },
+    {
+      key: 'specified',
+      header: 'Prescrit HT',
+      className: 'text-right tabular-nums',
+      render: (p) => {
+        const over = p.budgetCents !== null && p.specifiedCents > p.budgetCents
+        const pct = p.budgetCents ? Math.min(100, (p.specifiedCents / p.budgetCents) * 100) : 0
+        return (
+          <div className="inline-flex flex-col items-end gap-1">
+            <span className={over ? 'text-danger' : ''}>{euro0(p.specifiedCents)}</span>
+            <span className="block h-[3px] w-24 overflow-hidden rounded-full bg-track" aria-hidden="true">
+              <span className={`block h-full ${over ? 'bg-danger' : 'bg-accent'}`} style={{ width: `${pct}%` }} />
+            </span>
+          </div>
+        )
+      },
+    },
+    { key: 'items', header: 'Articles', className: 'text-right tabular-nums', render: (p) => String(p.itemCount) },
   ]
 
   return (
@@ -47,47 +76,35 @@ export function ProjectsPage() {
         title="Projets"
         subtitle={projects.data ? `${projects.data.length} projet${projects.data.length > 1 ? 's' : ''}` : undefined}
         actions={
-          <>
-            <label className="flex items-center gap-2 text-sm text-neutral-600">
-              Statut
-              <select
-                value={status ?? ''}
-                onChange={(event) => setStatus(event.target.value === '' ? null : (event.target.value as ProjectStatus))}
-                className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm"
-              >
-                <option value="">Tous</option>
-                {(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => (
-                  <option key={s} value={s}>
-                    {PROJECT_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Link to="/projects/new">
-              <Button variant="primary">Nouveau projet</Button>
-            </Link>
-          </>
+          <Link to="/projects/new">
+            <Button variant="primary">Nouveau projet</Button>
+          </Link>
         }
       />
-      {projects.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
-      {projects.isError && (
-        <EmptyState title="Impossible de charger les projets">
-          {projects.error.message}{' '}
-          <Link to="/health" className="underline">
-            Voir la page Santé
-          </Link>
-        </EmptyState>
-      )}
-      {projects.data && (
-        <DataTable
-          caption="Liste des projets"
-          columns={columns}
-          rows={projects.data}
-          rowKey={(p) => p.id}
-          onRowClick={(p) => navigate(`/projects/${p.id}`)}
-          empty={<EmptyState title="Aucun projet.">Créer le premier avec « Nouveau projet ».</EmptyState>}
-        />
-      )}
+      <ListToolbar
+        filters={
+          <Segmented
+            label="Statut"
+            value={status ?? 'all'}
+            onChange={(value) => setStatus(value === 'all' ? null : (value as ProjectStatus))}
+            options={[
+              { value: 'all', label: 'Tous' },
+              ...(Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[]).map((s) => ({ value: s, label: PROJECT_STATUS_LABELS[s] })),
+            ]}
+          />
+        }
+      />
+      <TableCard
+        label="Projets"
+        caption="Liste des projets"
+        columns={columns}
+        rows={projects.data}
+        rowKey={(p) => p.id}
+        onRowClick={(p) => navigate(`/projects/${p.id}`)}
+        loading={projects.isPending}
+        error={projects.isError ? { title: 'Impossible de charger les projets', message: projects.error.message } : null}
+        empty={status ? 'Aucun projet dans cet état.' : 'Aucun projet. Créer le premier avec « Nouveau projet ».'}
+      />
     </section>
   )
 }

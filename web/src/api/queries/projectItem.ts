@@ -18,8 +18,6 @@ export type ItemFileUpdate = components['schemas']['ItemFileUpdate']
 export type ItemFileRead = components['schemas']['ItemFileRead']
 export type ItemStatus = ProjectItemRead['status']
 export type ItemKind = ProjectItemRead['kind']
-export type ItemFamily = NonNullable<ProjectItemRead['family']>
-export type ItemUsage = NonNullable<ProjectItemRead['usage']>
 
 export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   to_quote: 'À chiffrer',
@@ -33,16 +31,6 @@ export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
 export const ITEM_STATUSES = Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]
 /** Statuses shown as a filled pill (the client has committed). */
 export const ENGAGED_STATUSES: ItemStatus[] = ['approved', 'deposit', 'purchased']
-export const ITEM_FAMILY_LABELS: Record<ItemFamily, string> = {
-  custom: 'Pièce sur-mesure',
-  joinery: 'Agencement',
-  ose: 'OS&E',
-  edition: "Pièce d'édition",
-  gallery: 'Pièce de galerie',
-  artwork: 'Artwork',
-  textile: 'Confection',
-}
-export const ITEM_USAGE_LABELS: Record<ItemUsage, string> = { indoor: 'Intérieur', outdoor: 'Extérieur' }
 
 export type ItemFilters = { status: ItemStatus | null; supplierId: number | null; q: string }
 

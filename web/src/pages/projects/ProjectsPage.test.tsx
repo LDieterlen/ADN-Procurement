@@ -30,9 +30,9 @@ describe('projets', () => {
     await within(table).findAllByText('Hôtel X SA')
     expect(within(table).getByText('En cours')).toBeTruthy()
     expect(within(table).getByText('2027-06-30')).toBeTruthy()
-    expect(within(table).getByText('50 000,00 €')).toBeTruthy()
-    expect(within(table).getByText('2 400,00 €')).toBeTruthy() // 100 € × 2 × 12
-    await user.selectOptions(screen.getByRole('combobox'), 'closed')
+    expect(within(table).getByText('50 000 €')).toBeTruthy() // rounded to the euro in the list
+    expect(within(table).getByText('2 400 €')).toBeTruthy() // 100 € × 2 × 12
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Statut' })).getByRole('radio', { name: 'Clos' }))
     await screen.findByText('Ancien chantier')
     expect(screen.queryByText('Rénovation étages')).toBeNull()
   })

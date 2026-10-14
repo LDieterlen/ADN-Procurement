@@ -54,7 +54,7 @@ describe('liste des clients', () => {
   test('liste vide : état vide avec invitation', async () => {
     api.clients.length = 0
     renderApp('/clients')
-    expect(await screen.findByText('Aucun client pour l’instant.')).toBeTruthy()
+    expect(await screen.findByText(/Aucun client pour l’instant./)).toBeTruthy()
   })
 
   test('serveur coupé : message et lien vers la santé', async () => {

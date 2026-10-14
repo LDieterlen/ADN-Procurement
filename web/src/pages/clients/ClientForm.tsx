@@ -114,8 +114,8 @@ export function ClientForm({
         <TextInput name="phone" label="Téléphone" type="tel" />
         <TextInput name="siren" label="SIREN" hint="9 chiffres" inputMode="numeric" />
       </div>
-      <fieldset className="max-w-3xl rounded border border-neutral-200 p-4">
-        <legend className="px-1 text-sm font-medium text-neutral-600">Adresse</legend>
+      <fieldset className="max-w-3xl rounded border border-line p-4">
+        <legend className="px-1 text-sm font-medium text-ink-2">Adresse</legend>
         <div className="grid grid-cols-2 gap-4">
           <TextInput name="addressLine1" label="Adresse" />
           <TextInput name="addressLine2" label="Complément" />

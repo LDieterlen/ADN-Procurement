@@ -13,14 +13,9 @@ export function FilterSelect({
   all?: string
 }) {
   return (
-    <label className="flex items-center gap-1 text-sm text-neutral-700">
+    <label className="flex items-center gap-1.5 text-[13px] text-ink-2">
       {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        className="rounded border border-neutral-300 bg-white px-2 py-1 text-sm"
-      >
+      <select value={value} onChange={(event) => onChange(event.target.value)} aria-label={label} className="control h-8 text-[13px]">
         <option value="">{all}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>

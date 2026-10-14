@@ -1,5 +1,5 @@
 // Amount in cents (integer or null) shown as "1 250,00"; the text never becomes a float in the API.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useController, useFormContext } from 'react-hook-form'
 import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
@@ -31,6 +31,13 @@ export function MoneyField({ name, label, currency, hint }: { name: string; labe
   const [invalid, setInvalid] = useState(false)
   const error = useFieldError(name)
   const fieldId = useFieldId(name)
+  // The value can change from outside (form.reset once the article is loaded, « Utiliser » of a
+  // capture): the text follows it, except while the user is typing something not yet valid.
+  const value = field.value as number | null | undefined
+  useEffect(() => {
+    if (!invalid && textToCents(text) !== (value ?? null)) setText(centsToText(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   return (
     <Field name={name} label={label} hint={invalid ? 'Montant attendu, deux décimales au plus (ex. 1 250,00).' : hint}>
       <div className="flex items-center gap-2">
@@ -52,7 +59,7 @@ export function MoneyField({ name, label, currency, hint }: { name: string; labe
             field.onBlur()
           }}
         />
-        {currency && <span className="text-sm text-neutral-500">{currency}</span>}
+        {currency && <span className="text-sm text-ink-3">{currency}</span>}
       </div>
     </Field>
   )

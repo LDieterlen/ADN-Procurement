@@ -23,6 +23,7 @@ beforeEach(() => {
         projectId: 1,
         itemCode: 'CHA-LUD-01',
         name: 'Beat Light Fat',
+        sourceUrl: 'https://www.tomdixon.net/beat-light-fat',
         supplierId: 1,
         unitCostCents: 125_000,
         currency: 'GBP',
@@ -41,7 +42,12 @@ describe('page article', () => {
     renderApp('/projects/1/items/1')
     expect(await screen.findByRole('heading', { name: 'Beat Light Fat' })).toBeTruthy()
     expect(screen.getByText(/14 917,56 € HT/)).toBeTruthy()
-    expect(screen.getByText(/Djamel Sabeur · 06 00 00 00 00/)).toBeTruthy()
+    // The form mounts before the article arrives: the price text must follow the loaded value.
+    await waitFor(() => expect((screen.getByLabelText('Prix unitaire HT') as HTMLInputElement).value).toBe('1 250,00'))
+    expect((screen.getByLabelText('Remise') as HTMLInputElement).value).toBe('15')
+    const rep = screen.getByRole('region', { name: 'Représentant' })
+    expect(rep.textContent).toContain('Djamel Sabeur')
+    expect(rep.textContent).toContain('06 00 00 00 00') // the mobile comes first
     await user.type(screen.getByLabelText('Référence'), 'BLS01')
     await user.type(screen.getByLabelText('Dimensions'), 'Ø 36 × H 30 cm')
     await user.selectOptions(screen.getByLabelText('Famille'), 'edition')
@@ -62,6 +68,23 @@ describe('page article', () => {
     })
     expect(api.events.some((e) => e.kind === 'price')).toBe(true)
     expect(await screen.findByText(/14 040,00 € HT/)).toBeTruthy() // 125 000 × 0,8 × 1,17 × 12
+  })
+
+  test("le lien internet est cliquable ; « Modifier » rend le champ, l'enregistrement revient au lien", async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/1')
+    const link = await screen.findByRole('link', { name: 'tomdixon.net/beat-light-fat' })
+    expect(link.getAttribute('href')).toBe('https://www.tomdixon.net/beat-light-fat')
+    expect(link.getAttribute('target')).toBe('_blank')
+    await user.click(screen.getByRole('button', { name: 'Modifier' }))
+    const input = screen.getByLabelText('Lien internet') as HTMLInputElement
+    expect(input.value).toBe('https://www.tomdixon.net/beat-light-fat')
+    await user.clear(input)
+    await user.type(input, 'https://www.tomdixon.net/beat-light-tall')
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    await screen.findByText('Article enregistré.')
+    expect(api.items[0]?.sourceUrl).toBe('https://www.tomdixon.net/beat-light-tall')
+    expect(await screen.findByRole('link', { name: 'tomdixon.net/beat-light-tall' })).toBeTruthy()
   })
 
   test('implantation : ajouter une localisation, modifier une quantité, retirer ; photo jointe', async () => {
@@ -106,11 +129,23 @@ describe('page article', () => {
   test('supprimer un article « à chiffrer » ramène au projet ; refusé après un changement de statut', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/1')
-    await user.click(await screen.findByRole('button', { name: 'Supprimer' }))
+    await user.click(await screen.findByRole('button', { name: "Supprimer l'article" }))
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Supprimer' }))
     expect(await screen.findByText('Article supprimé.')).toBeTruthy()
     expect(api.items).toHaveLength(0)
     expect(await screen.findByRole('heading', { name: 'Rénovation' })).toBeTruthy()
+  })
+
+  test("la localisation d'une implantation se change en place, sans la recréer", async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/1')
+    await screen.findByRole('heading', { name: 'Beat Light Fat' })
+    const table = screen.getByRole('table', { name: "Implantations de l'article" })
+    const select = within(table).getAllByRole('combobox')[0] as HTMLSelectElement
+    const target = Array.from(select.options).find((o) => o.value !== '' && o.value !== select.value)!
+    await user.selectOptions(select, target.value)
+    await waitFor(() => expect(api.items[0]?.placements.map((p) => p.locationId)).toContain(Number(target.value)))
+    expect(api.items[0]?.placements).toHaveLength(1)
   })
 })

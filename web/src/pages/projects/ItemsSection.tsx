@@ -8,13 +8,13 @@ import { useProjectSummary, type LineAmountsRead } from '../../api/queries/budge
 import { useCategories } from '../../api/queries/category'
 import { fileContentUrl } from '../../api/queries/file'
 import type { LocationRead } from '../../api/queries/project'
-import { ENGAGED_STATUSES, ITEM_STATUS_LABELS, useProjectItems, type ProjectItemRead } from '../../api/queries/projectItem'
+import { ITEM_STATUS_LABELS, useProjectItems, type ProjectItemRead } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { centsToText } from '../../components/forms/MoneyField'
 import { milliToText } from '../../components/forms/QuantityField'
-import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
+import { buttonClass } from '../../components/ui/Button'
 import { StatusSelect } from './StatusSelect'
 
 const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
@@ -54,35 +54,47 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
   }, [items.data, locations, amountsById])
 
   const count = (items.data ?? []).length
+  const groupCount = groups.filter((g) => g.key !== 'none' && g.key !== 'fees').length
   return (
     <Card
       title="Articles"
       label="Articles"
+      padding="table"
+      meta={count > 0 ? `${count} article${count > 1 ? 's' : ''} · ${groupCount} localisation${groupCount > 1 ? 's' : ''}` : undefined}
       actions={
-        count > 0 ? (
-          <span className="text-sm text-neutral-500">
-            {count} article{count > 1 ? 's' : ''}
-          </span>
+        !readOnly ? (
+          <Link to={`/projects/${projectId}/items/new`} className={buttonClass('primary', 'sm')}>
+            + Ajouter un article
+          </Link>
         ) : undefined
       }
     >
-      {items.isPending && <p className="text-sm text-neutral-500">Chargement…</p>}
-      {items.data && count === 0 && (
-        <p className="mb-4 text-sm text-neutral-500">Aucun article. Ajouter le premier ci-dessous : libre, ou depuis le catalogue.</p>
-      )}
+      {items.isPending && <p className="px-5 py-4 text-sm text-ink-3">Chargement…</p>}
+      {items.data && count === 0 && <p className="px-5 py-6 text-sm text-ink-2">Aucun article. Ajouter le premier avec « + Ajouter un article ».</p>}
       {count > 0 && (
-        <table className="mb-5 w-full text-sm" aria-label="Articles du projet">
+        <table className="w-full text-sm" aria-label="Articles du projet">
+          <colgroup>
+            <col className="w-14" />
+            <col className="w-[120px]" />
+            <col className="w-[150px]" />
+            <col />
+            <col className="w-20" />
+            <col className="w-[140px]" />
+            <col className="w-[120px]" />
+            <col className="w-[130px]" />
+            <col className="w-[60px]" />
+          </colgroup>
           <thead>
-            <tr className="border-b border-neutral-300 text-left text-xs font-medium uppercase tracking-wide text-neutral-500">
-              <th className="w-12 px-2 py-2"></th>
-              <th className="px-2 py-2">Code</th>
-              <th className="px-2 py-2">Type</th>
-              <th className="px-2 py-2">Désignation</th>
-              <th className="px-2 py-2 text-right">Qté</th>
-              <th className="px-2 py-2">Fournisseur</th>
-              <th className="px-2 py-2 text-right">Montant HT</th>
-              <th className="px-2 py-2">État</th>
-              <th className="px-2 py-2 text-center">Indice</th>
+            <tr className="border-b border-line text-left text-[12.5px] font-medium text-ink-2">
+              <th className="py-2.5 pl-5"></th>
+              <th className="px-3 py-2.5">Code</th>
+              <th className="px-3 py-2.5">Type</th>
+              <th className="px-3 py-2.5">Désignation</th>
+              <th className="px-3 py-2.5 text-right">Qté</th>
+              <th className="px-3 py-2.5">Fournisseur</th>
+              <th className="px-3 py-2.5 text-right">Montant HT</th>
+              <th className="px-3 py-2.5">État</th>
+              <th className="py-2.5 pr-5 pl-3 text-center">Ind.</th>
             </tr>
           </thead>
           <tbody>
@@ -98,11 +110,6 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
             ))}
           </tbody>
         </table>
-      )}
-      {!readOnly && (
-        <Link to={`/projects/${projectId}/items/new`}>
-          <Button variant="primary">+ Ajouter un article</Button>
-        </Link>
       )}
     </Card>
   )
@@ -121,25 +128,26 @@ function GroupRows({
   typeName: (id: number | null) => string
   onOpen: (id: number) => void
 }) {
+  const subtotal = group.rows.reduce<number | null>((sum, { item, placement, amounts }) => {
+    if (item.status === 'cancelled' || !amounts) return sum
+    const share = placement ? amounts.placements.find((p) => p.placementId === placement.id)?.totalHtCents : amounts.totalHtCents
+    return share === undefined ? sum : (sum ?? 0) + share
+  }, null)
   return (
     <>
-      <tr>
-        <td colSpan={9} className="px-2 pt-5 pb-1.5 text-sm">
-          {group.code && <span className="mr-2 font-mono text-xs text-neutral-500">{group.code}</span>}
+      <tr className="border-t border-line bg-sunken">
+        <td colSpan={6} className="py-2.5 pl-5 text-[13.5px]">
+          {group.code && <span className="mr-2 inline-block min-w-[30px] font-mono text-xs text-ink-2">{group.code}</span>}
           <span className="font-semibold">{group.title}</span>
-          {group.detail && <span className="text-neutral-500"> · {group.detail}</span>}
+          {group.detail && <span className="text-ink-3"> · {group.detail}</span>}
           {group.multiplier > 1 && (
-            <span className="ml-2 rounded-full border border-neutral-300 px-2 py-0.5 text-xs text-neutral-700">× {group.multiplier}</span>
+            <span className="ml-2 rounded-[4px] bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-ink">× {group.multiplier}</span>
           )}
         </td>
+        <td colSpan={3} className="py-2.5 pr-5 text-right text-[13px] text-ink-2 tabular-nums">
+          {group.rows.length === 0 ? 'Aucun article' : subtotal !== null ? `${centsToText(subtotal)} €` : ''}
+        </td>
       </tr>
-      {group.rows.length === 0 && (
-        <tr>
-          <td colSpan={9} className="px-2 py-2 text-xs text-neutral-400">
-            Aucun article ici.
-          </td>
-        </tr>
-      )}
       {group.rows.map(({ item, placement, amounts }) => {
         const image = item.files.find((f) => f.isPrimary)
         const muted = item.status === 'cancelled'
@@ -148,33 +156,29 @@ function GroupRows({
           <tr
             key={`${item.id}-${placement?.id ?? 'fee'}`}
             onClick={() => onOpen(item.id)}
-            className={`cursor-pointer border-t border-neutral-100 hover:bg-neutral-50 ${muted ? 'text-neutral-400' : ''}`}
-            aria-label={`${item.itemCode} dans ${group.key === 'fees' ? 'frais' : group.code || 'non affecté'}`}
+            className={`cursor-pointer border-b border-line-soft transition-colors duration-[120ms] hover:bg-sunken ${muted ? 'text-ink-3' : ''}`}
+            aria-label={`${placement?.code ?? item.itemCode} dans ${group.key === 'fees' ? 'frais' : group.code || 'non affecté'}`}
           >
-            <td className="px-2 py-2.5">
+            <td className="py-2 pl-5">
               {image ? (
-                <img src={fileContentUrl(image.fileId, image.sha256)} alt="" className="h-9 w-9 rounded-md border border-neutral-200 object-cover" />
+                <img src={fileContentUrl(image.fileId, image.sha256)} alt="" className="h-9 w-9 rounded-[5px] border border-line object-cover" />
               ) : (
-                <span className="block h-9 w-9 rounded-md border border-dashed border-neutral-200" />
+                <span className="block h-9 w-9 rounded-[5px] border border-line bg-sunken" />
               )}
             </td>
-            <td className="px-2 py-2.5 font-mono text-xs text-neutral-600">{item.itemCode}</td>
-            <td className="px-2 py-2.5 text-neutral-600">{item.kind === 'fee' ? 'Frais' : typeName(item.categoryId)}</td>
-            <td className={`px-2 py-2.5 font-medium ${muted ? 'line-through' : ''}`}>{item.name}</td>
-            <td className="px-2 py-2.5 text-right tabular-nums">
+            <td className="px-3 py-2 font-mono text-xs text-ink-2">{placement?.code ?? item.itemCode}</td>
+            <td className="px-3 py-2 text-ink-2">{item.kind === 'fee' ? 'Frais' : typeName(item.categoryId)}</td>
+            <td className={`px-3 py-2 font-medium ${muted ? 'line-through' : ''}`}>{item.name}</td>
+            <td className="px-3 py-2 text-right tabular-nums">
               {placement ? milliToText(placement.qtyMilli) : '—'}
-              {placement && group.multiplier > 1 && <span className="text-xs text-neutral-400"> × {group.multiplier}</span>}
+              {placement && group.multiplier > 1 && <span className="text-[12.5px] text-ink-3"> × {group.multiplier}</span>}
             </td>
-            <td className="px-2 py-2.5 text-neutral-600">{supplierName(item.supplierId)}</td>
-            <td className="px-2 py-2.5 text-right tabular-nums">{share !== undefined && !muted ? `${centsToText(share)} €` : ''}</td>
-            <td className="px-2 py-2.5">
-              {readOnly ? (
-                <Pill filled={ENGAGED_STATUSES.includes(item.status)}>{ITEM_STATUS_LABELS[item.status]}</Pill>
-              ) : (
-                <StatusSelect item={item} readOnly={readOnly} />
-              )}
+            <td className="px-3 py-2 text-ink-2">{supplierName(item.supplierId)}</td>
+            <td className="px-3 py-2 text-right tabular-nums">{share !== undefined && !muted ? `${centsToText(share)} €` : ''}</td>
+            <td className="px-3 py-2">
+              {readOnly ? <Pill status={item.status}>{ITEM_STATUS_LABELS[item.status]}</Pill> : <StatusSelect item={item} readOnly={readOnly} />}
             </td>
-            <td className="px-2 py-2.5 text-center">{item.indice ?? ''}</td>
+            <td className="py-2 pr-5 pl-3 text-center text-ink-2">{item.indice ?? '—'}</td>
           </tr>
         )
       })}

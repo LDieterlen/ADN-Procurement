@@ -43,7 +43,7 @@ export function ProjectEditPage() {
     }
   }
 
-  if (id !== undefined && existing.isPending) return <p className="text-sm text-neutral-500">Chargement…</p>
+  if (id !== undefined && existing.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (id !== undefined && existing.isError) {
     return (
       <EmptyState title={existing.error.message}>

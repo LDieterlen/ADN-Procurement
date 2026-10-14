@@ -6,7 +6,7 @@ export function Pagination({ offset, limit, total, onChange }: { offset: number;
   const from = offset + 1
   const to = Math.min(offset + limit, total)
   return (
-    <div className="flex items-center justify-between text-sm text-neutral-600">
+    <div className="flex items-center justify-between text-sm text-ink-2">
       <span>
         {from}–{to} sur {total}
       </span>

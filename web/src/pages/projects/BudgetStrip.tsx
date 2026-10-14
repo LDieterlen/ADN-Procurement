@@ -5,9 +5,8 @@ import { useState } from 'react'
 import { isApiError } from '../../api/errors'
 import { toBudgetLineIn, useBudgetLines, useProjectSummary, usePutBudgetLines } from '../../api/queries/budget'
 import { centsToText, textToCents } from '../../components/forms/MoneyField'
+import { Link } from 'react-router'
 import { Button } from '../../components/ui/Button'
-
-const ALERT_BAR = { none: 'bg-neutral-900', warning: 'bg-amber-500', over: 'bg-red-600' } as const
 
 export function BudgetStrip({ projectId, readOnly }: { projectId: number; readOnly: boolean }) {
   const summary = useProjectSummary(projectId)
@@ -18,7 +17,6 @@ export function BudgetStrip({ projectId, readOnly }: { projectId: number; readOn
   const [error, setError] = useState<string | null>(null)
   const data = summary.data
   if (!data) return null
-  const pct = data.budgetCents ? Math.min(100, Math.round((data.specifiedCents / data.budgetCents) * 100)) : 0
 
   async function save() {
     const cents = textToCents(text)
@@ -33,74 +31,82 @@ export function BudgetStrip({ projectId, readOnly }: { projectId: number; readOn
     }
   }
 
-  const figure = (label: string, value: string, className = '') => (
-    <div className="min-w-32">
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className={`text-lg font-semibold ${className}`}>{value}</div>
+  const budget = data.budgetCents ?? 0
+  const share = (cents: number) => (budget > 0 ? `${Math.min(100, (cents / budget) * 100)}%` : '0%')
+  const pct = budget > 0 ? Math.round((data.specifiedCents / budget) * 100) : null
+  const restClass = data.remainingCents === null ? 'text-ink-3' : data.remainingCents < 0 ? 'text-danger' : data.alert === 'warning' ? 'text-warn' : 'text-ok'
+  const figure = (label: string, value: string, swatch?: string, className = '') => (
+    <div>
+      <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-ink-2">
+        {swatch && <span className={`inline-block h-2 w-2 rounded-[2px] ${swatch}`} aria-hidden="true" />}
+        {label}
+      </div>
+      <div className={`mt-1 text-xl font-semibold tracking-[-0.01em] tabular-nums ${className}`}>{value}</div>
     </div>
   )
 
   return (
-    <section className="no-print mb-6 flex flex-wrap items-end gap-8 rounded-xl border border-neutral-200 bg-white px-5 py-4" aria-label="Synthèse budget">
-      <div className="min-w-32">
-        <div className="text-xs text-neutral-500">Budget HT</div>
-        {editing ? (
-          <span className="mt-1 inline-flex items-center gap-1">
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-32 rounded-lg border border-neutral-300 px-2 py-1 text-right text-sm"
-              inputMode="decimal"
-              aria-label="Budget global"
-              autoFocus
-            />
-            <Button variant="primary" onClick={() => void save()} disabled={put.isPending}>
-              OK
-            </Button>
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              Annuler
-            </Button>
-          </span>
+    <section className="no-print mb-6 rounded-[10px] border border-line bg-surface px-6 py-5" aria-label="Synthèse budget">
+      <div className="grid grid-cols-[repeat(5,1fr)_auto] items-start gap-6">
+        <div>
+          <div className="text-[12.5px] font-medium text-ink-2">Budget HT</div>
+          {editing ? (
+            <span className="mt-1 inline-flex items-center gap-1">
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="control h-8 w-32 text-right"
+                inputMode="decimal"
+                aria-label="Budget global"
+                autoFocus
+              />
+              <Button variant="primary" size="xs" onClick={() => void save()} disabled={put.isPending}>
+                OK
+              </Button>
+              <Button variant="ghost" size="xs" onClick={() => setEditing(false)}>
+                Annuler
+              </Button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={`mt-1 text-xl font-semibold tracking-[-0.01em] tabular-nums ${readOnly ? '' : 'underline decoration-line-strong decoration-dotted underline-offset-4'}`}
+              disabled={readOnly}
+              onClick={() => {
+                setText(data.budgetCents === null ? '' : centsToText(data.budgetCents))
+                setEditing(true)
+              }}
+              aria-label="Modifier le budget global"
+            >
+              {data.budgetCents === null ? 'à définir' : `${centsToText(data.budgetCents)} €`}
+            </button>
+          )}
+        </div>
+        {figure('Prescrit HT', `${centsToText(data.specifiedCents)} €`, 'bg-bar-spec')}
+        {figure('Devisé HT', `${centsToText(data.quotedCents)} €`, 'bg-bar-quoted')}
+        {figure('Validé HT', `${centsToText(data.approvedCents)} €`, 'bg-accent')}
+        {figure('Reste', data.remainingCents === null ? '—' : `${centsToText(data.remainingCents)} €`, undefined, restClass)}
+        <Link to={`/projects/${projectId}/budget`} className="self-center text-sm font-medium text-accent hover:text-accent-hover">
+          Budget détaillé →
+        </Link>
+      </div>
+      <div className="relative mt-4 h-2 overflow-hidden rounded-[4px] bg-track" aria-hidden="true">
+        <div className="absolute inset-y-0 left-0 bg-bar-spec" style={{ width: share(data.specifiedCents) }} />
+        <div className="absolute inset-y-0 left-0 bg-bar-quoted" style={{ width: share(data.quotedCents) }} />
+        <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: share(data.approvedCents) }} />
+      </div>
+      <div className="mt-2 flex items-center gap-3 text-[12.5px] text-ink-3">
+        {pct !== null ? (
+          <span className={data.alert === 'over' ? 'font-medium text-danger' : data.alert === 'warning' ? 'text-warn' : ''}>{pct}% du budget prescrit</span>
         ) : (
-          <button
-            type="button"
-            className={`text-lg font-semibold ${readOnly ? '' : 'underline decoration-neutral-300 decoration-dotted underline-offset-4'}`}
-            disabled={readOnly}
-            onClick={() => {
-              setText(data.budgetCents === null ? '' : centsToText(data.budgetCents))
-              setEditing(true)
-            }}
-            aria-label="Modifier le budget global"
-          >
-            {data.budgetCents === null ? 'à définir' : `${centsToText(data.budgetCents)} €`}
-          </button>
+          <span>Définir le budget pour suivre la part prescrite.</span>
+        )}
+        {error && (
+          <span role="alert" className="text-danger">
+            {error}
+          </span>
         )}
       </div>
-      {figure('Prescrit HT', `${centsToText(data.specifiedCents)} €`)}
-      {figure('Devisé HT', `${centsToText(data.quotedCents)} €`)}
-      {figure('Validé HT', `${centsToText(data.approvedCents)} €`)}
-      {figure(
-        'Reste',
-        data.remainingCents === null ? '—' : `${centsToText(data.remainingCents)} €`,
-        data.remainingCents !== null && data.remainingCents < 0 ? 'text-red-700' : '',
-      )}
-      {data.budgetCents ? (
-        <div className="flex items-center gap-2 self-center" title={`${pct} % du budget`}>
-          <div className="h-2 w-40 overflow-hidden rounded-full bg-neutral-200">
-            <div className={`h-2 ${ALERT_BAR[data.alert]}`} style={{ width: `${pct}%` }} />
-          </div>
-          <span
-            className={`text-xs ${data.alert === 'over' ? 'font-semibold text-red-700' : data.alert === 'warning' ? 'text-amber-700' : 'text-neutral-500'}`}
-          >
-            {pct} %
-          </span>
-        </div>
-      ) : null}
-      {error && (
-        <span role="alert" className="text-sm text-red-700">
-          {error}
-        </span>
-      )}
     </section>
   )
 }

@@ -126,27 +126,38 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
   }
 
   return (
-    <Card title="Localisations" label="Localisations">
+    <Card
+      title="Localisations"
+      label="Localisations"
+      padding="table"
+      actions={
+        !readOnly && editing !== 'new' ? (
+          <Button variant="primary" size="sm" onClick={() => setEditing('new')}>
+            + Ajouter une localisation
+          </Button>
+        ) : undefined
+      }
+    >
       {locations.length === 0 && (
-        <p className="mb-3 text-sm text-neutral-500">
+        <p className="px-5 py-4 text-sm text-ink-2">
           Aucune localisation : Lobby ×1, Chambre typo A ×24… chaque localisation porte sa zone, son niveau et son nombre.
         </p>
       )}
       {locations.length > 0 && (
-        <table className="mb-4 w-full text-sm" aria-label="Localisations du projet">
+        <table className="w-full text-sm" aria-label="Localisations du projet">
           <thead>
-            <tr className="border-b border-neutral-300 text-left text-sm text-neutral-900">
-              <th className="px-2 py-2 font-medium">Code</th>
-              <th className="px-2 py-2 font-medium">Nom</th>
-              <th className="px-2 py-2 font-medium">Zone</th>
-              <th className="px-2 py-2 font-medium">Niveau</th>
-              <th className="px-2 py-2 text-right font-medium">Nombre</th>
-              <th className="px-2 py-2"></th>
+            <tr className="border-b border-line text-left text-[12.5px] font-medium text-ink-2">
+              <th className="py-2.5 pl-5 font-medium">Code</th>
+              <th className="px-3 py-2.5 font-medium">Nom</th>
+              <th className="px-3 py-2.5 font-medium">Zone</th>
+              <th className="px-3 py-2.5 font-medium">Niveau</th>
+              <th className="px-3 py-2.5 text-right font-medium">Nombre</th>
+              <th className="py-2.5 pr-5"></th>
             </tr>
           </thead>
           <tbody>
             {locations.map((location, index) => (
-              <tr key={location.id} className="border-b border-neutral-200">
+              <tr key={location.id} className="border-b border-line-soft">
                 {editing === location.id ? (
                   <td colSpan={6} className="px-2 py-3">
                     <LocationForm
@@ -160,15 +171,15 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
                   </td>
                 ) : (
                   <>
-                    <td className="px-2 py-2.5 font-mono text-xs">{location.code}</td>
-                    <td className="px-2 py-2.5 font-medium">
+                    <td className="py-2.5 pl-5 font-mono text-xs text-ink-2">{location.code}</td>
+                    <td className="px-3 py-2.5 font-medium">
                       {location.name}
-                      {location.archivedAt && <span className="ml-2 rounded-full border border-neutral-300 px-1.5 text-xs">Archivée</span>}
+                      {location.archivedAt && <span className="ml-2 rounded-full border border-line-strong px-1.5 text-xs">Archivée</span>}
                     </td>
-                    <td className="px-2 py-2.5 text-neutral-600">{location.zone ?? ''}</td>
-                    <td className="px-2 py-2.5 text-neutral-600">{location.level ?? ''}</td>
-                    <td className="px-2 py-2.5 text-right">×{location.multiplier}</td>
-                    <td className="px-2 py-2.5 text-right text-xs">
+                    <td className="px-3 py-2.5 text-ink-2">{location.zone ?? ''}</td>
+                    <td className="px-3 py-2.5 text-ink-2">{location.level ?? ''}</td>
+                    <td className="px-3 py-2.5 text-right text-ink-2">× {location.multiplier}</td>
+                    <td className="py-2.5 pr-5 text-right text-[12.5px] text-ink-2">
                       {!readOnly && !location.archivedAt && (
                         <span className="inline-flex gap-2">
                           <button
@@ -196,7 +207,7 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
                           </button>
                           <button
                             type="button"
-                            className="text-red-700 underline"
+                            className="text-danger underline"
                             onClick={() => remove.mutateAsync(location.id).catch(fail)}
                             aria-label={`Supprimer ${location.name}`}
                           >
@@ -217,13 +228,8 @@ export function LocationsSection({ projectId, locations, readOnly }: { projectId
           </tbody>
         </table>
       )}
-      {!readOnly && editing === null && (
-        <Button variant="secondary" onClick={() => setEditing('new')}>
-          + Ajouter une localisation
-        </Button>
-      )}
       {!readOnly && editing === 'new' && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <div className="border-t border-line px-6 py-5">
           <h3 className="mb-4 text-base font-semibold">Nouvelle localisation</h3>
           <datalist id="zone-suggestions">
             {ZONE_SUGGESTIONS.map((z) => (
