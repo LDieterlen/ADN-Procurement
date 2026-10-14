@@ -21,6 +21,7 @@ from ffe.models import (
     Setting,
     Supplier,
 )
+from ffe.services.choice import labels as choice_labels
 from ffe.services.project_item import list_items
 
 
@@ -39,6 +40,8 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
     }
     suppliers = {s.id: s for s in session.scalars(select(Supplier))}
     categories = {c.id: c for c in session.scalars(select(Category))}
+    families = choice_labels(session, "family")
+    usages = choice_labels(session, "usage")
     rows: list[dict[str, Any]] = []
     for item in list_items(session, project_id):
         if item.kind != "product":
@@ -58,18 +61,20 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
             location = locations.get(placement.location_id) if placement.location_id else None
             rows.append(
                 {
-                    "item_code": item.item_code,
+                    "item_code": placement.code,
                     "type": category.name if category else "",
                     "name": item.name,
+                    "product_name": item.product_name,
                     "status": fr.ITEM_STATUS_LABELS[item.status],
                     "cancelled": item.status == "cancelled",
                     "indice": item.indice or "",
-                    "family": fr.ITEM_FAMILY_LABELS.get(item.family or "", ""),
-                    "usage": fr.ITEM_USAGE_LABELS.get(item.usage or "", ""),
+                    "family": families.get(item.family or "", ""),
+                    "usage": usages.get(item.usage or "", ""),
                     "comments": item.comments,
                     "reference": item.reference,
                     "finish": item.finish,
                     "dimensions": item.dimensions,
+                    "lead_time": item.lead_time,
                     "link": item.source_url,
                     "supplier_name": supplier.name if supplier else None,
                     "representative": supplier.contact_name if supplier else None,

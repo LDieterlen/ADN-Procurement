@@ -1,18 +1,18 @@
-"""Reference data: the 19 product types (ADR-0013), idempotent by `code`."""
+"""Reference data: the 21 product types (ADR-0013, revised 2026-10-13), idempotent by `code`."""
 
 from collections.abc import Callable
 from datetime import UTC, datetime
 
 from sqlalchemy import Engine, text
 
-SEED_VERSION = 2
+SEED_VERSION = 3
 
 # (code, name, sort_order) — `code` is stable, `name` is editable afterwards.
 CATEGORIES: tuple[tuple[str, str, int], ...] = (
     ("AS", "Assise", 10),
     ("TAB", "Table", 20),
     ("TBR", "Tabouret", 30),
-    ("MOB", "Gros mobilier", 40),
+    ("AGE", "Agencement", 40),
     ("LIT", "Lit", 50),
     ("TAP", "Tapis", 60),
     ("RID", "Rideau", 70),
@@ -21,11 +21,13 @@ CATEGORIES: tuple[tuple[str, str, int], ...] = (
     ("LUD", "Luminaire décoratif", 100),
     ("MIR", "Miroir", 110),
     ("DEC", "Décoration", 120),
-    ("ART", "Artwork", 130),
+    ("ART", "Œuvre d'art", 130),
     ("ACC", "Accessoire", 140),
     ("ACA", "Accastillage", 150),
     ("QUI", "Quincaillerie", 160),
+    ("SAN", "Sanitaire", 165),
     ("SIG", "Signalétique", 170),
+    ("REV", "Revêtement", 175),
     ("EQU", "Équipement", 180),
     ("DIV", "Divers", 190),
 )

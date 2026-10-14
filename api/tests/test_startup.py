@@ -129,7 +129,7 @@ def test_dev_schema_drift_rebuilds_the_database(settings: Settings, clock: Clock
         with again.engine.connect() as conn:
             columns = [row[1] for row in conn.execute(text("PRAGMA table_info(project)"))]
             assert "stale" not in columns
-            assert conn.execute(text("SELECT count(*) FROM category")).scalar() == 19
+            assert conn.execute(text("SELECT count(*) FROM category")).scalar() == 21
             assert conn.execute(text("SELECT count(*) FROM project")).scalar() == 1  # demo
         assert any("pre-reset" in b.path.name for b in list_backups(settings.backups_dir))
     finally:

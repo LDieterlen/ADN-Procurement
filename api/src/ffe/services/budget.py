@@ -13,9 +13,12 @@ from ffe.deps import Clock
 from ffe.errors import ConflictError, ErrorDetail, ValidationAppError
 from ffe.i18n import fr
 from ffe.models import BudgetLine, Category, Location, ProjectItem, Supplier
-from ffe.models.project_item import ITEM_FAMILIES, ITEM_STATUSES
+from ffe.models.project_item import ITEM_STATUSES
 from ffe.schemas.budget import BudgetLinesPut
+from ffe.schemas.project_item import code_label
 from ffe.services.base import stamp
+from ffe.services.choice import check_code
+from ffe.services.choice import labels as choice_labels
 from ffe.services.project import ensure_open, get_project
 from ffe.services.project_item import list_items
 
@@ -71,10 +74,8 @@ def put_budget_lines(
                 raise ValidationAppError(
                     [ErrorDetail(f"lines.{index}.locationId", fr.BUDGET_LOCATION_NOT_IN_PROJECT)]
                 )
-            if line.scope == "family" and line.family not in ITEM_FAMILIES:
-                raise ValidationAppError(
-                    [ErrorDetail(f"lines.{index}.family", fr.BUDGET_REFERENCE_MISMATCH)]
-                )
+            if line.scope == "family":
+                check_code(session, "family", line.family, f"lines.{index}.family")
             if line.scope == "zone" and not str(line.zone).strip():
                 raise ValidationAppError(
                     [ErrorDetail(f"lines.{index}.zone", fr.BUDGET_REFERENCE_MISMATCH)]
@@ -158,6 +159,7 @@ def summary(
     categories = {c.id: c for c in session.scalars(select(Category))}
     suppliers = {s.id: s for s in session.scalars(select(Supplier))}
     budgets = {_scope_key(b): b.amount_cents for b in list_budget_lines(session, project_id)}
+    families = choice_labels(session, "family")
 
     lines: list[dict[str, Any]] = []
     by_status: dict[str, list[int]] = {s: [0, 0] for s in ITEM_STATUSES}
@@ -185,7 +187,7 @@ def summary(
         lines.append(
             {
                 "project_item_id": item.id,
-                "item_code": item.item_code,
+                "item_code": code_label(item),
                 "status": item.status,
                 "kind": item.kind,
                 "counted": counted,
@@ -248,7 +250,7 @@ def summary(
                 bucket(
                     "family",
                     family,
-                    fr.ITEM_FAMILY_LABELS.get(family, "Sans famille"),
+                    families.get(family, "Sans famille") if family else "Sans famille",
                     (0 if family else 1, family),
                 ),
                 item.status,
@@ -286,7 +288,7 @@ def summary(
             for (scope, ref), _amount in budgets.items():
                 if scope == scope_of[axis] and ref not in found:
                     found[ref] = _Bucket(
-                        _budget_label(axis, ref, locations, suppliers), order=(0, ref)
+                        _budget_label(axis, ref, locations, suppliers, families), order=(0, ref)
                     )
         return [
             _row(key, b, budgets.get((scope_of[axis], key)) if axis in scope_of else None)
@@ -364,7 +366,11 @@ def _shares(
 
 
 def _budget_label(
-    axis: str, ref: str, locations: dict[int, Location], suppliers: dict[int, Supplier]
+    axis: str,
+    ref: str,
+    locations: dict[int, Location],
+    suppliers: dict[int, Supplier],
+    families: dict[str, str],
 ) -> str:
     if axis == "location":
         location = locations.get(int(ref)) if ref.isdigit() else None
@@ -373,5 +379,5 @@ def _budget_label(
         supplier = suppliers.get(int(ref)) if ref.isdigit() else None
         return supplier.name if supplier else ref
     if axis == "family":
-        return fr.ITEM_FAMILY_LABELS.get(ref, ref)
+        return families.get(ref, ref)
     return ref

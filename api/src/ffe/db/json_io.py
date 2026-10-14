@@ -35,10 +35,12 @@ TABLE_ORDER: tuple[str, ...] = (
     "setting",
     "client",
     "category",
+    "choice",
     "professional",
     "supplier",
     "file",
     "capture",
+    "capture_image",
     "project",
     "project_indice",
     "location",
@@ -132,8 +134,9 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
             existing: list[Any] = (
                 list(conn.execute(select(table.c.id)).all()) if "id" in table.c else []
             )
-            if table.name == "setting":
-                # Single row, seeded by migration 0001: an import overwrites it.
+            if table.name in ("setting", "choice"):
+                # Seeded by migration 0001 (single settings row, default list values): an import
+                # overwrites them.
                 conn.execute(delete(table))
             elif existing:
                 raise JsonIoError(

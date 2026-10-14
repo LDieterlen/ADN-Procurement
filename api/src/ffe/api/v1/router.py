@@ -6,6 +6,7 @@ from ffe.api.v1 import (
     budget,
     capture,
     category,
+    choice,
     client,
     export,
     file,
@@ -25,6 +26,7 @@ router.include_router(client.router)
 router.include_router(supplier.router)
 router.include_router(professional.router)
 router.include_router(category.router)
+router.include_router(choice.router)
 router.include_router(file.router)
 router.include_router(project.router)
 router.include_router(location.router)

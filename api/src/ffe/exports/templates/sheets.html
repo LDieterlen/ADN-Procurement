@@ -1,29 +1,42 @@
 {% extends "base.html" %}
+{% macro v(value, mono=False) -%}
+  {% if value %}<div class="v{% if mono %} mono{% endif %}">{{ value }}</div>{% else %}<div class="v empty">—</div>{% endif %}
+{%- endmacro %}
+{% macro head(where) -%}
+  <div class="head">
+    <div class="brand"><img src="{{ assets_url }}/logo.svg" alt="">{{ agency.name or "FF&E" }}</div>
+    <div class="where">{{ project.name }}<br>Projet {{ project.code }}{% if where %} · {{ where }}{% endif %}</div>
+  </div>
+{%- endmacro %}
 {% block body %}
 <section class="page cover">
-  <div class="agency">
-    <strong>{{ agency.name or "FFE" }}</strong><br>
-    <span class="muted small">{{ agency.address or "" }}</span>
+  <div class="head">
+    <div class="brand"><img src="{{ assets_url }}/logo.svg" alt="">{{ agency.name or "FF&E" }}</div>
+    <div class="where">{{ agency.address or "" }}</div>
   </div>
-  <h1>{{ project.name }}</h1>
-  <p class="muted">Projet {{ project.code }} · {{ client_name }}</p>
-  <p>Fiches de prescription — {{ item_count }} article(s) dans {{ location_count }} localisation(s)</p>
-  <p class="muted small">Diffusion {{ indice }} du {{ issued_on }}</p>
+  <div class="title">
+    <div class="rule"></div>
+    <div class="label">Fiches de prescription</div>
+    <h1>{{ project.name }}</h1>
+    <div class="client">{{ client_name }}</div>
+    <div class="facts">
+      <div class="label">Projet</div><div class="mono">{{ project.code }}</div>
+      <div class="label">Contenu</div><div>{{ item_count }} article(s) · {{ location_count }} localisation(s)</div>
+      <div class="label">Diffusion</div><div>{% if indice %}<span class="pill filled">Indice {{ indice }}</span>{% else %}<span class="pill">Sans indice</span>{% endif %} <span class="muted">{{ issued_on }}</span></div>
+    </div>
+  </div>
+  <div class="small muted">{{ agency.email or "" }}{% if agency.email and agency.phone %} · {% endif %}{{ agency.phone or "" }}</div>
 </section>
 
 <section class="page">
-  <table class="head"><tr>
-    <td><strong>{{ agency.name or "FFE" }}</strong></td>
-    <td style="text-align:center"><strong>{{ project.name }}</strong></td>
-    <td class="num"><span class="muted small">PRESCRIPTIONS</span><br><strong>LISTE</strong></td>
-  </tr></table>
-  <table class="list">
-    <thead><tr><th>Type</th><th>Code FF&amp;E</th><th>Désignation</th><th>Localisation</th><th>Qté</th><th>Indice</th></tr></thead>
+  {{ head("Liste des prescriptions") }}
+  <table class="list" style="margin-top: 20px">
+    <thead><tr><th class="nowrap">Type</th><th class="nowrap">Code FF&amp;E</th><th>Désignation</th><th class="nowrap">Localisation</th><th class="num">Qté</th><th class="center">Indice</th></tr></thead>
     <tbody>
     {% for loc in locations %}
-      <tr class="location"><td colspan="6">{{ loc["code"] or "—" }} — {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} (× {{ loc["multiplier"] }}){% endif %}</td></tr>
+      <tr class="location"><td colspan="6">{{ loc["code"] or "—" }} — {{ loc["name"] }} <span class="where">{% if loc["zone"] %}· {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} · × {{ loc["multiplier"] }}{% endif %}</span></td></tr>
       {% for a in loc["articles"] %}
-      <tr><td>{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
+      <tr><td class="nowrap">{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td class="nowrap">{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
       {% endfor %}
     {% endfor %}
     </tbody>
@@ -33,37 +46,63 @@
 {% for loc in locations %}
   {% for a in loc["articles"] %}
   <section class="page">
-    <table class="head"><tr>
-      <td><strong>{{ agency.name or "FFE" }}</strong></td>
-      <td style="text-align:center"><strong>{{ project.name }}</strong><br><span class="muted">{{ loc["name"] }}</span></td>
-      <td class="num"><span class="muted small">PRESCRIPTION</span><br><strong>{{ a["item_code"] }}</strong></td>
+    {{ head(loc["name"]) }}
+    <table class="hero"><tr>
+      <td class="visual">
+        {% if a["photo"] %}
+          <div class="photo-box has-photo"><img src="{{ a["photo"] }}" alt="{{ a["name"] }}"></div>
+          {% if a["license_note"] %}<div class="small faint" style="margin-top:4px">{{ a["license_note"] }}</div>{% endif %}
+        {% else %}
+          <div class="photo-box">photo produit</div>
+        {% endif %}
+        {% if a["drawing"] %}<div class="drawing"><img src="{{ a["drawing"] }}" alt="Dessin {{ a["item_code"] }}"></div>{% endif %}
+      </td>
+      <td class="text">
+        <table class="text-stack"><tr><td class="top">
+        <div class="label">Prescription · {{ a["item_code"] }}</div>
+        <h1 style="margin-top: 12px"{% if a["name"] | length > 60 %} class="long"{% endif %}>{{ a["name"] }}</h1>
+        <div class="meta">{{ a["type"] }} · {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}</div>
+        </td></tr><tr><td class="foot">
+        <table class="tiles"><tr>
+          <td class="tile dark" style="width:50%"><div class="label">Quantité</div><div class="big">{{ a["qty_text"] }}</div>{% if loc["multiplier"] > 1 %}<div class="small" style="color:#b8a89c; margin-top:2px">par unité · {{ a["qty_total_text"] }} au total</div>{% endif %}</td>
+          <td class="tile line" style="width:50%"><div class="label">Indice</div><div class="value">{% if a["indice"] %}Indice {{ a["indice"] }}{% else %}Sans indice{% endif %}<br><span class="muted" style="font-weight:400">{{ issued_on }}</span></div></td>
+        </tr></table>
+        </td></tr></table>
+      </td>
     </tr></table>
-    <table class="list" style="margin: 2mm 0 6mm">
-      <thead><tr><th>Type</th><th>Code FF&amp;E</th><th>Désignation</th><th>Zone</th><th>Localisation</th><th>Indice</th></tr></thead>
-      <tbody><tr><td>{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td>{{ loc["zone"] or "" }}</td><td>{{ loc["name"] }}</td><td class="center">{{ a["indice"] }}</td></tr></tbody>
+
+    <table class="section-head"><tr><td><span class="label">Produit</span></td><td class="aside">{% if a["supplier_name"] %}Fournisseur : {{ a["supplier_name"] }}{% endif %}</td></tr></table>
+    <table class="cells">
+      <tr>
+        <td><div class="k">Nom</div>{{ v(a["product_name"]) }}</td>
+        <td><div class="k">Référence</div>{{ v(a["reference"], True) }}</td>
+        <td><div class="k">Fournisseur</div>{{ v(a["supplier_name"]) }}</td>
+      </tr>
+      <tr>
+        <td><div class="k">Dimensions</div>{{ v(a["dimensions"]) }}</td>
+        <td><div class="k">Finitions</div>{{ v(a["finish"]) }}</td>
+        <td><div class="k">Délai</div>{{ v(a["lead_time"]) }}</td>
+      </tr>
+      <tr>
+        <td class="wide" colspan="3"><div class="k">Lien</div>{% if a["link"] %}<a class="v mono" style="display:block" href="{{ a["link"] }}">{{ a["link"] }}</a>{% else %}<div class="v empty">—</div>{% endif %}</td>
+      </tr>
     </table>
-    <div class="sheet">
-      <div class="visuals">
-        {% if a["photo"] %}<img class="photo" src="{{ a["photo"] }}" alt="{{ a["name"] }}">{% else %}<p class="muted">Pas de photo</p>{% endif %}
-        {% if a["license_note"] %}<p class="muted small">{{ a["license_note"] }}</p>{% endif %}
-        {% if a["drawing"] %}<img class="photo drawing" src="{{ a["drawing"] }}" alt="Dessin {{ a["item_code"] }}">{% endif %}
-      </div>
-      <table class="facts">
-        <tr><th>Nom produit</th></tr><tr><td>{{ a["name"] }}</td></tr>
-        <tr><th>Référence</th></tr><tr><td>{{ a["reference"] or "" }}</td></tr>
-        <tr><th>Fournisseur</th></tr><tr><td>{{ a["supplier_name"] or "" }}</td></tr>
-        <tr><th>Dimensions</th></tr><tr><td>{{ a["dimensions"] or "" }}</td></tr>
-        <tr><th>Finitions</th></tr><tr><td>{{ a["finish"] or "" }}</td></tr>
-        <tr><th>Quantité</th></tr><tr><td>{{ a["qty_text"] }}{% if loc["multiplier"] > 1 %} par unité, {{ a["qty_total_text"] }} au total{% endif %}</td></tr>
-        <tr><th>Commentaires</th></tr><tr><td class="tall">{{ a["comments"] or "" }}</td></tr>
-        <tr><th>Lien internet</th></tr><tr><td>{% if a["link"] %}<a href="{{ a["link"] }}">{{ a["link"] }}</a>{% endif %}</td></tr>
-        <tr><th>Représentant</th></tr><tr><td>{{ a["representative"] or "" }}</td></tr>
-        <tr><th>Téléphone</th></tr><tr><td>{{ a["phone"] or "" }}</td></tr>
-        <tr><th>Email</th></tr><tr><td>{{ a["email"] or "" }}</td></tr>
-        <tr><th>Diffusion</th></tr><tr><td>{{ indice }} — {{ issued_on }}</td></tr>
-        <tr><th>Validation</th></tr><tr><td class="tall"></td></tr>
-      </table>
-    </div>
+
+    <table class="columns"><tr>
+      <td style="width:33%">
+        <div class="block-head label">Contact</div>
+        <div class="block-body">{% if a["representative"] or a["phone"] or a["email"] %}{{ a["representative"] or "" }}{% if a["representative"] %}<br>{% endif %}{{ a["phone"] or "" }}{% if a["phone"] %}<br>{% endif %}{% if a["email"] %}<a href="mailto:{{ a["email"] }}">{{ a["email"] }}</a>{% endif %}{% else %}<span class="faint">—</span>{% endif %}</div>
+      </td>
+      <td colspan="2">
+        <div class="block-head label">Commentaires</div>
+        <div class="ruled">{% for line in (a["comments"] or "").splitlines() %}<div class="rule-line">{{ line }}</div>{% endfor %}{% for _ in range(3 - ((a["comments"] or "").splitlines() | length) if ((a["comments"] or "").splitlines() | length) < 3 else 0) %}<div class="rule-line"></div>{% endfor %}</div>
+      </td>
+    </tr></table>
+
+    <table class="bottom columns"><tr>
+      <td style="width:50%"><div class="block-head label">Diffusion</div><div class="block-body">Indice : {% if indice %}{{ indice }}{% else %}Sans indice{% endif %} — {{ issued_on }}</div></td>
+      <td style="width:50%"><div class="block-head label">Validation</div><div class="sign"></div></td>
+    </tr></table>
   </section>
   {% endfor %}
 {% endfor %}

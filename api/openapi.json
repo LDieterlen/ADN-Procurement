@@ -54,6 +54,18 @@
             "contentMediaType": "application/octet-stream",
             "title": "Image",
             "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
           }
         },
         "required": [
@@ -364,6 +376,28 @@
             ],
             "title": "Description"
           },
+          "dimensions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimensions"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
           "imageUrl": {
             "anyOf": [
               {
@@ -374,6 +408,25 @@
               }
             ],
             "title": "Imageurl"
+          },
+          "imageUrls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Imageurls",
+            "type": "array"
+          },
+          "leadTime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtime"
           },
           "name": {
             "anyOf": [
@@ -417,6 +470,17 @@
             "title": "Source",
             "type": "string"
           },
+          "typeCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typecode"
+          },
           "url": {
             "title": "Url",
             "type": "string"
@@ -447,15 +511,12 @@
             "title": "Id",
             "type": "integer"
           },
-          "image": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileRead"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/FileRead"
+            },
+            "title": "Images",
+            "type": "array"
           },
           "preview": {
             "$ref": "#/components/schemas/CapturePreviewRead"
@@ -464,7 +525,7 @@
         "required": [
           "id",
           "preview",
-          "image",
+          "images",
           "createdAt"
         ],
         "title": "CaptureRead",
@@ -575,6 +636,133 @@
           }
         },
         "title": "CategoryUpdate",
+        "type": "object"
+      },
+      "ChoiceCreate": {
+        "properties": {
+          "list": {
+            "enum": [
+              "family",
+              "usage",
+              "prestation"
+            ],
+            "title": "List",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          }
+        },
+        "required": [
+          "list",
+          "name"
+        ],
+        "title": "ChoiceCreate",
+        "type": "object"
+      },
+      "ChoiceRead": {
+        "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archivedat"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "list": {
+            "enum": [
+              "family",
+              "usage",
+              "prestation"
+            ],
+            "title": "List",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "list",
+          "code",
+          "name",
+          "sortOrder",
+          "archivedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ChoiceRead",
+        "type": "object"
+      },
+      "ChoiceUpdate": {
+        "description": "Label and order only: the code is kept by articles, envelopes and professionals.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          }
+        },
+        "title": "ChoiceUpdate",
         "type": "object"
       },
       "ClientCreate": {
@@ -1857,6 +2045,10 @@
       },
       "PlacementRead": {
         "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
           "createdAt": {
             "title": "Createdat",
             "type": "string"
@@ -1897,6 +2089,7 @@
           "id",
           "projectItemId",
           "locationId",
+          "code",
           "qtyMilli",
           "sortOrder",
           "createdAt",
@@ -2011,12 +2204,8 @@
           },
           "kind": {
             "default": "manufacturer",
-            "enum": [
-              "manufacturer",
-              "distributor",
-              "publisher",
-              "artisan"
-            ],
+            "maxLength": 40,
+            "minLength": 1,
             "title": "Kind",
             "type": "string"
           },
@@ -2170,12 +2359,6 @@
             "type": "integer"
           },
           "kind": {
-            "enum": [
-              "manufacturer",
-              "distributor",
-              "publisher",
-              "artisan"
-            ],
             "title": "Kind",
             "type": "string"
           },
@@ -2331,12 +2514,8 @@
           "kind": {
             "anyOf": [
               {
-                "enum": [
-                  "manufacturer",
-                  "distributor",
-                  "publisher",
-                  "artisan"
-                ],
+                "maxLength": 40,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -2627,15 +2806,8 @@
           "family": {
             "anyOf": [
               {
-                "enum": [
-                  "custom",
-                  "joinery",
-                  "ose",
-                  "edition",
-                  "gallery",
-                  "artwork",
-                  "textile"
-                ],
+                "maxLength": 40,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -2690,6 +2862,18 @@
             "title": "Kind",
             "type": "string"
           },
+          "leadTime": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtime"
+          },
           "name": {
             "anyOf": [
               {
@@ -2715,6 +2899,18 @@
               }
             ],
             "title": "Placements"
+          },
+          "productName": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productname"
           },
           "quoteIndice": {
             "anyOf": [
@@ -2809,10 +3005,8 @@
           "usage": {
             "anyOf": [
               {
-                "enum": [
-                  "indoor",
-                  "outdoor"
-                ],
+                "maxLength": 40,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -2875,15 +3069,6 @@
           "family": {
             "anyOf": [
               {
-                "enum": [
-                  "custom",
-                  "joinery",
-                  "ose",
-                  "edition",
-                  "gallery",
-                  "artwork",
-                  "textile"
-                ],
                 "type": "string"
               },
               {
@@ -2941,6 +3126,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "leadTime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtime"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -2951,6 +3147,10 @@
             },
             "title": "Placements",
             "type": "array"
+          },
+          "productName": {
+            "title": "Productname",
+            "type": "string"
           },
           "projectId": {
             "title": "Projectid",
@@ -3050,10 +3250,6 @@
           "usage": {
             "anyOf": [
               {
-                "enum": [
-                  "indoor",
-                  "outdoor"
-                ],
                 "type": "string"
               },
               {
@@ -3071,11 +3267,13 @@
           "categoryId",
           "supplierId",
           "name",
+          "productName",
           "reference",
           "family",
           "usage",
           "finish",
           "dimensions",
+          "leadTime",
           "sourceUrl",
           "comments",
           "unitCostCents",
@@ -3162,15 +3360,8 @@
           "family": {
             "anyOf": [
               {
-                "enum": [
-                  "custom",
-                  "joinery",
-                  "ose",
-                  "edition",
-                  "gallery",
-                  "artwork",
-                  "textile"
-                ],
+                "maxLength": 40,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -3216,6 +3407,18 @@
             ],
             "title": "Itemcode"
           },
+          "leadTime": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leadtime"
+          },
           "name": {
             "anyOf": [
               {
@@ -3228,6 +3431,19 @@
               }
             ],
             "title": "Name"
+          },
+          "productName": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productname"
           },
           "quoteIndice": {
             "anyOf": [
@@ -3328,10 +3544,8 @@
           "usage": {
             "anyOf": [
               {
-                "enum": [
-                  "indoor",
-                  "outdoor"
-                ],
+                "maxLength": 40,
+                "minLength": 1,
                 "type": "string"
               },
               {
@@ -4808,7 +5022,7 @@
     },
     "/api/v1/captures/{capture_id}/image": {
       "post": {
-        "description": "From the extension, when the server could not download the image itself.",
+        "description": "From the extension, for each photo the server could not download (`url` = its address).",
         "operationId": "attachCaptureImage",
         "parameters": [
           {
@@ -5139,6 +5353,252 @@
         "summary": "Unarchive Category",
         "tags": [
           "categories"
+        ]
+      }
+    },
+    "/api/v1/choices": {
+      "get": {
+        "operationId": "listChoices",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "list",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "family",
+                    "usage",
+                    "prestation"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "List"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeArchived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Includearchived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChoiceRead"
+                  },
+                  "title": "Response Listchoices",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Choices",
+        "tags": [
+          "choices"
+        ]
+      },
+      "post": {
+        "operationId": "createChoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChoiceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Choice",
+        "tags": [
+          "choices"
+        ]
+      }
+    },
+    "/api/v1/choices/{choice_id}": {
+      "patch": {
+        "operationId": "updateChoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "choice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Choice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChoiceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Choice",
+        "tags": [
+          "choices"
+        ]
+      }
+    },
+    "/api/v1/choices/{choice_id}/archive": {
+      "post": {
+        "operationId": "archiveChoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "choice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Choice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive Choice",
+        "tags": [
+          "choices"
+        ]
+      }
+    },
+    "/api/v1/choices/{choice_id}/unarchive": {
+      "post": {
+        "operationId": "unarchiveChoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "choice_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Choice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChoiceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unarchive Choice",
+        "tags": [
+          "choices"
         ]
       }
     },
@@ -5932,12 +6392,8 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "manufacturer",
-                    "distributor",
-                    "publisher",
-                    "artisan"
-                  ],
+                  "maxLength": 40,
+                  "minLength": 1,
                   "type": "string"
                 },
                 {

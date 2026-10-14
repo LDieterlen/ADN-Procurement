@@ -68,24 +68,37 @@ def test_location_constraints(seeded: Engine, values: dict[str, Any], constraint
 @pytest.mark.parametrize(
     ("values", "constraint"),
     [
-        ({"item_code": "", "name": "A", "category_id": 1}, "item_code_not_empty"),
-        ({"item_code": "X", "name": "A", "category_id": 1, "status": "draft"}, "status_enum"),
-        ({"item_code": "X", "name": "A", "category_id": 1, "family": "other"}, "family_enum"),
-        ({"item_code": "X", "name": "A", "category_id": 1, "usage": "garden"}, "usage_enum"),
         (
-            {"item_code": "X", "name": "A", "category_id": 1, "discount_bp": 10001},
+            {"item_code": "", "name": "A", "product_name": "A", "category_id": None, "kind": "fee"},
+            "item_code_not_empty",
+        ),
+        ({"name": "A", "product_name": "A", "category_id": 1, "status": "draft"}, "status_enum"),
+        (
+            {"name": "A", "product_name": "A", "category_id": 1, "discount_bp": 10001},
             "discount_bp_range",
         ),
         (
-            {"item_code": "X", "name": "A", "category_id": 1, "fx_rate_micro": 2},
+            {"name": "A", "product_name": "A", "category_id": 1, "fx_rate_micro": 2},
             "eur_rate_is_one",
         ),
-        ({"item_code": "X", "name": "A", "category_id": 1, "kind": "fee"}, "fee_has_no_type"),
-        ({"item_code": "X", "name": "A", "category_id": None}, "fee_has_no_type"),
         (
-            {"item_code": "X", "name": "A", "category_id": 1, "status": "to_quote", "kind": "ose"},
-            "kind_enum",
+            {
+                "item_code": "FR-01",
+                "name": "A",
+                "product_name": "A",
+                "category_id": 1,
+                "kind": "fee",
+            },
+            "fee_has_no_type",
         ),
+        ({"name": "A", "product_name": "A", "category_id": None}, "fee_has_no_type"),
+        ({"name": "A", "product_name": "A", "category_id": 1, "kind": "ose"}, "kind_enum"),
+        # Codes live on placements (ADR-0018): a product never carries one.
+        (
+            {"item_code": "CHA-LUD-01", "name": "A", "product_name": "A", "category_id": 1},
+            "fee_code_only",
+        ),
+        ({"name": "A", "product_name": "A", "category_id": None, "kind": "fee"}, "fee_code_only"),
     ],
 )
 def test_article_constraints(seeded: Engine, values: dict[str, Any], constraint: str) -> None:
@@ -93,11 +106,25 @@ def test_article_constraints(seeded: Engine, values: dict[str, Any], constraint:
         insert_row(seeded, ProjectItem, project_id=1, **values)
 
 
-def test_article_code_unique_per_project(seeded: Engine) -> None:
-    insert_row(seeded, ProjectItem, project_id=1, item_code="CHA-LUD-01", name="A", category_id=1)
+def test_fee_code_unique_per_project(seeded: Engine) -> None:
+    insert_row(
+        seeded,
+        ProjectItem,
+        project_id=1,
+        item_code="FR-01",
+        kind="fee",
+        name="A",
+        product_name="A",
+    )
     with pytest.raises(IntegrityError, match="project_item.project_id, project_item.item_code"):
         insert_row(
-            seeded, ProjectItem, project_id=1, item_code="CHA-LUD-01", name="B", category_id=1
+            seeded,
+            ProjectItem,
+            project_id=1,
+            item_code="FR-01",
+            kind="fee",
+            name="B",
+            product_name="B",
         )
 
 

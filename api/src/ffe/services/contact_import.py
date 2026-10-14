@@ -19,6 +19,7 @@ from ffe.i18n import fr
 from ffe.schemas.professional import ProfessionalCreate
 from ffe.schemas.supplier import SupplierCreate
 from ffe.services.base import normalize_key
+from ffe.services.choice import labels as choice_labels
 from ffe.services.professional import create_professional
 from ffe.services.supplier import create_supplier
 
@@ -91,7 +92,9 @@ def _clean_email(value: str | None) -> tuple[str | None, str | None]:
     return (text, None) if EMAIL_RE.match(text) else (None, text)
 
 
-def parse_contacts(text: str) -> list[ContactRow]:
+def parse_contacts(text: str, prestations: dict[str, str] | None = None) -> list[ContactRow]:
+    """`prestations`: folded label → code of the « prestation » list (defaults: the seed values)."""
+    known = prestations if prestations is not None else PROFESSIONAL_KINDS
     reader = csv.DictReader(io.StringIO(text), delimiter=";")
     headers = {(h or "").strip().upper(): h for h in reader.fieldnames or []}
     missing = [label for label in COLUMNS.values() if label not in headers]
@@ -112,8 +115,8 @@ def parse_contacts(text: str) -> list[ContactRow]:
         kind_label = normalize_key(_clean(get("kind")) or "")
         if kind_label == SUPPLIER_KIND:
             kind = "supplier"
-        elif kind_label in PROFESSIONAL_KINDS:
-            kind = PROFESSIONAL_KINDS[kind_label]
+        elif kind_label in known:
+            kind = known[kind_label]
         else:
             raise ContactImportError(
                 fr.CONTACT_IMPORT_UNKNOWN_KIND.format(line=line, name=name, kind=get("kind"))
@@ -148,7 +151,13 @@ def parse_contacts(text: str) -> list[ContactRow]:
 
 
 def import_contacts(session: Session, text: str, clock: Clock) -> ContactImportResult:
-    rows = parse_contacts(text)
+    with session.begin():
+        listed = choice_labels(session, "prestation")
+    prestations = {
+        **PROFESSIONAL_KINDS,
+        **{normalize_key(label): code for code, label in listed.items()},
+    }
+    rows = parse_contacts(text, prestations)
     result = ContactImportResult()
     result.skipped_duplicate_rows = _count_data_lines(text) - len(rows)
     names_in_file: dict[str, str] = {}  # normalized name → kind of the first row
@@ -156,9 +165,7 @@ def import_contacts(session: Session, text: str, clock: Clock) -> ContactImportR
         name = row.name
         first_kind = names_in_file.setdefault(normalize_key(name), row.kind)
         if first_kind != row.kind:
-            label = (
-                "Fournisseur" if row.kind == "supplier" else fr.PROFESSIONAL_KIND_LABELS[row.kind]
-            )
+            label = "Fournisseur" if row.kind == "supplier" else listed.get(row.kind, row.kind)
             name = f"{row.name} ({label})"
             result.renamed.append((row.name, name))
         prefix = fr.CONTACT_IMPORT_EMAIL_NOTE.format(email="")

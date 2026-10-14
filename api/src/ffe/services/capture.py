@@ -19,7 +19,7 @@ from ffe.captures.extract import Extracted, extract
 from ffe.deps import Clock
 from ffe.errors import ErrorDetail, NotFoundError, UnauthorizedError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import Capture, File, Setting
+from ffe.models import Capture, CaptureImage, File, Setting
 from ffe.services.base import stamp
 from ffe.services.file import sniff, store_bytes, unlink_if_orphan
 
@@ -129,22 +129,23 @@ def create_capture(
     fetcher: Fetcher = fetch_url,
     image: bytes | None = None,
 ) -> Capture:
-    """Extracts the sheet from the HTML the browser displays; keeps the image sent by the
-    extension, else tries to download it (best effort: protected sites refuse the server)."""
+    """Extracts the sheet from the HTML the browser displays and downloads every photo of the
+    page (best effort: protected CDNs refuse the server, the extension then sends them); an
+    `image` sent with the page comes first."""
     url = check_url(url)
     if len(html.encode("utf-8", errors="replace")) > MAX_HTML_BYTES:
         raise ValidationAppError([ErrorDetail("html", fr.CAPTURE_HTML_TOO_LARGE)])
     found = extract(html)
     if found.name is None:
         raise _err(fr.CAPTURE_NOTHING_FOUND)
-    image_file: File | None = None
+    files: list[File] = []
     if image:
-        image_file = _image_bytes(session, files_dir, image, "image", clock)
-    elif found.image_url:
+        files.append(_image_bytes(session, files_dir, image, "image", clock))
+    for image_url in found.image_urls:
         try:
-            image_file = store_image(session, files_dir, found.image_url, clock, fetcher)
+            files.append(store_image(session, files_dir, image_url, clock, fetcher))
         except ValidationAppError:
-            image_file = None
+            continue
     with session.begin():
         capture = Capture(
             url=url,
@@ -152,27 +153,48 @@ def create_capture(
             brand=found.brand,
             reference=found.reference,
             image_url=found.image_url,
+            image_urls="\n".join(found.image_urls) or None,
             price_cents=found.price_cents,
             currency=found.currency,
             description=found.description,
+            type_code=found.type_code,
+            dimensions=found.dimensions,
+            lead_time=found.lead_time,
+            finish=found.finish,
             source=found.source,
-            image_file_id=image_file.id if image_file else None,
             created_at=stamp(clock),
         )
         session.add(capture)
+        session.flush()
+        for order, file_id in enumerate(dict.fromkeys(f.id for f in files)):
+            session.add(CaptureImage(capture_id=capture.id, file_id=file_id, sort_order=order))
+    with session.begin():
+        session.refresh(capture)
     return capture
 
 
 def attach_capture_image(
-    session: Session, files_dir: Path, capture_id: int, data: bytes, name: str, clock: Clock
+    session: Session,
+    files_dir: Path,
+    capture_id: int,
+    data: bytes,
+    name: str,
+    clock: Clock,
+    source_url: str | None = None,
 ) -> Capture:
-    """The extension fetched the image itself (the server could not): keep it on the capture."""
+    """The extension fetched a photo itself (the server could not): appended to the capture."""
     capture = _get(session, capture_id)
     image_file = _image_bytes(session, files_dir, data, name or "image", clock)
     with session.begin():
-        capture.image_file_id = image_file.id
+        if image_file.source_url is None and source_url:
+            image_file.source_url = source_url
+        known = [i.file_id for i in capture.images]
+        if image_file.id not in known:
+            session.add(
+                CaptureImage(capture_id=capture.id, file_id=image_file.id, sort_order=len(known))
+            )
     with session.begin():
-        session.refresh(capture)  # the view-only `image` relationship follows the new id
+        session.refresh(capture)
     return capture
 
 
@@ -183,10 +205,10 @@ def list_captures(session: Session) -> list[Capture]:
 
 
 def delete_capture(session: Session, files_dir: Path, capture_id: int) -> None:
-    """Used or dismissed: the row goes, the image too if nothing else references it."""
+    """Used or dismissed: the row goes, its photos too when nothing else references them."""
     capture = _get(session, capture_id)
-    image_file_id = capture.image_file_id
+    file_ids = [i.file_id for i in capture.images]
     with session.begin():
         session.delete(capture)
-    if image_file_id is not None:
-        unlink_if_orphan(session, files_dir, image_file_id)
+    for file_id in file_ids:
+        unlink_if_orphan(session, files_dir, file_id)

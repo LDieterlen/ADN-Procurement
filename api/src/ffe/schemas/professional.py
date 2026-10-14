@@ -1,13 +1,13 @@
 """`professional` schemas (DATA_MODEL §4.6, ADR-0015)."""
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
 from ffe.schemas.base import BaseSchema
 
-ProfessionalKind = Literal["manufacturer", "distributor", "publisher", "artisan"]
+ProfessionalKind = Annotated[str, Field(min_length=1, max_length=40)]  # code of a « prestation »
 Name = Annotated[str, Field(min_length=1, max_length=200)]
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=2000)]
@@ -79,7 +79,7 @@ class ProfessionalUpdate(BaseSchema):
 class ProfessionalRead(BaseSchema):
     id: int
     name: str
-    kind: ProfessionalKind
+    kind: str
     specialty: str | None
     contact_name: str | None
     phone: str | None

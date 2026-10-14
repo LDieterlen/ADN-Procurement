@@ -7,6 +7,7 @@ from ffe.deps import Clock
 from ffe.models import Professional
 from ffe.schemas.professional import ProfessionalCreate, ProfessionalUpdate
 from ffe.services.base import normalize_key, stamp
+from ffe.services.choice import check_code
 from ffe.services.common import archive as common_archive
 from ffe.services.common import (
     check_duplicate_name,
@@ -55,6 +56,7 @@ def create_professional(
     session: Session, data: ProfessionalCreate, clock: Clock, force: bool = False
 ) -> Professional:
     with session.begin():
+        check_code(session, "prestation", data.kind, "kind")
         check_duplicate_name(session, Professional, RESOURCE, data.name, None, force)
         now = stamp(clock)
         professional = Professional(**data.model_dump(), created_at=now, updated_at=now)
@@ -68,6 +70,8 @@ def update_professional(
     with session.begin():
         professional = ensure_active(get_professional(session, professional_id), RESOURCE)
         changes = data.model_dump(exclude_unset=True)
+        if "kind" in changes and changes["kind"] != professional.kind:
+            check_code(session, "prestation", changes["kind"], "kind")
         if "name" in changes and changes["name"] != professional.name:
             check_duplicate_name(
                 session, Professional, RESOURCE, changes["name"], professional_id, False

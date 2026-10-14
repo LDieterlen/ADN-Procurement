@@ -66,6 +66,7 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         base,
         json={
             "name": "Beat Light Fat",
+            "productName": "Beat Light Fat, suspension en laiton",
             "categoryId": lud.id,
             "reference": "BLS01",
             "supplierId": dixon.id,
@@ -125,7 +126,7 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert [loc["name"] for loc in context["locations"]] == ["Lobby", "Chambre typo A"]
     lobby, room = context["locations"]
     assert [a["item_code"] for a in lobby["articles"]] == ["LOB-LUD-01", "LOB-LUD-02"]
-    assert [a["item_code"] for a in room["articles"]] == ["LOB-LUD-01"]
+    assert [a["item_code"] for a in room["articles"]] == ["CHA-LUD-01"]  # ADR-0018
     beat = lobby["articles"][0]
     assert beat["reference"] == "BLS01" and beat["supplier_name"] == "Tom Dixon"
     assert beat["representative"] == "Djamel Sabeur" and beat["email"] == "djamel@example.com"
@@ -138,6 +139,8 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert "125" not in html.replace("1 250", "") or "1 250,00" not in html
     assert "€" not in html and "Livraison" not in html
     assert "Djamel Sabeur" in html and "Ø 36 × H 30 cm" in html
+    assert "Beat Light Fat</h1>" in html  # the designation as the title
+    assert "Beat Light Fat, suspension en laiton" in html  # the name, in the « Nom » cell
     assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # cover, list, three sheets
 
 

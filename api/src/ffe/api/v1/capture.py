@@ -30,10 +30,15 @@ def preview_capture(
         brand=found.brand,
         reference=found.reference,
         image_url=found.image_url,
+        image_urls=list(found.image_urls),
         price_cents=found.price_cents,
         currency=found.currency,
         description=found.description,
         source=found.source,  # type: ignore[arg-type]
+        type_code=found.type_code,
+        dimensions=found.dimensions,
+        lead_time=found.lead_time,
+        finish=found.finish,
     )
 
 
@@ -88,14 +93,21 @@ def attach_capture_image(
     session: SessionDep,
     deps: DepsDep,
     x_ffe_token: Token = None,
+    url: Annotated[str | None, Form(max_length=2000)] = None,
 ) -> CaptureRead:
-    """From the extension, when the server could not download the image itself."""
+    """From the extension, for each photo the server could not download (`url` = its address)."""
     service.require_extension_token(session, x_ffe_token)
     data = image.file.read(MAX_IMAGE_BYTES + 1)
     if len(data) > MAX_IMAGE_BYTES:
         raise ValidationAppError([ErrorDetail("image", fr.CAPTURE_TOO_LARGE)])
     capture = service.attach_capture_image(
-        session, deps.settings.files_dir, capture_id, data, image.filename or "image", deps.clock
+        session,
+        deps.settings.files_dir,
+        capture_id,
+        data,
+        image.filename or "image",
+        deps.clock,
+        url,
     )
     return CaptureRead.from_model(capture)
 

@@ -7,9 +7,13 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from weasyprint import HTML  # pyright: ignore[reportMissingTypeStubs]
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
+# Fonts (Playfair Display, IBM Plex Sans, IBM Plex Mono — SIL Open Font License, from the Google
+# Fonts repository) and the logo, reached by absolute file URL: no network at render time.
+ASSETS = Path(__file__).resolve().parent / "assets"
 _env = Environment(
     loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]), trim_blocks=True
 )
+_env.globals["assets_url"] = ASSETS.as_uri()  # pyright: ignore[reportUnknownMemberType]
 
 
 def cents_text(cents: int | None) -> str:

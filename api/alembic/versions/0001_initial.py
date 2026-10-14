@@ -2,12 +2,13 @@
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-10-13
+Create Date: 2026-10-14
 
-Générée par `alembic revision --autogenerate` puis relue : 17 tables STRICT (DATA_MODEL §4), CHECK et
+Générée par `alembic revision --autogenerate` puis relue : 19 tables STRICT (DATA_MODEL §4), CHECK et
 UNIQUE des modèles, index partiels rendus par Alembic ; les quatre index d'expression (COALESCE,
-lower) et la ligne unique de `setting` sont écrits à la main en fin d'`upgrade`. Tant que la v1 n'est
-pas déclarée, ce fichier est le seul de l'historique et se régénère à chaque changement de modèle.
+lower), la ligne unique de `setting` et les valeurs de départ des listes (`choice`) sont écrits à la
+main en fin d'`upgrade`. Tant que la v1 n'est pas déclarée, ce fichier est le seul de l'historique et
+se régénère à chaque changement de modèle.
 """
 
 from collections.abc import Sequence
@@ -21,8 +22,53 @@ down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Values of the editable lists present from the start (copied from models/choice.py, 2026-10-14).
+DEFAULT_CHOICES = (
+    ("family", "custom", "Pièce sur-mesure"),
+    ("family", "joinery", "Agencement"),
+    ("family", "ose", "OS&E"),
+    ("family", "edition", "Pièce d'édition"),
+    ("family", "gallery", "Pièce de galerie"),
+    ("family", "artwork", "Œuvre d'art"),
+    ("family", "textile", "Confection"),
+    ("usage", "indoor", "Intérieur"),
+    ("usage", "outdoor", "Extérieur"),
+    ("prestation", "manufacturer", "Fabricant"),
+    ("prestation", "distributor", "Distributeur"),
+    ("prestation", "publisher", "Éditeur"),
+    ("prestation", "artisan", "Artisan"),
+)
+
 
 def upgrade() -> None:
+    op.create_table(
+        "capture",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=True),
+        sa.Column("brand", sa.Text(), nullable=True),
+        sa.Column("reference", sa.Text(), nullable=True),
+        sa.Column("image_url", sa.Text(), nullable=True),
+        sa.Column("image_urls", sa.Text(), nullable=True),
+        sa.Column("price_cents", sa.Integer(), nullable=True),
+        sa.Column("currency", sa.Text(), nullable=True),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("type_code", sa.Text(), nullable=True),
+        sa.Column("dimensions", sa.Text(), nullable=True),
+        sa.Column("lead_time", sa.Text(), nullable=True),
+        sa.Column("finish", sa.Text(), nullable=True),
+        sa.Column("source", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.Text(), nullable=False),
+        sa.CheckConstraint(
+            "source IN ('json-ld','opengraph','title')", name=op.f("ck_capture_source_values")
+        ),
+        sa.CheckConstraint("length(url) > 0", name=op.f("ck_capture_url_not_empty")),
+        sa.CheckConstraint(
+            "price_cents IS NULL OR price_cents >= 0", name=op.f("ck_capture_price_cents_min")
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_capture")),
+        sqlite_strict=True,
+    )
     op.create_table(
         "category",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -44,6 +90,25 @@ def upgrade() -> None:
     with op.batch_alter_table("category", schema=None) as batch_op:
         batch_op.create_index("ix_category_sort_order", ["sort_order"], unique=False)
 
+    op.create_table(
+        "choice",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("list", sa.Text(), nullable=False),
+        sa.Column("code", sa.Text(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("sort_order", sa.Integer(), nullable=False),
+        sa.Column("archived_at", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.Text(), nullable=False),
+        sa.Column("updated_at", sa.Text(), nullable=False),
+        sa.CheckConstraint(
+            "list IN ('family','usage','prestation')", name=op.f("ck_choice_list_values")
+        ),
+        sa.CheckConstraint("length(code) > 0", name=op.f("ck_choice_code_not_empty")),
+        sa.CheckConstraint("length(name) > 0", name=op.f("ck_choice_name_not_empty")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_choice")),
+        sa.UniqueConstraint("list", "code", name="uq_choice_list_code"),
+        sqlite_strict=True,
+    )
     op.create_table(
         "client",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -111,10 +176,6 @@ def upgrade() -> None:
         sa.Column("archived_at", sa.Text(), nullable=True),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
-        sa.CheckConstraint(
-            "kind IN ('manufacturer','distributor','publisher','artisan')",
-            name=op.f("ck_professional_kind_values"),
-        ),
         sa.CheckConstraint("length(name) > 0", name=op.f("ck_professional_name_not_empty")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_professional")),
         sqlite_strict=True,
@@ -166,35 +227,33 @@ def upgrade() -> None:
         batch_op.create_index("ix_supplier_archived_at", ["archived_at", "name"], unique=False)
 
     op.create_table(
-        "capture",
+        "capture_image",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("url", sa.Text(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=True),
-        sa.Column("brand", sa.Text(), nullable=True),
-        sa.Column("reference", sa.Text(), nullable=True),
-        sa.Column("image_url", sa.Text(), nullable=True),
-        sa.Column("price_cents", sa.Integer(), nullable=True),
-        sa.Column("currency", sa.Text(), nullable=True),
-        sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("source", sa.Text(), nullable=False),
-        sa.Column("image_file_id", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.Text(), nullable=False),
-        sa.CheckConstraint(
-            "source IN ('json-ld','opengraph','title')", name=op.f("ck_capture_source_values")
-        ),
-        sa.CheckConstraint("length(url) > 0", name=op.f("ck_capture_url_not_empty")),
-        sa.CheckConstraint(
-            "price_cents IS NULL OR price_cents >= 0", name=op.f("ck_capture_price_cents_min")
+        sa.Column("capture_id", sa.Integer(), nullable=False),
+        sa.Column("file_id", sa.Integer(), nullable=False),
+        sa.Column("sort_order", sa.Integer(), nullable=False),
+        sa.CheckConstraint("sort_order >= 0", name=op.f("ck_capture_image_sort_order_min")),
+        sa.ForeignKeyConstraint(
+            ["capture_id"],
+            ["capture.id"],
+            name=op.f("fk_capture_image_capture_id_capture"),
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["image_file_id"],
+            ["file_id"],
             ["file.id"],
             name=op.f("fk_capture_image_file_id_file"),
             ondelete="RESTRICT",
         ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_capture")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_capture_image")),
+        sa.UniqueConstraint("capture_id", "file_id", name="uq_capture_image_file"),
         sqlite_strict=True,
     )
+    with op.batch_alter_table("capture_image", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_capture_image_capture_id"), ["capture_id"], unique=False
+        )
+
     op.create_table(
         "project",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -332,16 +391,18 @@ def upgrade() -> None:
         "project_item",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("project_id", sa.Integer(), nullable=False),
-        sa.Column("item_code", sa.Text(), nullable=False),
+        sa.Column("item_code", sa.Text(), nullable=True),
         sa.Column("kind", sa.Text(), server_default="product", nullable=False),
         sa.Column("category_id", sa.Integer(), nullable=True),
         sa.Column("supplier_id", sa.Integer(), nullable=True),
         sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("product_name", sa.Text(), nullable=False),
         sa.Column("reference", sa.Text(), nullable=True),
         sa.Column("family", sa.Text(), nullable=True),
         sa.Column("usage", sa.Text(), nullable=True),
         sa.Column("finish", sa.Text(), nullable=True),
         sa.Column("dimensions", sa.Text(), nullable=True),
+        sa.Column("lead_time", sa.Text(), nullable=True),
         sa.Column("source_url", sa.Text(), nullable=True),
         sa.Column("comments", sa.Text(), nullable=True),
         sa.Column("unit_cost_cents", sa.Integer(), server_default=sa.text("0"), nullable=False),
@@ -365,18 +426,10 @@ def upgrade() -> None:
             "currency <> 'EUR' OR fx_rate_micro = 1000000",
             name=op.f("ck_project_item_eur_rate_is_one"),
         ),
-        sa.CheckConstraint(
-            "family IS NULL OR family IN ('custom', 'joinery', 'ose', 'edition', 'gallery', 'artwork', 'textile')",
-            name=op.f("ck_project_item_family_enum"),
-        ),
         sa.CheckConstraint("kind IN ('product', 'fee')", name=op.f("ck_project_item_kind_enum")),
         sa.CheckConstraint(
             "status IN ('to_quote', 'quoted', 'to_review', 'approved', 'deposit', 'purchased', 'cancelled')",
             name=op.f("ck_project_item_status_enum"),
-        ),
-        sa.CheckConstraint(
-            "usage IS NULL OR usage IN ('indoor', 'outdoor')",
-            name=op.f("ck_project_item_usage_enum"),
         ),
         sa.CheckConstraint(
             "discount_bp BETWEEN 0 AND 10000", name=op.f("ck_project_item_discount_bp_range")
@@ -385,6 +438,9 @@ def upgrade() -> None:
         sa.CheckConstraint("length(currency) = 3", name=op.f("ck_project_item_currency_length")),
         sa.CheckConstraint(
             "length(item_code) > 0", name=op.f("ck_project_item_item_code_not_empty")
+        ),
+        sa.CheckConstraint(
+            "(kind = 'fee') = (item_code IS NOT NULL)", name=op.f("ck_project_item_fee_code_only")
         ),
         sa.CheckConstraint("length(name) > 0", name=op.f("ck_project_item_name_not_empty")),
         sa.CheckConstraint("unit_cost_cents >= 0", name=op.f("ck_project_item_unit_cost_min")),
@@ -408,7 +464,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project_item")),
         sa.UniqueConstraint("id", "project_id", name="uq_project_item_id"),
-        sa.UniqueConstraint("project_id", "item_code", name="uq_project_item_project_id"),
         sqlite_strict=True,
     )
     with op.batch_alter_table("project_item", schema=None) as batch_op:
@@ -418,6 +473,12 @@ def upgrade() -> None:
         )
         batch_op.create_index("ix_project_item_status", ["project_id", "status"], unique=False)
         batch_op.create_index("ix_project_item_supplier_id", ["supplier_id"], unique=False)
+        batch_op.create_index(
+            "uq_project_item_code",
+            ["project_id", "item_code"],
+            unique=True,
+            sqlite_where=sa.text("item_code IS NOT NULL"),
+        )
 
     op.create_table(
         "budget_line",
@@ -553,10 +614,14 @@ def upgrade() -> None:
         sa.Column("project_item_id", sa.Integer(), nullable=False),
         sa.Column("project_id", sa.Integer(), nullable=False),
         sa.Column("location_id", sa.Integer(), nullable=True),
+        sa.Column("code", sa.Text(), nullable=False),
         sa.Column("qty_milli", sa.Integer(), server_default=sa.text("(1000)"), nullable=False),
         sa.Column("sort_order", sa.Integer(), server_default=sa.text("0"), nullable=False),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
+        sa.CheckConstraint(
+            "length(code) > 0", name=op.f("ck_project_item_placement_code_not_empty")
+        ),
         sa.CheckConstraint("qty_milli >= 0", name=op.f("ck_project_item_placement_qty_min")),
         sa.ForeignKeyConstraint(
             ["location_id", "project_id"],
@@ -571,6 +636,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project_item_placement")),
+        sa.UniqueConstraint("project_id", "code", name="uq_project_item_placement_code"),
         sqlite_strict=True,
     )
     with op.batch_alter_table("project_item_placement", schema=None) as batch_op:
@@ -599,6 +665,14 @@ def upgrade() -> None:
             "INSERT INTO setting (id, created_at, updated_at) VALUES (1, :now, :now)"
         ).bindparams(now=now)
     )
+    # The editable lists start with the values that used to be fixed (DATA_MODEL §4.18).
+    for order, (list_name, code, name) in enumerate(DEFAULT_CHOICES):
+        op.execute(
+            sa.text(
+                "INSERT INTO choice (list, code, name, sort_order, created_at, updated_at) "
+                "VALUES (:list, :code, :name, :order, :now, :now)"
+            ).bindparams(list=list_name, code=code, name=name, order=(order + 1) * 10, now=now)
+        )
 
 
 def downgrade() -> None:
@@ -624,6 +698,7 @@ def downgrade() -> None:
 
     op.drop_table("budget_line")
     with op.batch_alter_table("project_item", schema=None) as batch_op:
+        batch_op.drop_index("uq_project_item_code", sqlite_where=sa.text("item_code IS NOT NULL"))
         batch_op.drop_index("ix_project_item_supplier_id")
         batch_op.drop_index("ix_project_item_status")
         batch_op.drop_index("ix_project_item_project_id")
@@ -646,7 +721,10 @@ def downgrade() -> None:
         batch_op.drop_index("ix_project_client_id")
 
     op.drop_table("project")
-    op.drop_table("capture")
+    with op.batch_alter_table("capture_image", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_capture_image_capture_id"))
+
+    op.drop_table("capture_image")
     with op.batch_alter_table("supplier", schema=None) as batch_op:
         batch_op.drop_index("ix_supplier_archived_at")
 
@@ -658,7 +736,9 @@ def downgrade() -> None:
         batch_op.drop_index("ix_client_archived_at")
 
     op.drop_table("client")
+    op.drop_table("choice")
     with op.batch_alter_table("category", schema=None) as batch_op:
         batch_op.drop_index("ix_category_sort_order")
 
     op.drop_table("category")
+    op.drop_table("capture")

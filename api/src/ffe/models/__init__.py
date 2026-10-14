@@ -2,8 +2,9 @@
 
 from ffe.models.base import Base
 from ffe.models.budget_line import BudgetLine
-from ffe.models.capture import Capture
+from ffe.models.capture import Capture, CaptureImage
 from ffe.models.category import Category
+from ffe.models.choice import Choice
 from ffe.models.client import Client
 from ffe.models.file import File
 from ffe.models.item_code_sequence import ItemCodeSequence
@@ -23,7 +24,9 @@ __all__ = [
     "Base",
     "BudgetLine",
     "Capture",
+    "CaptureImage",
     "Category",
+    "Choice",
     "Client",
     "File",
     "ItemCodeSequence",

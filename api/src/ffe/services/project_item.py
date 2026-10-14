@@ -32,8 +32,10 @@ from ffe.schemas.project_item import (
     ProjectItemCreate,
     ProjectItemUpdate,
     StatusChange,
+    code_label,
 )
 from ffe.services.base import normalize_key, stamp
+from ffe.services.choice import check_code
 from ffe.services.file import get_file, unlink_if_orphan
 from ffe.services.project import ensure_open, get_project
 
@@ -128,13 +130,14 @@ def list_items(
             ProjectItemPlacement.location_id == location_id
         )
         query = query.where(ProjectItem.id.in_(placed))
-    rows = list(session.scalars(query.order_by(ProjectItem.sort_order, ProjectItem.item_code)))
+    rows = list(session.scalars(query))
+    rows.sort(key=lambda r: (r.sort_order, code_label(r)))
     if q and q.strip():
         needle = normalize_key(q)
         rows = [
             r
             for r in rows
-            if needle in normalize_key(r.name) or needle in normalize_key(r.item_code)
+            if needle in normalize_key(r.name) or needle in normalize_key(code_label(r))
         ]
     return rows
 
@@ -187,6 +190,18 @@ def next_item_code(session: Session, project_id: int, location_code: str, prefix
     return f"{head}{prefix}-{int(value):02d}"
 
 
+def placement_code(session: Session, project_id: int, location_id: int | None, prefix: str) -> str:
+    """A new code for a placement: next number of (location, type) in the project (ADR-0018)."""
+    return next_item_code(session, project_id, location_code_of(session, location_id), prefix)
+
+
+def _prefix_of(session: Session, item: ProjectItem) -> str:
+    """Type code of an existing article (its type may have been archived since)."""
+    category = session.get(Category, item.category_id) if item.category_id else None
+    assert category is not None  # a product always has a type (CHECK fee_has_no_type)
+    return category.code
+
+
 def _check_code_free(session: Session, project_id: int, code: str, exclude_id: int | None) -> None:
     taken = session.scalar(
         select(ProjectItem.id).where(
@@ -234,6 +249,8 @@ def _resolve_defaults(
     session: Session, project_id: int, data: ProjectItemCreate, now: str
 ) -> dict[str, Any]:
     values = data.model_dump(exclude={"placements", "item_code"})
+    check_code(session, "family", data.family, "family")
+    check_code(session, "usage", data.usage, "usage")
     if data.kind == "fee":
         if data.category_id is not None or data.placements:
             raise _err("kind", fr.ITEM_FEE_HAS_NO_TYPE)
@@ -242,8 +259,12 @@ def _resolve_defaults(
     if data.kind == "product" and values["category_id"] is None:
         raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
     _check_reference(session, Category, "categoryId", values["category_id"], "Type de produit")
+    # The name is required ; the designation defaults to it (and a bare designation, e.g. a fee
+    # typed inline, is its own name).
+    values["product_name"] = values["product_name"] or values["name"]
+    values["name"] = values["name"] or values["product_name"]
     if not values["name"]:
-        raise _err("name", fr.ITEM_NAME_REQUIRED)
+        raise _err("productName", fr.ITEM_PRODUCT_NAME_REQUIRED)
     supplier = _check_reference(
         session, Supplier, "supplierId", values["supplier_id"], "Fournisseur"
     )
@@ -289,7 +310,7 @@ def placement_pairs(session: Session, item: ProjectItem) -> list[tuple[int, int]
 
 def _placements_json(item: ProjectItem) -> str:
     return json.dumps(
-        [{"location": p.location_id, "qty": p.qty_milli} for p in item.placements],
+        [{"location": p.location_id, "qty": p.qty_milli, "code": p.code} for p in item.placements],
         separators=(",", ":"),
     )
 
@@ -324,6 +345,9 @@ def add_placement(
             ProjectItemPlacement(
                 project_id=item.project_id,
                 location_id=data.location_id,
+                code=placement_code(
+                    session, item.project_id, data.location_id, _prefix_of(session, item)
+                ),
                 qty_milli=data.qty_milli,
                 sort_order=data.sort_order,
                 created_at=now,
@@ -356,6 +380,10 @@ def update_placement(
                 for p in item.placements
             ):
                 raise _err("locationId", fr.PLACEMENT_LOCATION_TAKEN)
+            # The code follows the room: a new number in the arrival location (ADR-0018).
+            changes["code"] = placement_code(
+                session, item.project_id, changes["location_id"], _prefix_of(session, item)
+            )
         before = _placements_json(item)
         for field_name, value in changes.items():
             setattr(placement, field_name, value)
@@ -395,15 +423,16 @@ def create_item(
             if placement.location_id in seen:
                 raise _err("placements", fr.PLACEMENT_LOCATION_TAKEN)
             seen.add(placement.location_id)
-        if data.item_code:
-            _check_code_free(session, project_id, data.item_code, None)
-            code = data.item_code
-        elif data.kind == "fee":
-            code = next_item_code(session, project_id, "", FEE_PREFIX)
+        code: str | None = None
+        prefix = ""
+        if data.kind == "fee":
+            if data.item_code:
+                _check_code_free(session, project_id, data.item_code, None)
+            code = data.item_code or next_item_code(session, project_id, "", FEE_PREFIX)
         else:
+            if data.item_code:
+                raise _err("itemCode", fr.ITEM_CODE_FEE_ONLY)
             prefix = type_code(session, values["category_id"])
-            first = placements[0].location_id if placements else None
-            code = next_item_code(session, project_id, location_code_of(session, first), prefix)
         item = ProjectItem(
             **values, project_id=project_id, item_code=code, created_at=now, updated_at=now
         )
@@ -412,6 +441,7 @@ def create_item(
                 ProjectItemPlacement(
                     project_id=project_id,
                     location_id=placement.location_id,
+                    code=placement_code(session, project_id, placement.location_id, prefix),
                     qty_milli=placement.qty_milli,
                     sort_order=placement.sort_order,
                     created_at=now,
@@ -437,9 +467,13 @@ def update_item(
     with session.begin():
         item = _editable(session, item_id)
         changes = data.model_dump(exclude_unset=True)
+        if changes.get("family") != item.family:
+            check_code(session, "family", changes.get("family"), "family")
+        if changes.get("usage") != item.usage:
+            check_code(session, "usage", changes.get("usage"), "usage")
         if "item_code" in changes and changes["item_code"] != item.item_code:
-            if item.status != "to_quote":
-                raise _err("itemCode", fr.ITEM_CODE_IMMUTABLE)
+            if item.kind != "fee":
+                raise _err("itemCode", fr.ITEM_CODE_FEE_ONLY)
             _check_code_free(session, item.project_id, changes["item_code"], item_id)
         if item.kind == "fee":
             if changes.get("category_id") is not None:
@@ -454,12 +488,21 @@ def update_item(
             and changes["category_id"] is not None
             and changes["category_id"] != item.category_id
         ):
+            # A new type recodes every placement (ADR-0018), journaled with the codes.
             prefix = type_code(session, changes["category_id"])
-            if item.status == "to_quote" and "item_code" not in changes:
-                first = item.placements[0].location_id if item.placements else None
-                changes["item_code"] = next_item_code(
-                    session, item.project_id, location_code_of(session, first), prefix
+            before = _placements_json(item)
+            for placement in item.placements:
+                placement.code = placement_code(
+                    session, item.project_id, placement.location_id, prefix
                 )
+            write_event(
+                session,
+                item,
+                "placement",
+                clock,
+                old_value=before,
+                new_value=_placements_json(item),
+            )
         currency = changes.get("currency", item.currency)
         fx_given = changes.get("fx_rate_micro")
         if "currency" in changes or "fx_rate_micro" in changes:

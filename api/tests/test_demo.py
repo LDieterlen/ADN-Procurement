@@ -17,8 +17,8 @@ def test_demo_project_is_created_once_and_consistent(
     assert seed_demo(engine, clock) is None
     items = client.get(f"/api/v1/projects/{project.id}/project-items").json()
     assert len(items) == 5 and {i["kind"] for i in items} == {"product", "fee"}
-    codes = sorted(i["itemCode"] for i in items)
-    assert codes == ["BAR-TBR-01", "CHA-LIT-01", "CHA-LUD-01", "FR-01", "LOB-AS-01"]
+    codes = sorted(i["itemCode"] for i in items)  # one code per placement (ADR-0018)
+    assert codes == ["BAR-TBR-01", "CHA-LIT-01", "CHA-LUD-01 · SUI-LUD-01", "FR-01", "LOB-AS-01"]
     summary = client.get(f"/api/v1/projects/{project.id}/summary").json()
     assert summary["budgetCents"] == 85_000_000
     assert summary["specifiedCents"] == sum(

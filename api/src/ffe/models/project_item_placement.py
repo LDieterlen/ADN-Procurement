@@ -1,6 +1,15 @@
-"""`project_item_placement`: where a line goes and how many per location (DATA_MODEL §4.12)."""
+"""`project_item_placement`: where a line goes, how many, and its FF&E code `<LOC>-<TYPE>-NN`
+(DATA_MODEL §4.12, ADR-0018)."""
 
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, Integer, func, text
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
@@ -25,6 +34,8 @@ class ProjectItemPlacement(Base):
             ondelete="RESTRICT",
         ),
         CheckConstraint("qty_milli >= 0", name="qty_min"),
+        CheckConstraint("length(code) > 0", name="code_not_empty"),
+        UniqueConstraint("project_id", "code", name="uq_project_item_placement_code"),
         Index("ix_project_item_placement_project_id", "project_id", "location_id", "sort_order"),
         STRICT,
     )
@@ -33,6 +44,7 @@ class ProjectItemPlacement(Base):
     project_item_id: Mapped[int] = mapped_column(Integer, nullable=False)
     project_id: Mapped[int] = mapped_column(Integer, nullable=False)
     location_id: Mapped[int | None] = mapped_column(Integer)  # NULL = « non affecté »
+    code: Mapped[str] = mapped_column(Text, nullable=False)  # `<LOC>-<TYPE>-NN` (ADR-0018)
     qty_milli: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1000"))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)

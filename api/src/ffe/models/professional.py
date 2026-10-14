@@ -7,21 +7,17 @@ from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
 
-PROFESSIONAL_KINDS = ("manufacturer", "distributor", "publisher", "artisan")
-
 
 class Professional(TimestampedMixin, Base):
     __tablename__ = "professional"
     __table_args__ = (
         CheckConstraint("length(name) > 0", name="name_not_empty"),
-        CheckConstraint(
-            "kind IN ('manufacturer','distributor','publisher','artisan')", name="kind_values"
-        ),
         STRICT,
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Code of a « prestation » value (`choice`), checked by the service.
     kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="manufacturer")
     specialty: Mapped[str | None] = mapped_column(Text)
     contact_name: Mapped[str | None] = mapped_column(Text)

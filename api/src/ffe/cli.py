@@ -310,7 +310,7 @@ def seed(
     ] = False,
     prod: ProdFlag = False,
 ) -> None:
-    """Types de produit de départ (19 codes, ADR-0013), idempotent : n'ajoute que les codes absents."""
+    """Types de produit de départ (21 codes, ADR-0013), idempotent : n'ajoute que les codes absents."""
     with _opened(prod) as (_settings, engine):
         if has_pending(engine):
             _fail(DbError("Base non migrée : lancer `ffe db migrate` d'abord."))

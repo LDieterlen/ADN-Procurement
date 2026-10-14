@@ -16,14 +16,23 @@ class CapturePreviewRead(BaseSchema):
     brand: str | None
     reference: str | None
     image_url: str | None
+    image_urls: list[str] = []  # every photo of the page, first = image_url
     price_cents: int | None  # as displayed on the page, usually taxes included
     currency: str | None
     description: str | None
     source: Literal["json-ld", "opengraph", "title"]
+    type_code: str | None = None  # guessed from name and breadcrumb; the user checks
+    dimensions: str | None = None
+    lead_time: str | None = None
+    finish: str | None = None  # colour and material announced by the page
 
 
 class CaptureImageIn(BaseSchema):
     url: Url
+
+
+def _lines(text: str | None) -> list[str]:
+    return [line for line in (text or "").split("\n") if line]
 
 
 class CaptureRead(BaseSchema):
@@ -31,7 +40,7 @@ class CaptureRead(BaseSchema):
 
     id: int
     preview: CapturePreviewRead
-    image: FileRead | None
+    images: list[FileRead]  # downloaded photos, page order
     created_at: str
 
     @classmethod
@@ -44,11 +53,16 @@ class CaptureRead(BaseSchema):
                 brand=capture.brand,
                 reference=capture.reference,
                 image_url=capture.image_url,
+                image_urls=_lines(capture.image_urls),
                 price_cents=capture.price_cents,
                 currency=capture.currency,
                 description=capture.description,
                 source=capture.source,
+                type_code=capture.type_code,
+                dimensions=capture.dimensions,
+                lead_time=capture.lead_time,
+                finish=capture.finish,
             ),
-            image=FileRead.model_validate(capture.image) if capture.image else None,
+            images=[FileRead.model_validate(i.file) for i in capture.images],
             created_at=capture.created_at,
         )

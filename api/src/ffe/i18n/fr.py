@@ -5,6 +5,7 @@ RESOURCE_LABELS: dict[str, str] = {
     "supplier": "fournisseur",
     "professional": "professionnel",
     "category": "type de produit",
+    "choice": "valeur de liste",
     "file": "fichier",
     "project": "projet",
     "location": "localisation",
@@ -13,12 +14,6 @@ RESOURCE_LABELS: dict[str, str] = {
     "capture": "capture",
 }
 
-PROFESSIONAL_KIND_LABELS: dict[str, str] = {
-    "manufacturer": "Fabricant",
-    "distributor": "Distributeur",
-    "publisher": "Éditeur",
-    "artisan": "Artisan",
-}
 CONTACT_IMPORT_MISSING_COLUMNS = "Colonnes manquantes dans le fichier : {columns}."
 CONTACT_IMPORT_UNKNOWN_KIND = "Ligne {line} ({name}) : prestation inconnue « {kind} »."
 CONTACT_IMPORT_EMAIL_NOTE = "E-mail à vérifier : {email}"
@@ -46,24 +41,18 @@ ITEM_STATUS_LABELS: dict[str, str] = {
     "cancelled": "Annulé",
 }
 ITEM_KIND_LABELS: dict[str, str] = {"product": "Article", "fee": "Frais"}
-ITEM_FAMILY_LABELS: dict[str, str] = {
-    "custom": "Pièce sur-mesure",
-    "joinery": "Agencement",
-    "ose": "OS&E",
-    "edition": "Pièce d'édition",
-    "gallery": "Pièce de galerie",
-    "artwork": "Artwork",
-    "textile": "Confection",
-}
-ITEM_USAGE_LABELS: dict[str, str] = {"indoor": "Intérieur", "outdoor": "Extérieur"}
+CHOICE_UNKNOWN = "Valeur absente de la liste (ou archivée) : la choisir dans Listes."
+CHOICE_NAME_TAKEN = "Ce libellé existe déjà dans cette liste."
 ITEM_SAME_STATUS = "L'article est déjà dans ce statut."
 ITEM_CATEGORY_REQUIRED = "Un type de produit est nécessaire."
-ITEM_NAME_REQUIRED = "Une désignation est nécessaire."
+ITEM_PRODUCT_NAME_REQUIRED = "Un nom est nécessaire."
 ITEM_FEE_NEEDS_SUPPLIER = "Une ligne de frais est rattachée à un fournisseur."
 ITEM_FEE_HAS_NO_TYPE = "Une ligne de frais n'a ni type de produit, ni implantation, ni produit."
 ITEM_FX_REQUIRED = "Un taux de change est nécessaire pour une devise autre que l'euro."
 ITEM_FX_EUR_IS_ONE = "En euros, le taux de change vaut 1 000 000 (parité)."
-ITEM_CODE_IMMUTABLE = "Le code FF&E ne se modifie qu'en « à chiffrer »."
+ITEM_CODE_FEE_ONLY = (
+    "Le code d'un article suit ses localisations ; seuls les frais se codent à la main."
+)
 ITEM_CODE_TAKEN = "Ce code FF&E est déjà utilisé dans le projet."
 ITEM_DELETE_ONLY_NEW = (
     "Seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon."

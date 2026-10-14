@@ -1,4 +1,4 @@
-"""`ffe db seed`: the 19 product types, idempotent by code, names editable (ADR-0013)."""
+"""`ffe db seed`: the 21 product types, idempotent by code, names editable (ADR-0013)."""
 
 from sqlalchemy import Engine, text
 
@@ -13,7 +13,7 @@ def codes(engine: Engine) -> list[str]:
 
 
 def test_seed_inserts_the_nineteen_codes_in_order(engine: Engine, clock: Clock) -> None:
-    assert seed_categories(engine, clock) == 19
+    assert seed_categories(engine, clock) == 21
     assert codes(engine) == [code for code, _, _ in CATEGORIES]
     assert codes(engine)[0] == "AS" and codes(engine)[-1] == "DIV"
     with engine.connect() as conn:
@@ -34,4 +34,4 @@ def test_seed_is_idempotent_and_keeps_renamed_categories(engine: Engine, clock: 
             conn.execute(text("SELECT name FROM category WHERE code = 'LUD'")).scalar_one()
             == "Éclairage"
         )
-        assert conn.execute(text("SELECT count(*) FROM category")).scalar_one() == 19
+        assert conn.execute(text("SELECT count(*) FROM category")).scalar_one() == 21

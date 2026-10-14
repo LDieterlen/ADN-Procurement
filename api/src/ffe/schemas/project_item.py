@@ -12,8 +12,7 @@ ItemKind = Literal["product", "fee"]
 ItemStatus = Literal[
     "to_quote", "quoted", "to_review", "approved", "deposit", "purchased", "cancelled"
 ]
-ItemFamily = Literal["custom", "joinery", "ose", "edition", "gallery", "artwork", "textile"]
-ItemUsage = Literal["indoor", "outdoor"]
+ChoiceCode = Annotated[str, Field(min_length=1, max_length=40)]  # code of a `choice` list value
 ItemFileKind = Literal["image", "drawing", "other"]
 EventKind = Literal["created", "status", "price", "placement", "indice", "other"]
 
@@ -28,7 +27,17 @@ Milli = Annotated[int, Field(ge=0)]
 ItemCode = Annotated[str, Field(min_length=1, max_length=20)]
 Indice = Annotated[str | None, Field(max_length=10)]
 
-TEXTS = ("name", "item_code", "reference", "finish", "dimensions", "quote_ref", "quote_indice")
+TEXTS = (
+    "name",
+    "product_name",
+    "item_code",
+    "reference",
+    "finish",
+    "dimensions",
+    "lead_time",
+    "quote_ref",
+    "quote_indice",
+)
 
 
 def _strip(value: Any) -> Any:
@@ -58,6 +67,7 @@ class PlacementRead(BaseSchema):
     id: int
     project_item_id: int
     location_id: int | None
+    code: str
     qty_milli: int
     sort_order: int
     created_at: str
@@ -71,11 +81,13 @@ class ProjectItemCreate(BaseSchema):
     category_id: int | None = None
     supplier_id: int | None = None
     name: Short = None
+    product_name: Long = None
     reference: Short = None
-    family: ItemFamily | None = None
-    usage: ItemUsage | None = None
+    family: ChoiceCode | None = None
+    usage: ChoiceCode | None = None
     finish: Short = None
     dimensions: Short = None
+    lead_time: Short = None
     source_url: Url = None
     comments: Long = None
     unit_cost_cents: Cents | None = None
@@ -85,7 +97,7 @@ class ProjectItemCreate(BaseSchema):
     quote_ref: Short = None
     quote_indice: Indice = None
     quote_url: Url = None
-    item_code: ItemCode | None = None  # None = generated `<LOC>-<TYPE>-NN`
+    item_code: ItemCode | None = None  # fees only (ADR-0018); None = generated `FR-NN`
     sort_order: int = 0
     placements: list[PlacementCreate] | None = None  # None = one unassigned placement of 1
 
@@ -101,11 +113,13 @@ class ProjectItemUpdate(BaseSchema):
     category_id: int | None = None
     supplier_id: int | None = None
     name: Annotated[str | None, Field(min_length=1, max_length=200)] = None
+    product_name: Annotated[str | None, Field(min_length=1, max_length=4000)] = None
     reference: Short = None
-    family: ItemFamily | None = None
-    usage: ItemUsage | None = None
+    family: ChoiceCode | None = None
+    usage: ChoiceCode | None = None
     finish: Short = None
     dimensions: Short = None
+    lead_time: Short = None
     source_url: Url = None
     comments: Long = None
     unit_cost_cents: Cents | None = None
@@ -120,6 +134,7 @@ class ProjectItemUpdate(BaseSchema):
 
     @field_validator(
         "name",
+        "product_name",
         "unit_cost_cents",
         "currency",
         "fx_rate_micro",
@@ -135,7 +150,12 @@ class ProjectItemUpdate(BaseSchema):
         return _strip(value)
 
     @field_validator(
-        "reference", "finish", "dimensions", "quote_ref", "quote_indice", mode="before"
+        "reference",
+        "finish",
+        "dimensions",
+        "quote_ref",
+        "quote_indice",
+        mode="before",
     )
     @classmethod
     def strip_text(cls, value: Any) -> Any:
@@ -198,11 +218,13 @@ class ProjectItemRead(BaseSchema):
     category_id: int | None
     supplier_id: int | None
     name: str
+    product_name: str
     reference: str | None
-    family: ItemFamily | None
-    usage: ItemUsage | None
+    family: str | None
+    usage: str | None
     finish: str | None
     dimensions: str | None
+    lead_time: str | None
     source_url: str | None
     comments: str | None
     unit_cost_cents: int
@@ -225,13 +247,19 @@ class ProjectItemRead(BaseSchema):
         base = {
             name: getattr(item, name)
             for name in cls.model_fields
-            if name not in ("placements", "files")
+            if name not in ("placements", "files", "item_code")
         }
         return cls(
             **base,
+            item_code=code_label(item),
             placements=[PlacementRead.model_validate(p) for p in item.placements],
             files=[ItemFileRead.from_junction(f) for f in item.files],
         )
+
+
+def code_label(item: Any) -> str:
+    """Fee: its `FR-NN`; product: the codes of its placements (ADR-0018)."""
+    return item.item_code or " · ".join(p.code for p in item.placements)
 
 
 class EventRead(BaseSchema):

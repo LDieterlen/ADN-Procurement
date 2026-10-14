@@ -37,12 +37,14 @@ def world(session: Session, clock: Clock) -> dict[str, Any]:
     lamp = {
         "name": "Beat Light Fat",
         "categoryId": lud.id,
+        "productName": "  Beat Light Fat, suspension en laiton  ",
         "reference": "BLS01",
         "supplierId": dixon.id,
         "unitCostCents": 125_000,
         "currency": "GBP",
         "finish": "laiton",
         "dimensions": "Ø 36 × H 30 cm",
+        "leadTime": "6 à 8 semaines",
         "sourceUrl": "https://example.com/beat",
     }
     return {
@@ -75,8 +77,10 @@ def test_create_with_the_full_sheet_and_the_price(
     body = created.json()
     assert body["itemCode"] == "CHA-LUD-01" and body["status"] == "to_quote"
     assert body["name"] == "Beat Light Fat" and body["reference"] == "BLS01"
+    assert body["productName"] == "Beat Light Fat, suspension en laiton"  # trimmed
     assert body["supplierId"] == world["dixon"].id
     assert body["finish"] == "laiton" and body["dimensions"] == "Ø 36 × H 30 cm"
+    assert body["leadTime"] == "6 à 8 semaines"
     assert body["sourceUrl"] == "https://example.com/beat"
     assert body["unitCostCents"] == 125_000 and body["currency"] == "GBP"
     assert body["discountBp"] == 1500 and body["fxRateMicro"] == GBP
@@ -120,7 +124,7 @@ def test_a_hand_written_code_must_be_free(client: TestClient, world: dict[str, A
 @pytest.mark.parametrize(
     ("body", "field"),
     [
-        ({"categoryId": 1}, "name"),
+        ({"categoryId": 1}, "productName"),
         ({"name": "A"}, "categoryId"),
         ({"name": "A", "categoryId": 999}, "categoryId"),
         ({"name": "A", "categoryId": 1, "supplierId": 999}, "supplierId"),
@@ -179,7 +183,7 @@ def test_fee_line_has_no_type_no_placement_and_a_fee_code(
     assert client.get(base(world), params={"kind": "fee"}).json()[0]["id"] == body["id"]
 
 
-def test_patch_sheet_price_and_type_journals_price_and_renumbers_while_new(
+def test_patch_sheet_price_and_type_journals_price_and_recodes_placements(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     item = client.post(
@@ -211,18 +215,44 @@ def test_patch_sheet_price_and_type_journals_price_and_renumbers_while_new(
     assert body["quoteIndice"] == "B" and body["unitCostCents"] == 118_000
     tab = make_category_via_api(client, "TAB", "Table")
     renumbered = client.patch(url, json={"categoryId": tab}).json()
-    assert renumbered["itemCode"] == "CHA-TAB-01"
+    assert renumbered["placements"][0]["code"] == renumbered["itemCode"] == "CHA-TAB-01"
     events = client.get(f"{url}/events").json()
-    assert [e["kind"] for e in events] == ["created", "price"]
+    assert [e["kind"] for e in events] == ["created", "price", "placement"]
     assert '"cost":118000' in events[1]["newValue"] and '"discount":2000' in events[1]["newValue"]
+    assert '"CHA-LUD-01"' in events[2]["oldValue"] and '"CHA-TAB-01"' in events[2]["newValue"]
+    # A product code is never typed by hand (ADR-0018) ; a type change recodes at any status.
+    manual = client.patch(url, json={"itemCode": "AUTRE"})
+    assert manual.status_code == 422 and manual.json()["details"][0]["field"] == "itemCode"
     client.post(f"{url}/status", json={"status": "quoted"})
-    frozen = client.patch(url, json={"itemCode": "AUTRE"})
-    assert frozen.status_code == 422 and frozen.json()["details"][0]["field"] == "itemCode"
     assert (
-        client.patch(url, json={"categoryId": world["lud"].id}).json()["itemCode"] == "CHA-TAB-01"
+        client.patch(url, json={"categoryId": world["lud"].id}).json()["itemCode"] == "CHA-LUD-02"
     )
     assert client.patch(url, json={"name": None}).status_code == 422
     assert client.patch(url, json={"categoryId": None}).status_code == 422
+
+
+def test_each_placement_has_its_code_and_follows_its_location(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    """ADR-0018: one code per (article, room); moving a placement gives it a new number."""
+    item = client.post(
+        base(world),
+        json={**world["lamp"], "fxRateMicro": GBP, "placements": [{"locationId": world["cha"].id}]},
+    ).json()
+    assert [p["code"] for p in item["placements"]] == ["CHA-LUD-01"]
+    url = f"/api/v1/project-items/{item['id']}/placements"
+    added = client.post(url, json={"locationId": None}).json()
+    assert [p["code"] for p in added["placements"]] == ["CHA-LUD-01", "LUD-01"]
+    assert added["itemCode"] == "CHA-LUD-01 · LUD-01"
+    second = added["placements"][1]["id"]
+    moved = client.patch(f"/api/v1/placements/{second}", json={"locationId": world["cha"].id})
+    assert moved.status_code == 422  # already placed in CHA
+    first = added["placements"][0]["id"]
+    moved = client.patch(f"/api/v1/placements/{first}", json={"locationId": None})
+    assert moved.status_code == 422
+    client.delete(f"/api/v1/placements/{second}")
+    moved = client.patch(f"/api/v1/placements/{first}", json={"locationId": None}).json()
+    assert [p["code"] for p in moved["placements"]] == ["LUD-02"]  # numbers never reused
 
 
 def make_category_via_api(client: TestClient, code: str, name: str) -> int:
@@ -359,3 +389,20 @@ def test_closed_project_refuses_every_write(
     )
     assert client.get(f"/api/v1/project-items/{item.id}").status_code == 200
     assert client.get("/api/v1/project-items/999").status_code == 404
+
+
+def test_the_name_is_required_and_the_designation_defaults_to_it(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = {k: v for k, v in world["lamp"].items() if k != "name"} | {"fxRateMicro": GBP}
+    created = client.post(base(world), json=lamp)
+    assert created.status_code == 201, created.text
+    assert created.json()["name"] == "Beat Light Fat, suspension en laiton"
+    bare = client.post(base(world), json={**lamp, "productName": None, "name": "Pied"}).json()
+    assert bare["productName"] == "Pied"  # a bare designation is its own name
+    none = client.post(base(world), json={**lamp, "productName": "  ", "name": None})
+    assert none.status_code == 422
+    assert [d["field"] for d in none.json()["details"]] == ["productName"]
+    cleared = client.patch(f"/api/v1/project-items/{bare['id']}", json={"productName": None})
+    assert cleared.status_code == 422
+    assert [d["field"] for d in cleared.json()["details"]] == ["productName"]

@@ -85,4 +85,4 @@ def test_filter_by_kind_and_specialty(client: TestClient, session: Session, cloc
     assert client.get(URL, params={"kind": "publisher"}).json()["total"] == 2
     page = client.get(URL, params={"kind": "publisher", "specialty": "tissu", "q": "ded"}).json()
     assert [m["name"] for m in page["items"]] == ["Dedar"]
-    assert client.get(URL, params={"kind": "plumber"}).status_code == 422
+    assert client.get(URL, params={"kind": "plumber"}).json()["total"] == 0  # unknown prestation
