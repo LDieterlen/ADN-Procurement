@@ -150,7 +150,7 @@ Essai : ouvrir une page produit (n'importe quel site), clic sur l'extension › 
 
 - Lancer : double-clic sur **FFE**. Arrêter : fermer sa fenêtre Terminal. Si FFE tourne déjà, le double-clic rouvre simplement Chrome.
 - Sauvegardes : automatiques (`~/.persist/ffe/backups`), copiées dans **Documents › FFE-sauvegardes** ; Réglages › « Sauvegarder maintenant ».
-- **Mettre à jour : avec Léandre tant que la v1 n'est pas déclarée** (avant la v1, un changement de schéma ne met pas à niveau une base existante, ADR-0012). FFE fermé :
+- **Mettre à jour** (quand Léandre l'annonce ; la branche `mac` n'avance qu'avec des versions vérifiées). FFE fermé, dans le Terminal :
 
 ```bash
 cd ~/FFE/api && uv run ffe db export-json ~/Documents/FFE-sauvegardes/avant-maj.json --with-files --prod
@@ -159,7 +159,7 @@ cd ~/FFE/api && uv sync
 cd ~/FFE/web && npm ci && npm run build
 ```
 
-Puis relancer par **FFE**. Après la v1, ces lignes suffisent : la base se met à niveau seule au démarrage, sauvegarde faite avant.
+Puis relancer par **FFE**. Au démarrage, FFE sauvegarde la base (`pre-migrate-…`), la met à niveau, vérifie qu'aucune ligne n'a disparu et contrôle l'intégrité ; au moindre problème il s'arrête sans servir et nomme la sauvegarde à restaurer (ADR-0020). L'export JSON de la première ligne est une copie lisible de plus, à garder.
 
 ## 13. En cas de problème
 

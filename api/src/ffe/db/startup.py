@@ -9,7 +9,7 @@ from sqlalchemy import Engine
 from ffe.config import Settings
 from ffe.db import DbError
 from ffe.db.backup import BACKUP_MAX_AGE, backup_and_copy, last_backup_at
-from ffe.db.engine import create_db_engine, foreign_key_check, quick_check
+from ffe.db.engine import create_db_engine, foreign_key_check, quick_check, row_counts
 from ffe.db.fs_check import ensure_safe_data_dir
 from ffe.db.lock import InstanceLock
 from ffe.db.migrate import has_pending, head_revision, schema_drift, upgrade_head
@@ -73,7 +73,18 @@ def run_startup(
                 result = backup_and_copy(engine, settings, clock, label=label)
                 backup_path, copy_error = str(result.path), result.copy_error
         if pending:
+            before = row_counts(engine)
             upgrade_head(engine)  # 5
+            # Migrations are additive after the v1 (ADR-0020): a table that loses rows stops it all.
+            after = row_counts(engine)
+            lost = sorted(
+                t for t, n in before.items() if t != "alembic_version" and after.get(t, 0) < n
+            )
+            if lost:
+                raise StartupError(
+                    f"migration : des lignes ont disparu ({', '.join(lost)}). Base non servie ; "
+                    f"restaurer {backup_path} (`ffe db restore`)."
+                )
         violations = foreign_key_check(engine)  # 6
         if violations:
             hint = f" ; restaurer {backup_path}" if backup_path else ""

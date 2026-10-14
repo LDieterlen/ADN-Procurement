@@ -2,6 +2,8 @@
 
 Outil de procurement FF&E, local, mono-utilisateur. Back Python (`api/`), front TypeScript (`web/`), base SQLite sur `~/.persist/ffe/`. Décisions structurantes : `docs/decisions/ADR-0001` à `ADR-0005`. Modèle : `docs/DATA_MODEL.md`. Compte rendu de chaque session : `docs/JOURNAL.md`.
 
+> **v1 déclarée le 2026-10-14** (ADR-0020) : base réelle sur le Mac de l'utilisatrice, sans projet d'exemple ni faux contacts ; schéma `0001` figé, évolutions par migrations additives. Usage réel à démarrer sur signal de l'utilisateur.
+
 ## Mode d'emploi
 
 - **Une étape à la fois.** La session commence par « étape N ». Relire ce fichier et `JOURNAL.md` ; ne rien toucher d'une étape ultérieure. Un besoin hors étape va dans « Idées parquées », jamais dans le code.

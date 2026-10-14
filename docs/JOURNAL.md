@@ -4,6 +4,12 @@ Un paragraphe par session, du plus récent au plus ancien. Contenu fixe : **date
 
 ---
 
+## 2026-10-14 — Déclaration de la v1 (ADR-0020)
+
+**Compte rendu** : demande de l'utilisateur (« une mise à jour ne doit pas casser la base créée ; il ne faut absolument rien perdre »). Constat : avant la v1, un changement de schéma régénère `0001_initial.py`, et la base réelle du Mac (créée depuis `mac` au commit `62c4d14`, révision `0001`, schéma identique au code actuel, vérifié) aurait refusé de démarrer. Fait : v1 déclarée, `0001_initial.py` figée (empreinte sha256 testée) ; base témoin `tests/fixtures/v1_demo.sql` (schéma 0001, 21 types, projet d'exemple ; dump `iterdump`, jamais régénérée) ; `tests/test_v1_upgrade.py` (3) : empreinte, base témoin démarrée en base réelle sans aucune ligne ni colonne perdue, migration qui perd des lignes → arrêt ; `db/startup.py` compte les lignes avant et après `upgrade` et s'arrête sur une perte en nommant la sauvegarde `pre-migrate`. CLAUDE.md, ARCHITECTURE §5 et la notice Mac (§12, mise à jour sans intervention) au régime v1.
+
+**Commits** : branche `mac`, puis fusion dans `main`.
+
 ## 2026-10-14 — Branche `mac` : faire tourner FFE sur le Mac de l'utilisatrice
 
 **Compte rendu** : demande de l'utilisateur (installer FFE sur le Mac d'une personne non développeuse, sans paquet, installation faite ensemble). ADR-0019 : `fs_check.ensure_safe_data_dir` (Linux inchangé ; macOS : sous le dossier personnel, hors iCloud Drive, `~/Library/CloudStorage` et `/Volumes` ; autre système refusé), appelé au démarrage ; lanceur `scripts/mac/FFE.command` (sert la base réelle, attend `/api/v1/health`, ouvre Chrome, copie des sauvegardes dans `~/Documents/FFE-sauvegardes`, WeasyPrint pointé vers Homebrew) ; notice `docs/INSTALL_MAC.md` (Homebrew, clone, build, base réelle, alias sur le Bureau, extension avec options sur `127.0.0.1:8000`, mise à jour, dépannage). Tests : `test_startup.py` (+2, règle macOS par chemins). Non vérifié faute de Mac : lanceur, WeasyPrint avec Pango de Homebrew, extension sur macOS — essai à faire sur le poste. Reste : déclarer la v1 avant que de vraies données y vivent (mise à jour du schéma).
