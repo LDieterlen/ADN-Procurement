@@ -22,3 +22,5 @@ L'étape F2 produit le book client (une page par article, regroupé par zone, ph
 
 ## Repli
 Autre moteur PDF = remplacer `exports/pdf.render_pdf` ; gabarits inchangés.
+
+Complément (2026-10-13) : fiches redessinées d'après la maquette de l'utilisateur (« Fiche déco 1b Catalogue », `references/Fiche deco/`, hors dépôt) ; polices embarquées dans `exports/assets/` (Playfair Display, IBM Plex Sans, IBM Plex Mono, licence SIL OFL, fichiers du dépôt Google Fonts) et logo monochrome, atteints par URL de fichier : aucun réseau au rendu. Les blocs sont des tableaux, pas des grilles CSS, que WeasyPrint rend mal.

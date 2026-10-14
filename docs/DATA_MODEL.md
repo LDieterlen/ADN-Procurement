@@ -14,12 +14,12 @@ Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centai
 |---|---|---|
 | Référentiel | Données partagées entre projets, archivées plutôt que supprimées | `client`, `category` (types de produit), `professional` (annuaire), `supplier`, `product`, `file` |
 | Instance projet | Ce qu'un projet fige : la fiche de l'article, son prix, sa devise, son taux, son fournisseur, son statut | `project`, `location`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `item_code_sequence`, `project_file` |
-| Article (`project_item`) | **Une fiche de prescription** dans un projet : « Beat Light Fat, Flos, réf. BLS01, laiton, Ø 36 × H 30 cm, 1 062,50 GBP HT net ». Porte le code FF&E (`CHA-LUD-01`), le prix figé, le statut unique. Jamais l'emplacement |
+| Article (`project_item`) | **Une fiche de prescription** dans un projet : « Beat Light Fat, Flos, réf. BLS01, laiton, Ø 36 × H 30 cm, 1 062,50 GBP HT net ». Porte le prix figé et le statut unique ; ses codes FF&E (`CHA-LUD-01`) sont ceux de ses implantations, un par localisation (ADR-0018) |
 | Implantation (`project_item_placement`) | **Un emplacement d'un article** : localisation + quantité par unité. La même lampe dans le lobby (×2) et en chambre typo A (×1, localisation ×12) = un article, deux implantations, quantité totale 14 (exemple suivi en §4.9, §4.10 et §6) |
 | Localisation (`location`) | Lieu de destination dans un projet (lobby, bar, chambre typo A, suite…) avec sa **zone** (Zones communes, Hébergement, Back of house…), son **niveau** (R0, R+1…) et son **nombre** (multiplicateur, défaut 1) |
 | Frais (`kind = 'fee'`) | Ligne forfaitaire par fournisseur (livraison, emballage…) : comptée dans le budget, sans type, sans implantation, absente des fiches |
 
-Conséquences : pas de catalogue, l'article porte toute sa fiche (ADR-0016) ; un code identifie une fiche, pas une pièce ; les totaux sont calculés par `api/src/ffe/money.py`, jamais stockés ; zéro vue SQL ; le front n'additionne jamais.
+Conséquences : pas de catalogue, l'article porte toute sa fiche (ADR-0016) ; un code identifie un article dans une pièce (ADR-0018) ; les totaux sont calculés par `api/src/ffe/money.py`, jamais stockés ; zéro vue SQL ; le front n'additionne jamais.
 
 ---
 
@@ -128,7 +128,7 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 | sort_order | INTEGER | non | 0 | | |
 | archived_at | TS | oui | | | |
 
-Un seul niveau. Seed (`ffe db seed`, 19 types) : AS Assise, TAB Table, TBR Tabouret, MOB Gros mobilier, LIT Lit, TAP Tapis, RID Rideau, LIN Linge, LUA Luminaire architectural, LUD Luminaire décoratif, MIR Miroir, DEC Décoration, ART Artwork, ACC Accessoire, ACA Accastillage, QUI Quincaillerie, SIG Signalétique, EQU Équipement, DIV Divers.
+Un seul niveau. Seed (`ffe db seed`, 21 types, revus le 2026-10-13) : AS Assise, TAB Table, TBR Tabouret, AGE Agencement, LIT Lit, TAP Tapis, RID Rideau, LIN Linge, LUA Luminaire architectural, LUD Luminaire décoratif, MIR Miroir, DEC Décoration, ART Œuvre d'art, ACC Accessoire, ACA Accastillage, QUI Quincaillerie, SAN Sanitaire, SIG Signalétique, REV Revêtement, EQU Équipement, DIV Divers. Le code sert aussi de cible au devinage de type de la capture (`captures/extract.py`, mots-clés).
 
 ### 4.6 `professional` — annuaire
 
@@ -170,15 +170,17 @@ Le catalogue `product` / `product_file` a été retiré le 2026-10-13 (ADR-0016)
 | Colonne | Type | Null | Défaut | Contrainte | Commentaire |
 |---|---|---|---|---|---|
 | project_id | INTEGER | non | — | FK `project` RESTRICT ; `UNIQUE (id, project_id)` | |
-| item_code | TEXT | non | — | `UNIQUE (project_id, item_code)` ; `length > 0` | `<LOC>-<TYPE>-NN` (§7), éditable en `to_quote` |
+| item_code | TEXT | oui | | index unique partiel `(project_id, item_code) WHERE item_code IS NOT NULL` ; `length > 0` ; `(kind = 'fee') = (item_code IS NOT NULL)` | frais seulement : `FR-NN`, éditable ; un produit porte ses codes sur ses implantations (ADR-0018) |
 | kind | TEXT | non | `'product'` | `IN ('product','fee')` | |
 | category_id | INTEGER | oui | | FK `category` RESTRICT ; `(kind = 'fee') = (category_id IS NULL)` | type ; obligatoire pour un article |
 | supplier_id | INTEGER | oui | | FK `supplier` RESTRICT | obligatoire pour `fee` (règle d'app) |
-| name | TEXT | non | — | `length > 0` | désignation / nom produit |
+| product_name | TEXT | non | — | | « Nom » : le nom complet du produit, obligatoire dans le formulaire ; absent à la création par l'API → la désignation (2026-10-14) |
+| name | TEXT | non | — | `length > 0` | « Désignation », courte, titre des fiches PDF ; vide dans le formulaire → le nom ; à la capture, première partie du nom (avant une virgule ou un séparateur) |
 | reference | TEXT | oui | | | référence produit |
 | family | TEXT | oui | | `IN ('custom','joinery','ose','edition','gallery','artwork','textile')` | pièce sur-mesure, agencement, OS&E, pièce d'édition, pièce de galerie, artwork, confection |
 | usage | TEXT | oui | | `IN ('indoor','outdoor')` | intérieur / extérieur |
 | finish, dimensions, source_url, comments | TEXT | oui | | | la fiche de spec (dimensions en texte libre) |
+| lead_time | TEXT | oui | | | délai de livraison en texte libre (« 6 à 8 semaines »), imprimé sur la fiche ; pré-rempli par la capture |
 | unit_cost_cents | INTEGER | non | 0 | `>= 0` | PU HT brut dans `currency` |
 | currency | TEXT | non | `'EUR'` | `length = 3` | copiée du produit (s'il a un prix) sinon du fournisseur |
 | fx_rate_micro | INTEGER | non | 1000000 | `> 0` ; `= 1000000` si EUR | figé par article |
@@ -200,6 +202,7 @@ Exemple : `(3, 'CHA-LUD-01', 'product', 10, 4, 9, 'Beat Light Fat', 'BLS01', 'ed
 |---|---|---|---|---|---|
 | project_item_id, project_id | INTEGER | non | — | FK composite `project_item (id, project_id)` CASCADE | |
 | location_id | INTEGER | oui | | FK composite `location (id, project_id)` RESTRICT | NULL = « non affecté » |
+| code | TEXT | non | — | `UNIQUE (project_id, code)` ; `length > 0` | code FF&E `<LOC>-<TYPE>-NN` de l'article dans cette localisation (§7, ADR-0018) |
 | qty_milli | INTEGER | non | 1000 | `>= 0` | par unité de localisation |
 | sort_order | INTEGER | non | 0 | | |
 
@@ -232,6 +235,10 @@ PK `(project_id, location_code, prefix)`, `next_value ≥ 1`, FK `project` CASCA
 
 `project_id` FK RESTRICT, `file_id` FK RESTRICT, `kind` (`sheets_pdf` \| `list_pdf`), `issued_at`, `indice` (lettre déclarée sur le projet au moment de l'émission, NULL avant la première déclaration). Chaque émission est conservée telle qu'envoyée ; les émissions entre deux déclarations sont des essais, la dernière émise depuis la déclaration courante est la fiche de référence.
 
+### 4.18 `choice` — listes éditables (2026-10-14)
+
+`list` (`IN ('family','usage','prestation')`), `code` (généré du nom à la création, immuable, `UNIQUE (list, code)`), `name` (éditable, unique par liste après normalisation), `sort_order`, `archived_at`. Valeurs de départ posées par la migration (anciennes listes fixes). `project_item.family` / `usage`, `budget_line.family` (périmètre famille) et `professional.kind` gardent le **code** ; plus de `CHECK` sur ces colonnes, le service refuse un code absent ou archivé (422). Les statuts (article, projet), le genre d'article (`product` / `fee`) et le genre de client restent fixes : ils portent des règles de calcul ou de saisie.
+
 ### 4.17 `project_indice` — déclarations d'indice
 
 `project_id` FK CASCADE, `indice` (`length > 0`, `UNIQUE (project_id, indice)`), `declared_at`. Une ligne par « Nouvel indice » ; « Retirer l'indice » supprime la dernière, remet le projet sur la précédente et rend aux articles marqués leur lettre d'avant (événements `indice` de `project_item_event`, journal en ajout seul : old_value → new_value puis l'inverse).
@@ -242,12 +249,13 @@ PK `(project_id, location_code, prefix)`, `next_value ≥ 1`, FK `project` CASCA
 |---|---|---|---|---|---|
 | url | TEXT | non | — | `length > 0` | page envoyée, sans fragment |
 | name, brand, reference, image_url, description | TEXT | oui | | | extraction générique (`captures/extract.py`) |
+| type_code, dimensions, lead_time, finish | TEXT | oui | | | devinés dans la page (mots-clés du nom et du fil d'Ariane, motifs de dimensions et de délai, `color` / `material` schema.org) ; à vérifier |
 | price_cents, currency | INTEGER, TEXT | oui | | `price_cents >= 0` | prix affiché (souvent TTC) |
 | source | TEXT | non | — | `IN ('json-ld','opengraph','title')` | |
-| image_file_id | INTEGER | oui | | FK `file` RESTRICT | photo téléchargée par le serveur ou envoyée par l'extension ; comptée par `unlink_if_orphan` |
+| image_urls | TEXT | oui | | | toutes les adresses de photos de la page (une par ligne, 12 au plus) |
 | created_at | TS | non | | | immuable |
 
-Globale (pas de projet) ; supprimée quand l'article est créé (« Utiliser ») ou sur « Supprimer », image retirée si plus référencée.
+Photos : table `capture_image` (`capture_id` FK CASCADE, `file_id` FK RESTRICT, `sort_order`, `UNIQUE (capture_id, file_id)`) — toutes les photos de la page, téléchargées par le serveur ou envoyées par l'extension, comptées par `unlink_if_orphan` (2026-10-14). Globale (pas de projet) ; supprimée quand l'article est créé (« Utiliser ») ou sur « Supprimer », image retirée si plus référencée.
 
 ---
 
@@ -286,7 +294,7 @@ Ordre fixé : remise, puis change, puis quantité. Les totaux **par article** so
 
 ## 7. Codes FF&E, séquences, indices
 
-- Code : `<LOC>-<TYPE>-NN` — code de la localisation de la première implantation (vide → `<TYPE>-NN`), code du type, numéro à 2 chiffres minimum par (projet, localisation, type) ; frais : `FR-NN`. Attribution par `INSERT … ON CONFLICT … RETURNING` sur `item_code_sequence`, jamais décrémentée. Éditable en `to_quote` (unique par projet) ; changer le type d'un article `to_quote` lui donne un nouveau code ; déplacer l'article ne le renumérote pas.
+- Code (ADR-0018) : un par **implantation**, `<LOC>-<TYPE>-NN` — code de la localisation (non affecté → `<TYPE>-NN`), code du type, numéro à 2 chiffres minimum par (projet, localisation, type) ; frais : `FR-NN` sur l'article. Attribution par `INSERT … ON CONFLICT … RETURNING` sur `item_code_sequence`, jamais décrémentée : un numéro n'est jamais réutilisé. Nouvelle implantation ou changement de localisation → nouveau code dans la localisation d'arrivée ; changement de type → toutes les implantations recodées (événement `placement`, codes avant / après), quel que soit le statut. Le code d'un produit ne se saisit pas ; celui d'un frais est éditable (unique par projet). DTO : `PlacementRead.code` ; `ProjectItemRead.itemCode` = libellé (frais : `FR-NN` ; produit : codes des implantations séparés par « · »).
 - Codes projet : `<project_code_prefix><AAAA>-NNN` par `MAX + 1` sur l'année ; éditables.
 - Indice de diffusion : chaque émission des fiches (`sheets_pdf`) porte une lettre = rang de l'émission ; tout article jamais émis ou modifié (`updated_at`) depuis l'émission précédente prend cette lettre dans `project_item.indice`. Le listing ne pose rien.
 
@@ -301,7 +309,7 @@ Ordre fixé : remise, puis change, puis quantité. Les totaux **par article** so
 | Exports xlsx (listing, budget) | `project_file.kind` + `'list_xlsx'`, `'budget_xlsx'` ; openpyxl, valeurs seulement |
 | Marge / prix de vente | `project_item.markup_bp`, `unit_sell_override_cents`, `setting.pricing_mode` |
 | Options A/B, remplacement tracé | `project_item.alternative_of_id`, `replaced_by_id` (FK composites) |
-| Délai et date de besoin | `project_item.lead_time_weeks`, `required_on_site` ; alerte « commander avant le » |
+| Date de besoin | `project_item.required_on_site` ; alerte « commander avant le » (le délai existe en texte libre, `lead_time`, depuis le 2026-10-13) |
 | TVA et TTC | `project.default_vat_bp`, `project_item.vat_rate_bp` ; `vat_totals` dans `money.py` |
 | Identité légale des fournisseurs, recherche d'entreprises (F3) | `supplier.siren/siret/vat_number/adresse`, `supplier_registry_snapshot` ; jamais de dirigeant |
 | Multi-utilisateur, bureau | `app_user`, colonnes `*_by`, `public_id` |

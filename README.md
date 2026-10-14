@@ -29,7 +29,7 @@ Pré-requis : `uv` ≥ 0.12 et Node 24. Toutes les commandes se tapent dans le t
 mkdir -p ~/.venvs && ln -sfn ~/.venvs/ffe api/.venv   # venv Python sur ext4, pas sur le montage 9p
 (cd api && uv sync)                                   # dépendances Python
 (cd web && npm ci)                                    # dépendances front
-(cd api && uv run ffe db migrate && uv run ffe db seed --demo)   # base de dev (~/.persist/ffe-dev) + 19 types de produit + projet d'exemple
+(cd api && uv run ffe db migrate && uv run ffe db seed --demo)   # base de dev (~/.persist/ffe-dev) + 21 types de produit + projet d'exemple
 
 # Développement : deux terminaux
 (cd api && uv run ffe serve --reload)   # API sur http://127.0.0.1:8000 ; tant que la v1 n'est pas déclarée, un changement de schéma recrée la base de dev tout seul au démarrage (sauvegarde `pre-reset`, types, projet d'exemple, annuaire `references/ANNUAIRE FUSION.csv` si présent) ; à la main : `uv run ffe db reset-dev`

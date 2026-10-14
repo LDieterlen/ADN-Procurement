@@ -21,7 +21,7 @@ Référence pour nommer les choses : le **français** dans l'UI, les documents e
 | Listing FF&E | FF&E schedule | Tableau synthétique des articles : code, type, désignation, référence, fournisseur, quantité, montant HT, état, indice. | Page projet ; `GET …/exports/list.pdf` |
 | Fiches de prescription / fiche de spec | Specification sheets / spec book | Fiches illustrées, une par article, remises au client ; jamais de prix. | `GET …/exports/sheets.pdf` ; `fee` exclu |
 | Fiche technique | Cut sheet / tear sheet / datasheet | Document fabricant : dimensions, finitions, normes. | `product_file.kind = 'datasheet'` ; `file` |
-| Délai de livraison | Lead time | Durée entre commande et disponibilité. | Retiré par ADR-0013 ; accroche DATA_MODEL §8 |
+| Délai de livraison | Lead time | Durée annoncée entre commande et disponibilité, texte libre sur l'article, imprimé sur la fiche ; deviné dans la page capturée. | `project_item.lead_time`, `capture.lead_time` |
 | Date de besoin sur site | Required on site | Date à laquelle l'article doit être livré sur le chantier. | Retiré par ADR-0013 ; accroche DATA_MODEL §8 |
 | Commander avant le | Order-by date | Date limite de commande ; calculée. | Retiré par ADR-0013 |
 | Demande de prix / consultation | RFQ (Request for Quotation) | Demande de devis à un ou plusieurs fournisseurs. | Export PDF (F2) ; aucune table |
