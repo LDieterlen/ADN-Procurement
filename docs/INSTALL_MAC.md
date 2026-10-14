@@ -58,6 +58,13 @@ brew link --force node@24
 
 - `uv` : installe Python 3.14 et les bibliothèques de FFE ; `node@24` : construit l'interface ; `pango` : nécessaire aux PDF.
 
+**Apple Silicon uniquement** : indiquer où Homebrew range Pango, sinon toute commande `ffe` échoue (« cannot load library 'libgobject-2.0-0' ») :
+
+```bash
+echo 'export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib' >> ~/.zprofile
+source ~/.zprofile
+```
+
 Vérifications, une par ligne : `uv --version` (`uv 0.…`), `node --version` (`v24.…`), `npm --version` (un numéro).
 
 ## 5. Google Chrome (5 min)
@@ -162,7 +169,7 @@ Puis relancer par **FFE**. Après la v1, ces lignes suffisent : la base se met �
 | `command not found: node` | `brew link --force node@24`, puis rouvrir le Terminal |
 | « FFE n'a pas démarré » et « Dossier de données refusé » | Données déplacées dans iCloud, Dropbox ou un disque externe : remettre `~/.persist/ffe` |
 | « FFE tourne déjà (verrou …) » | Une autre fenêtre Terminal fait tourner FFE : utiliser celle-là, ou la fermer |
-| PDF en erreur (`libpango`, `cannot load library`) | `brew install pango`, puis relancer par le raccourci **FFE** (c'est lui qui indique à WeasyPrint où est Pango) |
+| « WeasyPrint could not import some external libraries », `cannot load library 'libgobject-2.0-0'` | Apple Silicon : ligne `DYLD_FALLBACK_LIBRARY_PATH` du §4 absente de `~/.zprofile` (la poser, rouvrir le Terminal) ; vérifier `ls /opt/homebrew/lib/libgobject-2.0.0.dylib`, sinon `brew install pango` |
 | Page blanche ou « Not Found » sur `127.0.0.1:8000` | Interface non construite : refaire `cd ~/FFE/web && npm run build` |
 | Extension : « Jeton de l'extension absent ou invalide » | Jeton régénéré depuis : le recopier (§11, 6-7) |
 | Extension : « Failed to fetch » | FFE non lancé, ou options pas sur `http://127.0.0.1:8000` |
