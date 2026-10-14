@@ -50,3 +50,4 @@ Comment revenir en arrière ou faire évoluer, et à quel coût.
 | [ADR-0017](ADR-0017-extension-chrome.md) | Extension Chrome : boîte de réception `capture`, jeton `X-FFE-Token`, CORS limité aux extensions | acceptée | 2026-10-13 |
 | [ADR-0014](ADR-0014-coller-une-adresse.md) | « Coller une adresse » : lecture générique d'une page produit, côté serveur, à la demande | acceptée | 2026-10-12 |
 | [ADR-0015](ADR-0015-annuaire-professionnels.md) | Annuaire : `professional` (prestation, savoir-faire, deux contacts) détaché des produits, contacts enrichis du fournisseur, import CSV | acceptée | 2026-10-12 |
+| [ADR-0019](ADR-0019-poste-mac.md) | Faire tourner FFE sur un Mac, sans paquet | acceptée | 2026-10-14 |

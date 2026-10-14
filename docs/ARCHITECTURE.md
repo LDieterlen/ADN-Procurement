@@ -69,7 +69,7 @@ Variables d'environnement (lues par `config.py` via pydantic-settings, préfixe 
 │   │   ├── i18n/fr.py                      # étape 4 : messages d'erreur et libellés d'enums en français
 │   │   ├── db/                             # étape 3
 │   │   │   ├── engine.py                   #   create_engine + event connect → pragmas
-│   │   │   ├── fs_check.py                 #   lecture de /proc/mounts, refus hors ext4
+│   │   │   ├── fs_check.py                 #   Linux : /proc/mounts, refus hors ext4 ; macOS : disque du Mac hors dossiers synchronisés (ADR-0019)
 │   │   │   ├── lock.py                     #   verrou mono-instance (ffe.lock)
 │   │   │   ├── startup.py                  #   cycle de démarrage §5
 │   │   │   ├── backup.py                   #   backup(), quick_check, rotation, restore() ; étape 9 : copy_to_backup_dir(), sync_files(), backup_and_copy(), needs_backup()
@@ -150,7 +150,7 @@ Règles :
 ### Emplacement et refus de démarrer
 
 - Réel : `~/.persist/ffe/ffe.sqlite` ; dev : `~/.persist/ffe-dev/ffe.sqlite` ; surcharge `FFE_DATA_DIR`. `/home/vscode/.persist` est le seul ext4 persistant du conteneur ; `/workspaces/Perso` est 9p (verrous et WAL non fiables), `/` est un overlay effacé au rebuild.
-- `fs_check.py` lit `/proc/mounts`, trouve le point de montage le plus long qui préfixe le chemin résolu de `FFE_DATA_DIR`, et **refuse de démarrer** si le type n'est pas `ext4` (message : chemin, type trouvé, type attendu). Testé à l'étape 3 avec `FFE_DATA_DIR=/workspaces/x`.
+- `fs_check.py` lit `/proc/mounts`, trouve le point de montage le plus long qui préfixe le chemin résolu de `FFE_DATA_DIR`, et **refuse de démarrer** si le type n'est pas `ext4` (message : chemin, type trouvé, type attendu). Testé à l'étape 3 avec `FFE_DATA_DIR=/workspaces/x`. Sur macOS (ADR-0019, `ensure_safe_data_dir`) : le chemin résolu doit être sous le dossier personnel, hors `~/Library/Mobile Documents` et `~/Library/CloudStorage` (donc hors `/Volumes`) ; installation : `docs/INSTALL_MAC.md`, lanceur `scripts/mac/FFE.command`.
 - `FFE_BACKUP_DIR` absent ou inaccessible : démarrage autorisé, avertissement persistant dans `GET /api/v1/health` et dans l'UI.
 
 ### Pragmas et verrou

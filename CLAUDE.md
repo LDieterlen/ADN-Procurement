@@ -4,7 +4,7 @@ Outil local, mono-utilisateur, de procurement FF&E (mobilier, luminaires, équip
 Priorité : **fiabilité**, puis **simplicité**. Rien de clever : du code court, lisible, testé.
 Langues : code (identifiants, fichiers, tables, colonnes, commentaires) en **anglais** ; UI, docs, ADR, JOURNAL et commits en **français**.
 Avant toute tâche : lire `docs/ROADMAP.md` (où on en est) et `docs/JOURNAL.md` (dernière session).
-Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARCHITECTURE.md`. Les décisions tranchées sont dans `docs/decisions/` (ADR-0001 à 0018).
+Avant de toucher la base ou l'API : lire aussi `docs/DATA_MODEL.md` et `docs/ARCHITECTURE.md`. Les décisions tranchées sont dans `docs/decisions/` (ADR-0001 à 0019).
 
 ## Commandes
 
@@ -69,7 +69,7 @@ Checklist « ajouter une ressource » (détail dans `docs/ARCHITECTURE.md` §9) 
 - **Pas de code pour plus tard** : aucune table, colonne, dossier, route, composant ou dépendance qui n'est pas utilisé et testé dans l'étape en cours ou dans l'étape suivante nommée dans `ROADMAP.md` (ex. tables de l'étape 3 servies par l'API de l'étape 4). Les accroches futures restent dans `docs/DATA_MODEL.md` §9 et `ROADMAP.md` (« Idées parquées »).
 - **Un fait = un document maître** ; les autres le citent (`ARCHITECTURE §5`) sans le recopier. Maîtres : arborescence, variables d'environnement, cycle de démarrage, pragmas, sauvegardes, tests → `ARCHITECTURE.md` ; tables, statuts, formules, accroches futures → `DATA_MODEL.md` ; routes → `API.md` ; décisions → `docs/decisions/`.
 - Une étape à la fois (`docs/ROADMAP.md`). Un besoin hors étape va dans « Idées parquées », pas dans le code.
-- Données vivantes (base, WAL, fichiers joints, verrou) uniquement sous `FFE_DATA_DIR` sur **ext4** (`~/.persist/…`) ; refus de démarrer sinon (lecture de `/proc/mounts`). Jamais `/workspaces`, `/mnt`, ni l'overlay. Copies de sauvegarde terminées : `FFE_BACKUP_DIR`.
+- Données vivantes (base, WAL, fichiers joints, verrou) uniquement sous `FFE_DATA_DIR` sur **ext4** (`~/.persist/…`) ; refus de démarrer sinon (lecture de `/proc/mounts`) ; sur macOS, disque du Mac sous le dossier personnel, hors dossiers synchronisés (ADR-0019). Jamais `/workspaces`, `/mnt`, ni l'overlay. Copies de sauvegarde terminées : `FFE_BACKUP_DIR`.
 - Cycle de démarrage, pragmas et sauvegardes : ARCHITECTURE §5 (maître). Règles dures : tout échec du cycle = arrêt sans servir, base intacte ; SQLite ≥ 3.37 ; jamais copier `ffe.sqlite` à chaud (`sqlite3.Connection.backup()` uniquement, puis `quick_check` du fichier produit).
 - Migrations : **jusqu'à la v1 déclarée par l'utilisateur, une seule migration `0001_initial.py` régénérée depuis les modèles** (ADR-0012) ; ensuite une par étape, relue ligne à ligne, **additive seulement**, jamais éditée une fois appliquée ; jamais d'autogénération non relue ; `alembic check` en test ; backup automatique avant chaque `upgrade`. Détail (batch, index d'expression, STRICT) : ARCHITECTURE §5.
 - Argent : `*_cents INTEGER` HT + `currency` TEXT ISO 4217 ; taux en points de base `*_bp INTEGER` (10 000 = 100 %) ; quantités `qty_milli INTEGER` ; change `fx_rate_micro INTEGER` (1 unité = `fx_rate_micro`/1 000 000 EUR ; 1 000 000 pour l'EUR), figé par ligne. Jamais de REAL, jamais de float en Python pour un montant.

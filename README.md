@@ -22,6 +22,9 @@ Le dépôt vit sur `/workspaces/Perso/FFE` (montage 9p, vu depuis Windows). Les 
 
 ## Lancer
 
+Sur le Mac de l'utilisatrice (sans paquet, lancé par un double-clic) : [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md).
+
+
 Pré-requis : `uv` ≥ 0.12 et Node 24. Toutes les commandes se tapent dans le terminal du devcontainer, depuis la racine du dépôt.
 
 ```bash
