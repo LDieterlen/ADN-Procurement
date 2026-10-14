@@ -1,5 +1,7 @@
-"""Refuse to put live data anywhere but on ext4 (ARCHITECTURE §5): 9p and overlay lose WAL and locks."""
+"""Refuse to put live data on a disk that loses WAL and locks (ARCHITECTURE §5): on Linux anything
+but ext4 (9p, overlay); on macOS a synced folder (iCloud, Dropbox…) or a mounted volume (ADR-0019)."""
 
+import sys
 from pathlib import Path
 
 from ffe.db import DbError
@@ -42,3 +44,27 @@ def ensure_ext4(path: Path, mounts_file: Path = PROC_MOUNTS) -> None:
             f"de type « {fstype} », « {REQUIRED_FSTYPE} » attendu (~/.persist). "
             "Jamais de base SQLite sur /workspaces (9p) ni sur l'overlay."
         )
+
+
+# Under the home directory, these are synced by a cloud client: never live data there.
+MAC_SYNCED = ("Library/Mobile Documents", "Library/CloudStorage")
+
+
+def ensure_mac_local(path: Path, home: Path) -> None:
+    """macOS: the data directory sits on the Mac's own disk, under the home, outside synced folders."""
+    target, home = path.resolve(), home.resolve()
+    synced = [home / folder for folder in MAC_SYNCED]
+    if not target.is_relative_to(home) or any(target.is_relative_to(s) for s in synced):
+        raise FsCheckError(
+            f"Dossier de données refusé : {path} doit être sur le disque du Mac, dans le dossier "
+            "personnel, hors iCloud Drive, Dropbox, OneDrive, Google Drive et disques externes."
+        )
+
+
+def ensure_safe_data_dir(path: Path, platform: str = sys.platform) -> None:
+    if platform == "darwin":
+        ensure_mac_local(path, Path.home())
+    elif platform.startswith("linux"):
+        ensure_ext4(path)
+    else:
+        raise FsCheckError(f"Système non pris en charge ({platform}) : Linux ou macOS.")

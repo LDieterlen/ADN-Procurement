@@ -10,7 +10,7 @@ from ffe.config import Settings
 from ffe.db import DbError
 from ffe.db.backup import BACKUP_MAX_AGE, backup_and_copy, last_backup_at
 from ffe.db.engine import create_db_engine, foreign_key_check, quick_check
-from ffe.db.fs_check import ensure_ext4
+from ffe.db.fs_check import ensure_safe_data_dir
 from ffe.db.lock import InstanceLock
 from ffe.db.migrate import has_pending, head_revision, schema_drift, upgrade_head
 
@@ -42,9 +42,9 @@ def utcnow() -> datetime:
 
 
 def prepare_data_dir(settings: Settings) -> None:
-    """Steps 1: ext4 check, then create the data directories."""
+    """Steps 1: disk check (ADR-0019), then create the data directories."""
     data_dir = settings.resolved_data_dir
-    ensure_ext4(data_dir)
+    ensure_safe_data_dir(data_dir)
     (settings.backups_dir / "tmp").mkdir(parents=True, exist_ok=True)
 
 

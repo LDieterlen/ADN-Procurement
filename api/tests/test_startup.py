@@ -9,7 +9,7 @@ from conftest import FIXED_NOW
 from ffe.config import Settings
 from ffe.db import DbError
 from ffe.db.backup import list_backups
-from ffe.db.fs_check import FsCheckError, mount_of
+from ffe.db.fs_check import FsCheckError, ensure_mac_local, ensure_safe_data_dir, mount_of
 from ffe.db.lock import LockError
 from ffe.db.migrate import current_revision, downgrade_base, head_revision
 from ffe.db.startup import StartupError, run_startup
@@ -25,6 +25,24 @@ def test_mount_of_resolves_the_longest_prefix(tmp_path: Path) -> None:
         "ext4",
     )
     assert mount_of(Path("/etc"), mounts) == ("/", "overlay")
+
+
+def test_mac_accepts_the_home_disk_and_refuses_synced_folders_and_volumes(tmp_path: Path) -> None:
+    home = tmp_path / "Users" / "anne"
+    ensure_mac_local(home / ".persist" / "ffe", home)  # the default place: accepted
+    for refused in (
+        home / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "ffe",  # iCloud Drive
+        home / "Library" / "CloudStorage" / "Dropbox" / "ffe",
+        Path("/Volumes/Partage/ffe"),
+        home / ".." / "autre" / "ffe",  # outside the home once resolved
+    ):
+        with pytest.raises(FsCheckError, match="disque du Mac"):
+            ensure_mac_local(refused, home)
+
+
+def test_other_systems_are_refused(tmp_path: Path) -> None:
+    with pytest.raises(FsCheckError, match="non pris en charge"):
+        ensure_safe_data_dir(tmp_path, platform="win32")
 
 
 def test_refuses_a_data_dir_outside_ext4(tmp_path: Path) -> None:
