@@ -22,9 +22,10 @@ import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { NewSupplierModal } from './InlineCreate'
+import { fold } from '../../lib/text'
 import { EMPTY_ITEM, fromCapture, ItemFields, toCreatePayload, type ItemFormValues } from './ItemForm'
 
-const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
+const ALL = { q: '', includeArchived: false, limit: 1000, offset: 0 }
 
 export function ItemNewPage() {
   const params = useParams<{ id: string }>()
@@ -77,7 +78,9 @@ export function ItemNewPage() {
     const found = result.preview.brand ? similarSuppliers(result.preview.brand, suppliers.data?.items ?? []) : []
     setBrand(result.preview.brand)
     const type = result.preview.typeCode ? (categories.data ?? []).find((c) => c.code === result.preview.typeCode) : undefined
-    form.reset(fromCapture(result.preview, form.getValues(), found.length === 1 && found[0] ? found[0].id : null, type?.id ?? null))
+    // An option keeps its base's type, whatever the page suggests (ADR-0021).
+    const typeId = optionOf && base.data ? base.data.categoryId : (type?.id ?? null)
+    form.reset(fromCapture(result.preview, form.getValues(), found.length === 1 && found[0] ? found[0].id : null, typeId))
     setFormKey((k) => k + 1)
     setPrefilled(true)
   }
@@ -93,15 +96,19 @@ export function ItemNewPage() {
         projectId,
         data: optionOf ? { ...payload, placements: null, optionOfId: optionOf } : payload,
       })
+      let attached = 0
       for (const [index, file] of photos.entries()) {
         await attach
           .mutateAsync({ itemId: created.id, data: { fileId: file.id, kind: 'image', isPrimary: index === 0, caption: null, sortOrder: index } })
+          .then(() => (attached += 1))
           .catch(() => undefined)
       }
       if (captureId !== null) await deleteCapture.mutateAsync(captureId).catch(() => undefined) // consumed
       toast.show({
         kind: 'success',
-        message: `${created.itemCode} ajouté${photos.length > 1 ? ` avec ${photos.length} photos` : photos.length ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.`,
+        message: `${created.itemCode} ajouté${attached > 1 ? ` avec ${attached} photos` : attached ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.${
+          attached < photos.length ? ` ${photos.length - attached} photo(s) non jointe(s) : les ajouter depuis la page de l'article.` : ''
+        }`,
       })
       // Back to the project (the article is in its list), or to the base article for an option.
       navigate(optionOf ? `/projects/${projectId}/items/${optionOf}` : `/projects/${projectId}`)
@@ -117,6 +124,16 @@ export function ItemNewPage() {
     }
   }
 
+  if (optionOf && base.isError) {
+    // The article to add an option to is not there (deleted, wrong address).
+    return (
+      <EmptyState title={base.error.message}>
+        <Link to={`/projects/${projectId}`} className="underline">
+          Retour au projet
+        </Link>
+      </EmptyState>
+    )
+  }
   if (project.isPending) return <p className="text-sm text-ink-3">Chargement…</p>
   if (project.isError) {
     return (
@@ -261,7 +278,7 @@ export function ItemNewPage() {
                   <select
                     value={locationId}
                     onChange={(e) => setLocationId(e.target.value)}
-                    className="min-w-64 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-normal"
+                    className="min-w-64 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-normal"
                   >
                     <option value="">Non affecté</option>
                     {(locations.data ?? []).map((l) => (
@@ -285,7 +302,7 @@ export function ItemNewPage() {
             </Card>
           )}
           <div className="mt-6 flex gap-2">
-            <Button type="submit" variant="primary" disabled={create.isPending}>
+            <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
               {optionOf ? "Créer l'option" : "Créer l'article"}
             </Button>
             <Link to={`/projects/${p.id}`}>
@@ -339,10 +356,7 @@ function InboxRow({ capture, onUse, onDismiss }: { capture: CaptureRead; onUse: 
 /** Accent- and punctuation-insensitive resemblance: « AM.PM » finds « La Redoute / AM PM ». */
 export function similarSuppliers<T extends { id: number; name: string }>(brand: string, suppliers: T[]): T[] {
   const key = (text: string) =>
-    text
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
+    fold(text)
       .replace(/[^a-z0-9]+/g, ' ')
       .trim()
   const wanted = key(brand)

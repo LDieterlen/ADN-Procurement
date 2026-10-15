@@ -11,7 +11,7 @@ const PNG = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 
 beforeEach(() => {
   api = installFakeApi({
     clients: [{ name: 'Hôtel X SA' }],
-    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', contactName: 'Djamel Sabeur', phone: '01 00 00 00 00', mobile: '06 00 00 00 00' }],
+    suppliers: [{ name: 'Tom Dixon', currency: 'GBP', contactName: 'Jean Exemple', phone: '01 00 00 00 00', mobile: '06 00 00 00 00' }],
     categories: [{ code: 'LUD', name: 'Luminaire décoratif' }],
     projects: [{ name: 'Rénovation', clientId: 1, status: 'active' }],
     locations: [
@@ -49,7 +49,7 @@ describe('page article', () => {
     await waitFor(() => expect((screen.getByLabelText('Prix unitaire HT') as HTMLInputElement).value).toBe('1 250,00'))
     expect((screen.getByLabelText('Remise') as HTMLInputElement).value).toBe('15')
     const rep = screen.getByRole('region', { name: 'Représentant' })
-    expect(rep.textContent).toContain('Djamel Sabeur')
+    expect(rep.textContent).toContain('Jean Exemple')
     expect(rep.textContent).toContain('06 00 00 00 00') // the mobile comes first
     await user.type(screen.getByLabelText('Référence'), 'BLS01')
     await user.type(screen.getByLabelText('Dimensions'), 'Ø 36 × H 30 cm')
@@ -93,7 +93,7 @@ describe('page article', () => {
   test('implantation et photos : tout attend « Enregistrer », puis part en une fois', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/1')
-    const card = await screen.findByRole('region', { name: 'Implantation' })
+    const card = await screen.findByRole('region', { name: 'Implantations' })
     await user.selectOptions(within(card).getByLabelText('Localisation à ajouter'), '1')
     await user.clear(within(card).getByLabelText('Quantité à ajouter'))
     await user.type(within(card).getByLabelText('Quantité à ajouter'), '2')
@@ -202,6 +202,29 @@ describe('page article', () => {
     await user.click(await screen.findByRole('button', { name: 'Détacher' }))
     await user.click(saveButton())
     await waitFor(() => expect(api.items.find((i) => i.id === 1)?.optionOfId).toBeNull())
+  })
+
+  test('un article introuvable le dit, avec un lien de retour (jamais « Chargement… » sans fin)', async () => {
+    renderApp('/projects/1/items/99')
+    expect(await screen.findByRole('link', { name: 'Retour au projet' })).toBeTruthy()
+    expect(screen.queryByText('Chargement…')).toBeNull()
+  })
+
+  test('projet clos : la fiche se lit sans se modifier, et rien ne retient la sortie', async () => {
+    api.projects[0]!.status = 'closed'
+    renderApp('/projects/1/items/1')
+    expect((await screen.findByLabelText('Référence')).matches(':disabled')).toBe(true) // through the disabled fieldset
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).toBeNull()
+  })
+
+  test("enregistrer n'envoie que les champs modifiés", async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/1')
+    await user.type(await screen.findByLabelText('Commentaires'), 'Au-dessus du bureau')
+    await user.click(saveButton())
+    await screen.findByText('Article enregistré.')
+    const sent = api.requests.find((r) => r.path.endsWith('/save'))?.body as { sheet: Record<string, unknown> }
+    expect(Object.keys(sent.sheet)).toEqual(['comments'])
   })
 
   test("la localisation d'une implantation se change en place, sans la recréer", async () => {

@@ -1,5 +1,6 @@
 // Parcours 1 (ADR-0013) : type → client → projet avec budget → localisation ×12 → article libre 450 €
-// → code CHA-LUD-01, montant et reste venus du serveur, fiches PDF émises.
+// → code CHA-LUD-01, montant et reste venus du serveur, fiches PDF émises (mis à jour le 2026-10-15 :
+// page « Listes », champ « Nom », retour au projet après création, indice déclaré à part).
 import { expect, test } from '@playwright/test'
 
 test('créer un projet, une localisation et un article : les totaux viennent du serveur', async ({ page }) => {
@@ -7,7 +8,7 @@ test('créer un projet, une localisation et un article : les totaux viennent du 
   await page.getByLabel('Nom').fill('Luminaire décoratif')
   await page.getByLabel('Code').fill('LUD')
   await page.getByRole('button', { name: 'Créer' }).click()
-  await expect(page.getByRole('heading', { name: 'Types de produit' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Listes' })).toBeVisible()
 
   await page.goto('/clients/new')
   await page.getByLabel('Nom').fill('Hôtel X SA')
@@ -32,20 +33,22 @@ test('créer un projet, une localisation et un article : les totaux viennent du 
 
   await page.getByRole('link', { name: '+ Ajouter un article' }).click()
   await expect(page.getByRole('heading', { name: 'Nouvel article' })).toBeVisible()
-  await page.getByLabel('Désignation', { exact: true }).fill('Applique de chevet')
+  await page.getByLabel('Nom', { exact: true }).fill('Applique de chevet')
   await page.getByLabel('Type', { exact: true }).selectOption({ label: 'LUD — Luminaire décoratif' })
   await page.getByLabel('Prix unitaire HT', { exact: true }).fill('450')
   await page.getByRole('region', { name: 'Implantation' }).getByLabel('Localisation').selectOption({ label: 'CHA — Chambre typo A (×12)' })
   await page.getByRole('button', { name: "Créer l'article" }).click()
-  await expect(page.getByRole('heading', { name: 'Applique de chevet' })).toBeVisible()
-  // 450,00 € × 1 × 12 = 5 400,00 € HT, calculé par le serveur.
-  await expect(page.getByText('5 400,00 € HT')).toBeVisible()
-
-  await page.getByRole('link', { name: 'Retour au projet' }).click()
+  // Back on the project: 450,00 € × 1 × 12 = 5 400,00 € HT, calculé par le serveur.
+  await expect(page.getByRole('row', { name: 'CHA-LUD-01 dans CHA' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Synthèse budget' })).toContainText('5 400,00 €')
   await expect(page.getByRole('region', { name: 'Synthèse budget' })).toContainText('44 600,00 €')
 
   const download = page.waitForEvent('download')
   await page.getByRole('link', { name: 'Fiches PDF' }).click()
-  expect((await download).suggestedFilename()).toMatch(/-fiches-A-\d{4}-\d{2}-\d{2}\.pdf$/)
+  expect((await download).suggestedFilename()).toMatch(/-fiches(-[A-Z])?-\d{4}-\d{2}-\d{2}\.pdf$/) // no indice declared yet
+
+  // The article page shows the same server amount.
+  await page.getByRole('row', { name: 'CHA-LUD-01 dans CHA' }).click()
+  await expect(page.getByRole('heading', { name: 'Applique de chevet' })).toBeVisible()
+  await expect(page.getByText('5 400,00 € HT')).toBeVisible()
 })

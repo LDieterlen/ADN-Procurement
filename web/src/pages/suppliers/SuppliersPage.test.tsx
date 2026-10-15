@@ -10,7 +10,7 @@ let api: FakeApi
 beforeEach(() => {
   api = installFakeApi({
     suppliers: [
-      { name: 'Tom Dixon', contactName: 'Djamel Sabeur', currency: 'GBP', phone: '01 00 00 00 00', mobile: '06 00 00 00 00', specialty: 'Luminaire' },
+      { name: 'Tom Dixon', contactName: 'Jean Exemple', currency: 'GBP', phone: '01 00 00 00 00', mobile: '06 00 00 00 00', specialty: 'Luminaire' },
       { name: 'Flos' },
       ...Array.from({ length: 60 }, (_, i) => ({ name: `Fournisseur ${String(i).padStart(2, '0')}` })),
     ],
@@ -55,7 +55,7 @@ describe('fournisseurs', () => {
     await screen.findByRole('dialog')
     await user.click(screen.getByRole('button', { name: "Ouvrir l'existant" }))
     expect(await screen.findByRole('heading', { name: 'Tom Dixon' })).toBeTruthy()
-    expect((screen.getByLabelText('Représentant') as HTMLInputElement).value).toBe('Djamel Sabeur')
+    expect((screen.getByLabelText('Représentant') as HTMLInputElement).value).toBe('Jean Exemple')
   })
 
   test('filtre par savoir-faire', async () => {

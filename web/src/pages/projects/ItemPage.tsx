@@ -9,8 +9,7 @@ import { Link, useBlocker, useNavigate, useParams } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useProjectSummary } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
-import { fileContentUrl } from '../../api/queries/file'
-import { CLOSED_STATUSES, locationLabel, useLocations, useProject, type LocationRead } from '../../api/queries/project'
+import { CLOSED_STATUSES, useLocations, useProject } from '../../api/queries/project'
 import {
   ITEM_STATUS_LABELS,
   useDeleteItem,
@@ -18,16 +17,16 @@ import {
   useProjectItem,
   useProjectItems,
   useSaveItem,
-  type EventRead,
   type ItemFileRead,
   type ItemSave,
   type ItemStatus,
   type ProjectItemRead,
+  type ProjectItemUpdate,
 } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { centsToText } from '../../components/forms/MoneyField'
-import { milliToText, textToMilli } from '../../components/forms/QuantityField'
+import { milliToText } from '../../components/forms/QuantityField'
 import { Button } from '../../components/ui/Button'
 import { Card, Dot, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -36,13 +35,14 @@ import { Pill } from '../../components/ui/Pill'
 import { useToast } from '../../components/ui/Toast'
 import { NewSupplierModal } from './InlineCreate'
 import { ItemFiles } from './ItemFiles'
+import { ItemHistory } from './ItemHistory'
+import { OptionsCard } from './OptionsCard'
+import { PlacementsCard, type DraftPlacement } from './PlacementsCard'
 import { fromItem, ItemFields, toUpdatePayload, type ItemFormValues } from './ItemForm'
 import { StatusSelect } from './StatusSelect'
 
-const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
+const ALL = { q: '', includeArchived: true, limit: 1000, offset: 0 } // every supplier, archived ones too: names of existing articles
 
-/** A placement as edited: `id` null = added on the page, saved with the rest. */
-type DraftPlacement = { key: string; id: number | null; locationId: number | null; qtyMilli: number; sortOrder: number }
 /** Everything of the page that is not the sheet form: saved by the same « Enregistrer ». */
 type Draft = {
   status: { status: ItemStatus; note: string | null }
@@ -63,6 +63,15 @@ function draftOf(item: ProjectItemRead): Draft {
 }
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+/** Only the fields typed on the page go to the server (an archived supplier left untouched never
+ * blocks saving a comment). The rate goes with the currency, the designation with the name. */
+function changedFields(full: ProjectItemUpdate, dirty: string[]): ProjectItemUpdate {
+  const wanted = new Set(dirty.map((key) => (key === 'fxRate' ? 'fxRateMicro' : key)))
+  if (wanted.has('currency')) wanted.add('fxRateMicro')
+  if (wanted.has('name') || wanted.has('productName')) ['name', 'productName'].forEach((key) => wanted.add(key))
+  return Object.fromEntries(Object.entries(full).filter(([key]) => wanted.has(key))) as ProjectItemUpdate
+}
 
 export function ItemPage() {
   const params = useParams<{ id: string; itemId: string }>()
@@ -87,6 +96,7 @@ export function ItemPage() {
   const form = useForm<ItemFormValues>({ defaultValues: item.data ? fromItem(item.data) : undefined })
   const [draft, setDraft] = useState<Draft | null>(item.data ? draftOf(item.data) : null)
   const leaving = useRef(false) // set before a navigation that must not be stopped (after a delete)
+  const [version, setVersion] = useState(0) // bumped when the page reloads the article: resets the typed quantities
 
   const original = item.data ? draftOf(item.data) : null
   const draftDirty = draft !== null && original !== null && !sameJson(draft, original)
@@ -103,6 +113,7 @@ export function ItemPage() {
       loaded.current = item.data.id
       form.reset(fromItem(item.data))
       setDraft(draftOf(item.data))
+      setVersion((v) => v + 1)
     }
   }, [item.data, form])
   useEffect(() => {
@@ -118,9 +129,12 @@ export function ItemPage() {
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !leaving.current && currentLocation.pathname !== nextLocation.pathname)
+  const readOnly = project.data ? CLOSED_STATUSES.includes(project.data.status) : false
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => dirty && !readOnly && !leaving.current && currentLocation.pathname !== nextLocation.pathname,
+  )
 
-  if (project.isPending || item.isPending || draft === null) return <p className="text-sm text-ink-3">Chargement…</p>
+  // An article that does not load (deleted, wrong address, API stopped) says so, never « Chargement… » forever.
   if (project.isError || item.isError) {
     const message = project.isError ? project.error.message : item.isError ? item.error.message : ''
     return (
@@ -131,10 +145,10 @@ export function ItemPage() {
       </EmptyState>
     )
   }
+  if (project.isPending || item.isPending || draft === null) return <p className="text-sm text-ink-3">Chargement…</p>
   const p = project.data
   const it = item.data
   const d = draft
-  const readOnly = CLOSED_STATUSES.includes(p.status)
   const amounts = summary.data?.lines.find((l) => l.projectItemId === it.id)
   const supplier = suppliers.data?.items.find((s) => s.id === it.supplierId)
   const typeName = categories.data?.find((c) => c.id === it.categoryId)?.name ?? ''
@@ -143,7 +157,8 @@ export function ItemPage() {
   const itemOptions = all.filter((i) => i.optionOfId === it.id)
   // Before the project's first indice any article can be deleted (ADR-0021); after, only a new one.
   const deletable = !readOnly && itemOptions.length === 0 && (p.indice === null || it.status === 'to_quote')
-  const patch = (change: Partial<Draft>) => setDraft({ ...d, ...change })
+  // Always from the latest draft: an upload finishing later never undoes the changes made meanwhile.
+  const patch = (change: Partial<Draft>) => setDraft((prev) => (prev ? { ...prev, ...change } : prev))
 
   /** Saves everything pending; true when saved. */
   async function saveAll(): Promise<boolean> {
@@ -152,7 +167,7 @@ export function ItemPage() {
     let saved = false
     await form.handleSubmit(async (values) => {
       const data: ItemSave = { attachOptions: d.attach }
-      if (form.formState.isDirty) data.sheet = toUpdatePayload(values, it)
+      if (form.formState.isDirty) data.sheet = changedFields(toUpdatePayload(values, it), Object.keys(form.formState.dirtyFields))
       if (d.status.status !== it.status) data.status = d.status
       if (!sameJson(d.placements, original?.placements))
         data.placements = d.placements.map((pl) => ({ id: pl.id, locationId: pl.locationId, qtyMilli: pl.qtyMilli, sortOrder: pl.sortOrder }))
@@ -163,6 +178,7 @@ export function ItemPage() {
         const result = await save.mutateAsync({ id: it.id, data })
         form.reset(fromItem(result))
         setDraft(draftOf(result))
+        setVersion((v) => v + 1)
         toast.show({ kind: 'success', message: 'Article enregistré.' })
         saved = true
       } catch (error) {
@@ -177,6 +193,7 @@ export function ItemPage() {
   function discard() {
     form.reset(fromItem(it))
     setDraft(draftOf(it))
+    setVersion((v) => v + 1)
     setBanner(null)
   }
 
@@ -215,7 +232,7 @@ export function ItemPage() {
             ) : (
               <StatusSelect item={it} readOnly={readOnly} value={d.status.status} onChange={(status, note) => patch({ status: { status, note } })} />
             )}
-            {d.status.status !== it.status && <span className="text-[12px] text-warn">à enregistrer</span>}
+            {d.status.status !== it.status && <span className="text-xs text-warn">à enregistrer</span>}
             {amounts && (
               <>
                 <Dot />
@@ -244,8 +261,8 @@ export function ItemPage() {
       />
       <div className="grid grid-cols-[340px_1fr] items-start gap-6">
         <div className="space-y-4">
-          <Card title="Photo et dessin" padding="form">
-            <ItemFiles files={d.files} onChange={(files) => patch({ files })} readOnly={readOnly} />
+          <Card title="Photo et plan" padding="form">
+            <ItemFiles files={d.files} onChange={(update) => setDraft((prev) => (prev ? { ...prev, files: update(prev.files) } : prev))} readOnly={readOnly} />
           </Card>
           {supplier && (
             <Card label="Représentant" padding="form">
@@ -300,21 +317,25 @@ export function ItemPage() {
           )}
           <Form form={form} onSubmit={() => void saveAll()} banner={banner}>
             <Card title="Fiche" label="Fiche" padding="form">
-              <ItemFields
-                form={form}
-                kind={it.kind}
-                categories={(categories.data ?? [])
-                  .filter((c) => it.optionOfId === null || c.id === it.categoryId) // an option keeps its base's type
-                  .map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
-                suppliers={options(suppliers.data?.items)}
-                onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
-              />
+              {/* A closed project is read only: the fields are shown, never editable. */}
+              <fieldset disabled={readOnly} className="contents">
+                <ItemFields
+                  form={form}
+                  kind={it.kind}
+                  categories={(categories.data ?? [])
+                    .filter((c) => it.optionOfId === null || c.id === it.categoryId) // an option keeps its base's type
+                    .map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
+                  suppliers={options(suppliers.data?.items.filter((s) => s.archivedAt === null || s.id === it.supplierId))}
+                  onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
+                />
+              </fieldset>
             </Card>
           </Form>
           {it.kind === 'product' && it.optionOfId === null && (
             <PlacementsCard
               item={it}
               placements={d.placements}
+              version={version}
               onChange={(placements) => patch({ placements })}
               locations={(locations.data ?? []).filter((l) => l.archivedAt === null || it.placements.some((pl) => pl.locationId === l.id))}
               readOnly={readOnly}
@@ -341,7 +362,7 @@ export function ItemPage() {
             />
           )}
           <Card title="Historique" padding="form">
-            <History events={events.data ?? []} />
+            <ItemHistory events={events.data ?? []} />
           </Card>
           {deletable && (
             <div className="flex justify-end">
@@ -423,486 +444,5 @@ export function ItemPage() {
           : "Possible tant que l'article est « à chiffrer » et sans historique ; sinon, l'annuler."}
       </ConfirmDialog>
     </section>
-  )
-}
-
-/** The options of a base article (ADR-0021): list, « + Nouvelle option » (creation page) or an
- * existing article of the project attached as an option, pending until « Enregistrer ». */
-function OptionsCard({
-  item,
-  options,
-  pending,
-  onPendingChange,
-  candidates,
-  amountOf,
-  supplierName,
-  readOnly,
-}: {
-  item: ProjectItemRead
-  options: ProjectItemRead[]
-  pending: ProjectItemRead[]
-  onPendingChange: (ids: number[]) => void
-  candidates: ProjectItemRead[]
-  amountOf: (id: number) => number | undefined
-  supplierName: (id: number | null) => string
-  readOnly: boolean
-}) {
-  const navigate = useNavigate()
-  const [candidate, setCandidate] = useState('')
-  const thumb = (row: ProjectItemRead) => {
-    const photo = row.files.find((f) => f.isPrimary)
-    return photo ? (
-      <img
-        src={fileContentUrl(photo.fileId, photo.sha256)}
-        alt={`Photo ${row.name}`}
-        className="h-10 w-10 rounded-[5px] border border-line bg-white object-contain"
-      />
-    ) : (
-      <span className="block h-10 w-10 rounded-[5px] border border-dashed border-line-strong bg-sunken" />
-    )
-  }
-  return (
-    <Card
-      title="Options"
-      label="Options"
-      padding="table"
-      meta={options.length ? `${options.length} option${options.length > 1 ? 's' : ''} · montants indicatifs, hors totaux` : undefined}
-      actions={
-        !readOnly && (
-          <Link to={`/projects/${item.projectId}/items/new?optionOf=${item.id}`}>
-            <Button variant="secondary" size="sm">
-              + Nouvelle option
-            </Button>
-          </Link>
-        )
-      }
-    >
-      {options.length === 0 && pending.length === 0 ? (
-        <p className="px-5 py-4 text-sm text-ink-3">Aucune option : proposer une alternative à cet article.</p>
-      ) : (
-        <table className="w-full text-sm" aria-label="Options de l'article">
-          <tbody>
-            {options.map((option) => {
-              const amount = amountOf(option.id)
-              return (
-                <tr
-                  key={option.id}
-                  onClick={() => navigate(`/projects/${item.projectId}/items/${option.id}`)}
-                  className="cursor-pointer border-b border-line-soft hover:bg-sunken"
-                >
-                  <td className="w-14 py-2 pl-5">{thumb(option)}</td>
-                  <td className="px-3 py-2.5 font-mono text-xs font-medium whitespace-nowrap">{option.itemCode}</td>
-                  <td className="px-3 py-2.5 font-medium">{option.name}</td>
-                  <td className="px-3 py-2.5 text-right text-ink-2 tabular-nums">{amount !== undefined ? `(${centsToText(amount)} €)` : ''}</td>
-                  <td className="py-2.5 pr-5 pl-3 text-right">
-                    <Pill status={option.status}>{ITEM_STATUS_LABELS[option.status]}</Pill>
-                  </td>
-                </tr>
-              )
-            })}
-            {pending.map((row) => (
-              <tr key={`pending-${row.id}`} className="border-b border-line-soft bg-warn-soft/40">
-                <td className="w-14 py-2 pl-5">{thumb(row)}</td>
-                <td className="px-3 py-2.5 text-[12px] text-warn">à enregistrer</td>
-                <td className="px-3 py-2.5 font-medium">{row.name}</td>
-                <td className="px-3 py-2.5 text-right text-ink-3 text-[12.5px]">devient une option</td>
-                <td className="py-2.5 pr-5 pl-3 text-right">
-                  <button
-                    type="button"
-                    className="text-[13px] text-danger hover:underline"
-                    aria-label={`Ne pas rattacher ${row.name}`}
-                    onClick={() => onPendingChange(pending.filter((o) => o.id !== row.id).map((o) => o.id))}
-                  >
-                    Retirer
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {!readOnly && candidates.length > 0 && (
-        <div className="flex items-end gap-3 border-t border-line bg-sunken px-5 py-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 text-[12.5px] font-medium text-ink-2">Article existant du même type à rattacher</div>
-            <CandidatePicker candidates={candidates} value={candidate} onChange={setCandidate} supplierName={supplierName} />
-          </div>
-          <Button
-            size="sm"
-            disabled={!candidate}
-            onClick={() => {
-              onPendingChange([...pending.map((o) => o.id), Number(candidate)])
-              setCandidate('')
-            }}
-          >
-            Rattacher comme option
-          </Button>
-        </div>
-      )}
-    </Card>
-  )
-}
-
-const fold = (text: string) =>
-  text
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-
-/** Choice of an article with its thumbnail (a native select cannot show images), made for long
- * lists: a search box (code, name, reference, supplier, finish, dimensions; accents and case
- * ignored), the match count, keyboard (↑ ↓ Entrée Échap), supplier and reference under each name. */
-function CandidatePicker({
-  candidates,
-  value,
-  onChange,
-  supplierName,
-}: {
-  candidates: ProjectItemRead[]
-  value: string
-  onChange: (value: string) => void
-  supplierName: (id: number | null) => string
-}) {
-  // The panel is `position: fixed`, placed from the button (below, or above when the window lacks
-  // room): the card clips what overflows it, so an absolute list was hidden under the next card.
-  const [at, setAt] = useState<{ left: number; width: number; maxHeight: number; top?: number; bottom?: number } | null>(null)
-  const [query, setQuery] = useState('')
-  const [active, setActive] = useState(0)
-  const open = at !== null
-  const root = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLUListElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const close = (event: Event) => {
-      if (!(event.target instanceof Node && root.current?.contains(event.target))) setAt(null)
-    }
-    document.addEventListener('mousedown', close)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-    return () => {
-      document.removeEventListener('mousedown', close)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
-    }
-  }, [open])
-  useEffect(() => {
-    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' })
-  }, [active])
-
-  function toggle(button: HTMLElement) {
-    if (open) return setAt(null)
-    const box = button.getBoundingClientRect()
-    const below = window.innerHeight - box.bottom
-    // At most 380 px (search box + list), never past the window: the list scrolls inside.
-    const down = below >= 260 || below >= box.top
-    const room = (down ? below : box.top) - 12
-    setQuery('')
-    setActive(0)
-    setAt({
-      left: box.left,
-      width: box.width,
-      maxHeight: Math.min(380, room),
-      ...(down ? { top: box.bottom + 4 } : { bottom: window.innerHeight - box.top + 4 }),
-    })
-  }
-  function choose(c: ProjectItemRead) {
-    onChange(String(c.id))
-    setAt(null)
-  }
-
-  const words = fold(query).split(/\s+/).filter(Boolean)
-  const haystack = (c: ProjectItemRead) =>
-    fold([c.itemCode, c.name, c.productName, c.reference, supplierName(c.supplierId), c.finish, c.dimensions].filter(Boolean).join(' '))
-  const matches = words.length ? candidates.filter((c) => words.every((w) => haystack(c).includes(w))) : candidates
-  const chosen = candidates.find((c) => String(c.id) === value)
-  const line = (c: ProjectItemRead) => {
-    const photo = c.files.find((f) => f.isPrimary)
-    const detail = [supplierName(c.supplierId), c.reference && `réf. ${c.reference}`, c.dimensions].filter(Boolean).join(' · ')
-    return (
-      <span className="flex min-w-0 items-center gap-2.5">
-        {photo ? (
-          <img src={fileContentUrl(photo.fileId, photo.sha256)} alt="" className="h-10 w-10 shrink-0 rounded border border-line bg-white object-contain" />
-        ) : (
-          <span className="h-10 w-10 shrink-0 rounded border border-dashed border-line-strong bg-sunken" />
-        )}
-        <span className="min-w-0">
-          <span className="block truncate">
-            <span className="font-mono text-xs text-ink-2">{c.itemCode}</span> {c.name}
-          </span>
-          {detail && <span className="block truncate text-[12px] text-ink-3">{detail}</span>}
-        </span>
-      </span>
-    )
-  }
-  // The chosen article inside the field: one line and a small thumbnail, so the field keeps the
-  // height of every other control (the two-line rows with 40 px thumbnails are for the list).
-  const compact = (c: ProjectItemRead) => {
-    const photo = c.files.find((f) => f.isPrimary)
-    return (
-      <span className="flex min-w-0 items-center gap-2">
-        {photo && (
-          <img src={fileContentUrl(photo.fileId, photo.sha256)} alt="" className="h-6 w-6 shrink-0 rounded-[4px] border border-line bg-white object-contain" />
-        )}
-        <span className="min-w-0 truncate">
-          <span className="font-mono text-xs text-ink-2">{c.itemCode}</span> {c.name}
-        </span>
-      </span>
-    )
-  }
-  return (
-    <div ref={root} className="relative" onKeyDown={(event) => event.key === 'Escape' && setAt(null)}>
-      <button
-        type="button"
-        aria-label="Article existant à rattacher"
-        aria-expanded={open}
-        onClick={(event) => toggle(event.currentTarget)}
-        className="control flex h-[34px] w-full items-center justify-between gap-2 bg-white text-left text-[13px]"
-      >
-        {chosen ? compact(chosen) : <span className="text-ink-3">Choisir un article du projet…</span>}
-        <span aria-hidden="true" className="text-ink-3">
-          ▾
-        </span>
-      </button>
-      {at && (
-        <div
-          style={{ left: at.left, width: at.width, top: at.top, bottom: at.bottom, maxHeight: at.maxHeight }}
-          className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line-strong bg-white text-[13px] shadow-lg"
-        >
-          <div className="flex items-center gap-2 border-b border-line-soft px-3 py-2">
-            <input
-              autoFocus
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value)
-                setActive(0)
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'ArrowDown') {
-                  event.preventDefault()
-                  setActive((i) => Math.min(i + 1, matches.length - 1))
-                } else if (event.key === 'ArrowUp') {
-                  event.preventDefault()
-                  setActive((i) => Math.max(i - 1, 0))
-                } else if (event.key === 'Enter') {
-                  event.preventDefault()
-                  const c = matches[active]
-                  if (c) choose(c)
-                }
-              }}
-              placeholder="Rechercher : code, nom, référence, fournisseur…"
-              aria-label="Rechercher un article à rattacher"
-              className="control h-8 min-w-0 flex-1 text-[13px]"
-            />
-            <span className="shrink-0 text-[12px] text-ink-3 tabular-nums">
-              {words.length ? `${matches.length} sur ${candidates.length}` : `${candidates.length} article${candidates.length > 1 ? 's' : ''}`}
-            </span>
-          </div>
-          <ul ref={listRef} role="listbox" aria-label="Articles à rattacher" className="min-h-0 flex-1 overflow-auto py-1">
-            {matches.length === 0 && <li className="px-3 py-2 text-ink-3">Aucun article ne correspond.</li>}
-            {matches.map((c, index) => (
-              <li
-                key={c.id}
-                role="option"
-                aria-selected={String(c.id) === value}
-                data-active={index === active}
-                className={`cursor-pointer px-3 py-1.5 ${index === active ? 'bg-sunken' : ''}`}
-                onMouseEnter={() => setActive(index)}
-                onClick={() => choose(c)}
-              >
-                {line(c)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function PlacementsCard({
-  item,
-  placements,
-  onChange,
-  locations,
-  readOnly,
-}: {
-  item: ProjectItemRead
-  placements: DraftPlacement[]
-  onChange: (placements: DraftPlacement[]) => void
-  locations: LocationRead[]
-  readOnly: boolean
-}) {
-  const toast = useToast()
-  const [locationId, setLocationId] = useState<string>('')
-  const [qty, setQty] = useState('1')
-  const locationOf = (id: number | null) => locations.find((l) => l.id === id)
-  const saved = (draft: DraftPlacement) => item.placements.find((p) => p.id === draft.id)
-  const set = (key: string, change: Partial<DraftPlacement>) => onChange(placements.map((p) => (p.key === key ? { ...p, ...change } : p)))
-
-  return (
-    <Card title="Implantation" label="Implantation" padding="table">
-      <table className="w-full text-sm" aria-label="Implantations de l'article">
-        <thead>
-          <tr className="border-b border-line text-left text-[12.5px] font-medium text-ink-2">
-            <th className="py-2.5 pl-5">Code</th>
-            <th className="px-3 py-2.5">Localisation</th>
-            <th className="px-3 py-2.5 text-right">Quantité</th>
-            <th className="px-3 py-2.5 text-right">Nombre</th>
-            <th className="px-3 py-2.5 text-right">Total</th>
-            <th className="py-2.5 pr-5"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {placements.map((placement) => {
-            const location = locationOf(placement.locationId)
-            const multiplier = location?.multiplier ?? 1
-            const before = saved(placement)
-            // A new placement, or one moved to another location, gets its code when saved.
-            const code = before && before.locationId === placement.locationId ? before.code : null
-            return (
-              <tr key={placement.key} className="border-b border-line-soft">
-                <td className="py-2 pl-5 font-mono text-xs font-medium whitespace-nowrap">
-                  {code ?? <span className="font-sans text-[12px] font-normal text-warn">à l'enregistrement</span>}
-                </td>
-                <td className="px-3 py-2">
-                  {readOnly ? (
-                    location ? (
-                      <>
-                        <span className="mr-2 font-mono text-xs text-ink-2">{location.code}</span>
-                        {location.name}
-                      </>
-                    ) : (
-                      'Non affecté'
-                    )
-                  ) : (
-                    <select
-                      value={placement.locationId ?? ''}
-                      aria-label={`Localisation de l'implantation ${location?.code ?? 'non affecté'}`}
-                      className="control h-[30px] max-w-[260px] text-[13px]"
-                      onChange={(event) => set(placement.key, { locationId: event.target.value ? Number(event.target.value) : null })}
-                    >
-                      <option value="">Non affecté</option>
-                      {locations
-                        .filter(
-                          (l) =>
-                            l.id === placement.locationId ||
-                            (l.archivedAt === null && !placements.some((other) => other.key !== placement.key && other.locationId === l.id)),
-                        )
-                        .map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {locationLabel(l)}
-                          </option>
-                        ))}
-                    </select>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {readOnly ? (
-                    milliToText(placement.qtyMilli)
-                  ) : (
-                    <input
-                      key={placement.qtyMilli}
-                      defaultValue={milliToText(placement.qtyMilli)}
-                      inputMode="decimal"
-                      aria-label={`Quantité dans ${location?.code ?? 'non affecté'}`}
-                      className="control h-[30px] w-16 px-2 text-right tabular-nums"
-                      onBlur={(event) => {
-                        const milli = textToMilli(event.target.value)
-                        if (milli === undefined || milli === null) return toast.show({ kind: 'error', message: 'Quantité invalide.' })
-                        if (milli !== placement.qtyMilli) set(placement.key, { qtyMilli: milli })
-                      }}
-                    />
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right text-ink-2">× {multiplier}</td>
-                <td className="px-3 py-2 text-right font-medium tabular-nums">{milliToText(placement.qtyMilli * multiplier)}</td>
-                <td className="py-2 pr-5 text-right text-[13px]">
-                  {!readOnly && placements.length > 1 && (
-                    <button
-                      type="button"
-                      className="text-danger hover:underline"
-                      onClick={() => onChange(placements.filter((p) => p.key !== placement.key))}
-                      aria-label={`Retirer de ${location?.code ?? 'non affecté'}`}
-                    >
-                      Retirer
-                    </button>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {!readOnly && (
-        <div className="flex flex-wrap items-end gap-3 border-t border-line bg-sunken px-5 py-3">
-          <label className="flex flex-1 flex-col gap-1.5 text-[12.5px] font-medium text-ink-2">
-            Localisation à ajouter
-            <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="control h-8 font-normal">
-              <option value="">Non affecté</option>
-              {locations
-                .filter((l) => l.archivedAt === null && !placements.some((p) => p.locationId === l.id))
-                .map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {locationLabel(l)}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="flex w-[110px] flex-col gap-1.5 text-[12.5px] font-medium text-ink-2">
-            Quantité à ajouter
-            <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="control h-8 text-right font-normal tabular-nums" />
-          </label>
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={() => {
-              const milli = textToMilli(qty)
-              if (milli === undefined || milli === null) return toast.show({ kind: 'error', message: 'Quantité invalide.' })
-              const target = locationId ? Number(locationId) : null
-              if (placements.some((p) => p.locationId === target))
-                return toast.show({ kind: 'error', message: "L'article est déjà implanté dans cette localisation." })
-              onChange([...placements, { key: `new${Date.now()}`, id: null, locationId: target, qtyMilli: milli, sortOrder: placements.length }])
-              setQty('1')
-              setLocationId('')
-            }}
-          >
-            Ajouter
-          </Button>
-        </div>
-      )}
-    </Card>
-  )
-}
-
-const EVENT_LABELS: Record<string, string> = {
-  created: 'Création',
-  status: 'Statut',
-  price: 'Prix',
-  placement: 'Implantation',
-  indice: 'Indice',
-  other: 'Autre',
-}
-
-function History({ events }: { events: EventRead[] }) {
-  if (events.length === 0) return <p className="text-sm text-ink-3">Aucun événement.</p>
-  return (
-    <ul className="text-[13.5px]" aria-label="Historique de l'article">
-      {[...events].reverse().map((e) => (
-        <li key={e.id} className="grid grid-cols-[150px_100px_1fr] gap-3 border-t border-line-soft py-2.5 first:border-t-0">
-          <span className="text-ink-3 tabular-nums">{e.changedAt.replace('T', ' ').slice(0, 16)}</span>
-          <span className="font-medium">{EVENT_LABELS[e.kind] ?? e.kind}</span>
-          <span className="text-ink-2">
-            {e.kind === 'status' && e.fromStatus && e.toStatus
-              ? `${ITEM_STATUS_LABELS[e.fromStatus as keyof typeof ITEM_STATUS_LABELS] ?? e.fromStatus} → ${ITEM_STATUS_LABELS[e.toStatus as keyof typeof ITEM_STATUS_LABELS] ?? e.toStatus}`
-              : e.kind === 'price' && e.newValue
-                ? 'Prix, remise ou devise modifiés'
-                : e.kind === 'created' && e.note
-                  ? e.note
-                  : ''}
-            {e.note && e.kind !== 'created' ? ` — ${e.note}` : ''}
-          </span>
-        </li>
-      ))}
-    </ul>
   )
 }

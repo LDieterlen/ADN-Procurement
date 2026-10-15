@@ -31,7 +31,7 @@ import { useToast } from '../../components/ui/Toast'
 import { BudgetStrip } from './BudgetStrip'
 
 const AXES: SummaryAxis[] = ['location', 'zone', 'family', 'type', 'supplier']
-const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
+const ALL = { q: '', includeArchived: true, limit: 1000, offset: 0 } // every supplier, archived ones too: names of existing articles
 const ALERT_TEXT = { none: 'font-medium text-ok', warning: 'font-medium text-warn', over: 'font-medium text-danger' } as const
 
 export function BudgetPage() {
@@ -138,14 +138,17 @@ export function BudgetPage() {
             (() => {
               const data = summary.data
               const rows = data.byStatus.filter((r) => r.status !== 'cancelled')
-              const total = rows.reduce((sum, r) => sum + r.amountCents, 0)
               return (
                 <>
                   <div className="flex h-7 gap-0.5 overflow-hidden rounded-[5px]" aria-hidden="true">
                     {rows.map((r) => (
                       <div
                         key={r.status}
-                        style={{ ...pillStyle(r.status as ItemStatus), flex: `${Math.max(r.amountCents, total * 0.01, 1)} 1 0%`, boxShadow: 'none' }}
+                        style={{
+                          ...pillStyle(r.status as ItemStatus),
+                          flex: `${Math.max(r.shareBp, 100)} 1 0%` /* the server's share; 1 % minimum to stay visible */,
+                          boxShadow: 'none',
+                        }}
                         title={ITEM_STATUS_LABELS[r.status as ItemStatus] ?? r.status}
                       />
                     ))}
@@ -186,7 +189,7 @@ export function BudgetPage() {
                 <select
                   value={filters.zone ?? ''}
                   onChange={(e) => setFilters({ ...filters, zone: e.target.value || null })}
-                  className="control h-8 text-[13px]"
+                  className="control control-sm"
                   aria-label="Filtrer par zone"
                 >
                   <option value="">Toutes</option>
@@ -202,15 +205,17 @@ export function BudgetPage() {
                 <select
                   value={filters.supplierId ?? ''}
                   onChange={(e) => setFilters({ ...filters, supplierId: e.target.value ? Number(e.target.value) : null })}
-                  className="control h-8 text-[13px]"
+                  className="control control-sm"
                   aria-label="Filtrer par fournisseur"
                 >
                   <option value="">Tous</option>
-                  {(suppliers.data?.items ?? []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
+                  {(suppliers.data?.items ?? [])
+                    .filter((s) => s.archivedAt === null)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
                 </select>
               </label>
               <label className="flex items-center gap-1.5 text-[13px] text-ink-2">
@@ -218,7 +223,7 @@ export function BudgetPage() {
                 <select
                   value={filters.family ?? ''}
                   onChange={(e) => setFilters({ ...filters, family: e.target.value || null })}
-                  className="control h-8 text-[13px]"
+                  className="control control-sm"
                   aria-label="Filtrer par famille"
                 >
                   <option value="">Toutes</option>
@@ -272,7 +277,7 @@ export function BudgetPage() {
                         inputMode="decimal"
                         placeholder="—"
                         aria-label={`Prévisionnel ${row.label}`}
-                        className="control h-8 w-[130px] text-right tabular-nums"
+                        className="control control-sm w-[130px] text-right tabular-nums"
                         onBlur={(event) => {
                           const cents = textToCents(event.target.value)
                           if (cents !== undefined && cents !== (row.budgetCents ?? null)) void setEnvelope(row, event.target.value)

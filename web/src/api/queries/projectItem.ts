@@ -9,15 +9,11 @@ export type ProjectItemRead = components['schemas']['ProjectItemRead']
 export type ProjectItemCreate = components['schemas']['ProjectItemCreate']
 export type ProjectItemUpdate = components['schemas']['ProjectItemUpdate']
 export type PlacementRead = components['schemas']['PlacementRead']
-export type PlacementCreate = components['schemas']['PlacementCreate']
-export type PlacementUpdate = components['schemas']['PlacementUpdate']
 export type StatusChange = components['schemas']['StatusChange']
 export type EventRead = components['schemas']['EventRead']
 export type ItemFileAttach = components['schemas']['ItemFileAttach']
-export type ItemFileUpdate = components['schemas']['ItemFileUpdate']
 export type ItemFileRead = components['schemas']['ItemFileRead']
 export type ItemStatus = ProjectItemRead['status']
-export type ItemKind = ProjectItemRead['kind']
 
 export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   to_quote: 'À chiffrer',
@@ -29,8 +25,6 @@ export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   cancelled: 'Annulé',
 }
 export const ITEM_STATUSES = Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]
-/** Statuses shown as a filled pill (the client has committed). */
-export const ENGAGED_STATUSES: ItemStatus[] = ['approved', 'deposit', 'purchased']
 
 export type ItemFilters = { status: ItemStatus | null; supplierId: number | null; q: string }
 
@@ -92,20 +86,17 @@ export function useCreateItem() {
   })
 }
 
-export function useUpdateItem() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ProjectItemUpdate }) =>
-      call(api.PATCH('/api/v1/project-items/{item_id}', { params: { path: { item_id: id } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
 export function useDeleteItem() {
+  const queryClient = useQueryClient()
   const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: (id: number) => call(api.DELETE('/api/v1/project-items/{item_id}', { params: { path: { item_id: id } } })).then(() => undefined),
-    onSuccess: invalidate,
+    onSuccess: (_result, id) => {
+      // The deleted article is forgotten, never fetched again (a 404, and Back would show it).
+      queryClient.removeQueries({ queryKey: itemKeys.one(id) })
+      queryClient.removeQueries({ queryKey: itemKeys.events(id) })
+      invalidate()
+    },
   })
 }
 
@@ -113,39 +104,17 @@ export type ItemSave = components['schemas']['ItemSave']
 
 /** « Enregistrer » on the article page: every pending change at once, all or nothing. */
 export function useSaveItem() {
+  const queryClient = useQueryClient()
   const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: ItemSave }) =>
       call(api.POST('/api/v1/project-items/{item_id}/save', { params: { path: { item_id: id } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-/** An existing article of the project becomes an option of `baseId` (ADR-0021). */
-export function useAttachOption() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ baseId, itemId }: { baseId: number; itemId: number }) =>
-      call(api.POST('/api/v1/project-items/{item_id}/options', { params: { path: { item_id: baseId } }, body: { projectItemId: itemId } })),
-    onSuccess: invalidate,
-  })
-}
-
-/** The option becomes an independent article, unassigned (ADR-0021). */
-export function useDetachOption() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: (optionId: number) => call(api.POST('/api/v1/project-items/{item_id}/detach', { params: { path: { item_id: optionId } } })),
-    onSuccess: invalidate,
-  })
-}
-
-/** The option takes its base's place; returns the option, now the base (ADR-0021). */
-export function useRetainOption() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: (optionId: number) => call(api.POST('/api/v1/project-items/{item_id}/retain', { params: { path: { item_id: optionId } } })),
-    onSuccess: invalidate,
+    onSuccess: (saved) => {
+      // The saved article at once in the cache: the page compares its draft with it, so nothing
+      // looks pending while the refetch runs (no false « unsaved changes »).
+      queryClient.setQueryData(itemKeys.one(saved.id), saved)
+      invalidate()
+    },
   })
 }
 
@@ -158,55 +127,11 @@ export function useChangeItemStatus() {
   })
 }
 
-export function useAddPlacement() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ itemId, data }: { itemId: number; data: PlacementCreate }) =>
-      call(api.POST('/api/v1/project-items/{item_id}/placements', { params: { path: { item_id: itemId } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-export function useUpdatePlacement() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: PlacementUpdate }) =>
-      call(api.PATCH('/api/v1/placements/{placement_id}', { params: { path: { placement_id: id } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-export function useDeletePlacement() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: (id: number) => call(api.DELETE('/api/v1/placements/{placement_id}', { params: { path: { placement_id: id } } })),
-    onSuccess: invalidate,
-  })
-}
-
 export function useAttachItemFile() {
   const invalidate = useInvalidateItems()
   return useMutation({
     mutationFn: ({ itemId, data }: { itemId: number; data: ItemFileAttach }) =>
       call(api.POST('/api/v1/project-items/{item_id}/files', { params: { path: { item_id: itemId } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-export function useUpdateItemFile() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ itemId, fileId, data }: { itemId: number; fileId: number; data: ItemFileUpdate }) =>
-      call(api.PATCH('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } }, body: data })),
-    onSuccess: invalidate,
-  })
-}
-
-export function useDetachItemFile() {
-  const invalidate = useInvalidateItems()
-  return useMutation({
-    mutationFn: ({ itemId, fileId }: { itemId: number; fileId: number }) =>
-      call(api.DELETE('/api/v1/project-items/{item_id}/files/{file_id}', { params: { path: { item_id: itemId, file_id: fileId } } })),
     onSuccess: invalidate,
   })
 }

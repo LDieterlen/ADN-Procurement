@@ -7,7 +7,6 @@ import { call } from './client'
 export type SupplierRead = components['schemas']['SupplierRead']
 export type SupplierCreate = components['schemas']['SupplierCreate']
 export type SupplierUpdate = components['schemas']['SupplierUpdate']
-export type SupplierPage = components['schemas']['Page_SupplierRead_']
 
 export type ListParams = { q: string; includeArchived: boolean; limit: number; offset: number; specialty?: string | null }
 

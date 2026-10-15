@@ -7,7 +7,7 @@ export type DialogAction = { label: string; onClick: () => void; variant?: 'prim
 export function ConfirmDialog({ open, title, children, actions }: { open: boolean; title: string; children?: ReactNode; actions: DialogAction[] }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,30,35,.35)] px-4" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim px-4" role="presentation">
       <div
         role="dialog"
         aria-modal="true"

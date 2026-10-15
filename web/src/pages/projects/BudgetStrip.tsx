@@ -55,7 +55,7 @@ export function BudgetStrip({ projectId, readOnly }: { projectId: number; readOn
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="control h-8 w-32 text-right"
+                className="control control-sm w-32 text-right"
                 inputMode="decimal"
                 aria-label="Budget global"
                 autoFocus

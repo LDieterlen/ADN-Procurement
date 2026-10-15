@@ -1,7 +1,7 @@
 // In-memory stand-in for the FFE API, installed on globalThis.fetch for component tests (D5.10).
 // It mirrors the server rules the UI reacts to (ADR-0013): 422 by field, 409 duplicate/archived,
-// 404, archive, catalogue pagination `{items, total}`, item codes `<LOC>-<TYPE>-NN`, the free
-// article joining the catalogue, the summary computed with the integer formulas of money.py.
+// 404, archive, directory pagination `{items, total}`, item codes `<LOC>-<TYPE>-NN` per placement,
+// options, « Enregistrer » (`/save`), the summary computed with the integer formulas of money.py.
 import type { components } from '../../src/api/schema.d.ts'
 
 type ClientRead = components['schemas']['ClientRead']

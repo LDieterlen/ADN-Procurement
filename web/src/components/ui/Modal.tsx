@@ -6,7 +6,7 @@ import { Button } from './Button'
 export function Modal({ open, title, onClose, children, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-[rgba(27,30,35,.35)] py-10" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim py-10" role="presentation">
       <div
         role="dialog"
         aria-modal="true"

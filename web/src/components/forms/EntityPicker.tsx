@@ -1,6 +1,9 @@
 // Picks one entity id (or null) from a loaded list. Short lists: a native select. Long lists
 // (FILTER_FROM and more): one search box that opens a filtered list — type, pick, done.
 import { useEffect, useId, useRef, useState } from 'react'
+import { fold } from '../../lib/text'
+import { Button } from '../ui/Button'
+import { useFloatingPanel } from '../ui/useFloatingPanel'
 import { useController, useFormContext } from 'react-hook-form'
 import { Field, controlClass, useFieldError, useFieldId } from './Field'
 
@@ -8,8 +11,6 @@ export type PickerOption = { id: number; label: string; hint?: string }
 
 const FILTER_FROM = 30
 const MAX_SHOWN = 40
-
-const fold = (text: string) => text.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export function EntityPicker({
   name,
@@ -35,14 +36,9 @@ export function EntityPicker({
   const fieldId = useFieldId(name)
   const value = field.value as number | null | undefined
   const createButton = onCreate && (
-    <button
-      type="button"
-      onClick={onCreate}
-      className="whitespace-nowrap rounded border border-line-strong px-2 py-1 text-xs hover:bg-track"
-      aria-label={`Nouveau : ${label.toLowerCase()}`}
-    >
+    <Button size="xs" onClick={onCreate} className="whitespace-nowrap" aria-label={`Nouveau : ${label.toLowerCase()}`}>
       + Nouveau
-    </button>
+    </Button>
   )
   return (
     <Field name={name} label={label} hint={hint}>
@@ -62,7 +58,7 @@ export function EntityPicker({
             id={fieldId}
             value={value ?? ''}
             aria-invalid={error ? true : undefined}
-            className={`${controlClass} w-full min-w-0 flex-1 bg-white`}
+            className={`${controlClass} w-full min-w-0 flex-1`}
             onChange={(event) => field.onChange(event.target.value === '' ? null : Number(event.target.value))}
             onBlur={field.onBlur}
           >
@@ -103,10 +99,14 @@ function Combobox({
 }) {
   const selected = options.find((o) => o.id === value) ?? null
   const [query, setQuery] = useState(selected?.label ?? '')
-  const [open, setOpen] = useState(false)
+  // The list is drawn above the page (useFloatingPanel): the form's card never cuts it.
+  const panel = useFloatingPanel({ maxHeight: 256 })
+  const open = panel.open
+  const input = useRef<HTMLInputElement>(null)
+  const setOpen = (value: boolean) => (value ? input.current && !open && panel.openFrom(input.current) : panel.close())
   const [active, setActive] = useState(0)
   const listId = useId()
-  const root = useRef<HTMLDivElement>(null)
+  const root = panel.root
 
   // The chosen name follows the value when it changes from outside (reset, « + Nouveau », suggestion).
   useEffect(() => {
@@ -141,6 +141,7 @@ function Combobox({
       }}
     >
       <input
+        ref={input}
         id={id}
         type="text"
         role="combobox"
@@ -151,7 +152,7 @@ function Combobox({
         autoComplete="off"
         value={query}
         placeholder={required ? 'Rechercher et choisir…' : 'Rechercher… (vide = aucun)'}
-        className={`${controlClass} w-full min-w-0 bg-white pr-7`}
+        className={`${controlClass} w-full min-w-0 pr-7`}
         onFocus={(event) => {
           setOpen(true)
           event.currentTarget.select()
@@ -194,7 +195,8 @@ function Combobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-line-strong bg-white py-1 text-sm shadow-lg"
+          style={panel.style}
+          className="z-50 overflow-auto rounded-lg border border-line-strong bg-surface py-1 text-sm shadow-lg"
         >
           {shown.length === 0 && <li className="px-3 py-1.5 text-ink-3">Aucun résultat.</li>}
           {shown.map((option, index) => (
@@ -202,7 +204,7 @@ function Combobox({
               key={option.id}
               role="option"
               aria-selected={option.id === value}
-              className={`cursor-pointer px-3 py-1.5 ${index === active ? 'bg-track' : ''} ${option.id === value ? 'font-medium' : ''}`}
+              className={`cursor-pointer px-3 py-1.5 ${index === active ? 'bg-sunken' : ''} ${option.id === value ? 'font-medium' : ''}`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setActive(index)}
               onClick={() => choose(option)}

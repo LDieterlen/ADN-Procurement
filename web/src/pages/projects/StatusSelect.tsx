@@ -37,8 +37,9 @@ export function StatusSelect({
   }
 
   return (
-    <>
-      <span className={`relative inline-flex ${className}`} onClick={(event) => event.stopPropagation()}>
+    // Clicks stay here, the cancel dialog's included: in the project list the row behind opens the article.
+    <span className="contents" onClick={(event) => event.stopPropagation()}>
+      <span className={`relative inline-flex ${className}`}>
         <span
           className="inline-flex h-6 items-center gap-1.5 rounded-[5px] px-[9px] text-[12.5px] font-medium whitespace-nowrap"
           style={pillStyle(status)}
@@ -91,6 +92,6 @@ export function StatusSelect({
           </Button>
         </div>
       </Modal>
-    </>
+    </span>
   )
 }

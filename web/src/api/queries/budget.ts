@@ -7,7 +7,6 @@ import { call } from './client'
 
 export type BudgetLineRead = components['schemas']['BudgetLineRead']
 export type BudgetLineIn = components['schemas']['BudgetLineIn']
-export type BudgetScope = BudgetLineIn['scope']
 export type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 export type LineAmountsRead = components['schemas']['LineAmountsRead']
 export type SummaryRowRead = components['schemas']['SummaryRowRead']

@@ -9,7 +9,7 @@ const STYLES: Record<Variant, string> = {
   danger: 'text-danger hover:bg-sunken disabled:text-ink-3',
   ghost: 'text-ink-2 hover:bg-sunken hover:text-ink disabled:text-ink-3',
 }
-const SIZES: Record<Size, string> = { md: 'h-9 px-3.5', sm: 'h-[34px] px-3', xs: 'h-8 px-2.5 text-[13px]' }
+const SIZES: Record<Size, string> = { md: 'h-9 px-3.5', sm: 'h-8 px-3', xs: 'h-8 px-2.5 text-[13px]' }
 
 /** The classes of a button, also for links that look like one (download, navigation). */
 export function buttonClass(variant: Variant = 'secondary', size: Size = 'md', className = ''): string {

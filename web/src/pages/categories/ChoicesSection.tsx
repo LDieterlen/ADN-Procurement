@@ -56,7 +56,7 @@ export function ChoicesSection({ list, includeArchived }: { list: ChoiceList; in
             onChange={(e) => setName(e.target.value)}
             placeholder={`Nouvelle valeur — ${HINTS[list]}`}
             aria-label={`Nouvelle valeur : ${title}`}
-            className="control h-8 flex-1 bg-white"
+            className="control control-sm flex-1 bg-surface"
           />
           <Button type="submit" variant="primary" size="xs" disabled={create.isPending || !name.trim()}>
             Ajouter
@@ -83,7 +83,7 @@ function ChoiceName({ choice, onError }: { choice: ChoiceRead; onError: (error: 
           })
       }}
       aria-label={`Nom de ${choice.name}`}
-      className="control h-8 w-full max-w-md font-medium disabled:bg-sunken disabled:text-ink-3"
+      className="control control-sm w-full max-w-md font-medium disabled:bg-sunken disabled:text-ink-3"
     />
   )
 }

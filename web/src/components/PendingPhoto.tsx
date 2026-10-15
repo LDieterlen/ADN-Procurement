@@ -1,5 +1,5 @@
-// A photo chosen before the record exists (ADR-0014): read from a page, taken from the catalogue
-// product, or dropped here. It is attached by the page once the article or product is created.
+// A photo chosen before the article exists (ADR-0014): read from a page or dropped here. It is
+// attached by the page once the article is created.
 import { useRef } from 'react'
 import { isApiError } from '../api/errors'
 import { fileContentUrl, useUploadFile, type FileRead } from '../api/queries/file'

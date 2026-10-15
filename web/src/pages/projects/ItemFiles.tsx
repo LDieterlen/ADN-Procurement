@@ -11,43 +11,52 @@ type FileKind = ItemFileRead['kind']
 const KIND_LABELS: Record<FileKind, string> = { image: 'Photo', finish: 'Finition', drawing: 'Plan', other: 'Autre' }
 const KIND_CHOICES: FileKind[] = ['image', 'finish', 'drawing']
 
-export function ItemFiles({ files, onChange, readOnly }: { files: ItemFileRead[]; onChange: (files: ItemFileRead[]) => void; readOnly: boolean }) {
+export function ItemFiles({
+  files,
+  onChange,
+  readOnly,
+}: {
+  files: ItemFileRead[]
+  /** Receives an update of the latest list: an upload that finishes later keeps the other changes. */
+  onChange: (update: (current: ItemFileRead[]) => ItemFileRead[]) => void
+  readOnly: boolean
+}) {
   const upload = useUploadFile()
   const toast = useToast()
   const photoInput = useRef<HTMLInputElement>(null)
   const drawingInput = useRef<HTMLInputElement>(null)
 
-  async function add(chosen: FileList | null, kind: FileKind) {
-    if (!chosen) return
-    let next = files
-    for (const file of Array.from(chosen)) {
+  async function add(chosen: File[], kind: FileKind) {
+    for (const file of chosen) {
       try {
         const stored = await upload.mutateAsync(file)
-        if (next.some((f) => f.fileId === stored.id)) continue
-        next = [
-          ...next,
-          {
-            fileId: stored.id,
-            kind,
-            isPrimary: kind === 'image' && !next.some((f) => f.isPrimary),
-            caption: null,
-            sortOrder: next.length,
-            sha256: stored.sha256,
-            ext: stored.ext,
-            mimeType: stored.mimeType,
-            originalName: stored.originalName,
-            sizeBytes: stored.sizeBytes,
-          },
-        ]
+        onChange((current) =>
+          current.some((f) => f.fileId === stored.id)
+            ? current
+            : [
+                ...current,
+                {
+                  fileId: stored.id,
+                  kind,
+                  isPrimary: kind === 'image' && !current.some((f) => f.isPrimary),
+                  caption: null,
+                  sortOrder: current.length,
+                  sha256: stored.sha256,
+                  ext: stored.ext,
+                  mimeType: stored.mimeType,
+                  originalName: stored.originalName,
+                  sizeBytes: stored.sizeBytes,
+                },
+              ],
+        )
       } catch (error) {
         toast.show({ kind: 'error', message: isApiError(error) ? (error.details[0]?.message ?? error.message) : String(error), persistent: true })
       }
     }
-    onChange(next)
   }
   const patch = (fileId: number, change: Partial<ItemFileRead>) =>
-    onChange(
-      files.map((f) => {
+    onChange((current) =>
+      current.map((f) => {
         if (f.fileId === fileId) return { ...f, ...change, isPrimary: (change.isPrimary ?? f.isPrimary) && (change.kind ?? f.kind) === 'image' }
         return change.isPrimary ? { ...f, isPrimary: false } : f
       }),
@@ -86,7 +95,11 @@ export function ItemFiles({ files, onChange, readOnly }: { files: ItemFileRead[]
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               aria-label="Photo à joindre"
-              onChange={(e) => void add(e.target.files, 'image')}
+              onChange={(e) => {
+                const chosen = Array.from(e.target.files ?? []) // copied before the input is emptied
+                void add(chosen, 'image')
+                e.target.value = '' // the same file can be chosen again after a removal
+              }}
             />
             <button
               type="button"
@@ -102,7 +115,11 @@ export function ItemFiles({ files, onChange, readOnly }: { files: ItemFileRead[]
               accept="image/jpeg,image/png,image/webp,application/pdf"
               className="hidden"
               aria-label="Plan à joindre"
-              onChange={(e) => void add(e.target.files, 'drawing')}
+              onChange={(e) => {
+                const chosen = Array.from(e.target.files ?? []) // copied before the input is emptied
+                void add(chosen, 'drawing')
+                e.target.value = ''
+              }}
             />
           </>
         )}
@@ -157,7 +174,7 @@ export function ItemFiles({ files, onChange, readOnly }: { files: ItemFileRead[]
                     type="button"
                     className="text-danger hover:underline"
                     aria-label={`Retirer ${file.originalName}`}
-                    onClick={() => onChange(files.filter((f) => f.fileId !== file.fileId))}
+                    onClick={() => onChange((current) => current.filter((f) => f.fileId !== file.fileId))}
                   >
                     Retirer
                   </button>

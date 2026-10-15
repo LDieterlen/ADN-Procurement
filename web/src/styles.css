@@ -42,6 +42,12 @@
   --color-warn: #7a5216;
   --color-warn-soft: #f6ebd6;
   --color-danger: #a4442f;
+  /* Borders of the soft status pills (accent, warn, ok soft tones). */
+  --color-accent-line: #d3dde8;
+  --color-warn-line: #ebd9b6;
+  --color-ok-line: #c6dacc;
+  --color-muted: #efeeea;
+  --color-scrim: rgba(27, 30, 35, 0.35);
 }
 
 body {
@@ -69,6 +75,11 @@ body {
   font-size: 14px;
   color: var(--color-ink);
   transition: border-color 120ms ease;
+}
+/* The compact size, for filters, editable table cells and card footers (32 px, as Button xs/sm). */
+.control.control-sm {
+  height: 32px;
+  font-size: 13px;
 }
 .control:focus {
   outline: none;

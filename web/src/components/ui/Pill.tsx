@@ -20,21 +20,21 @@ export type PillStatus =
 type Look = { bg: string; ink: string; border?: string; strike?: boolean }
 
 const LOOKS: Record<PillStatus, Look> = {
-  to_quote: { bg: '#FFFFFF', ink: '#5B6068', border: '#CFCCC4' },
-  quoted: { bg: '#E7EDF3', ink: '#2C4560', border: '#D3DDE8' },
-  to_review: { bg: '#F6EBD6', ink: '#7A5216', border: '#EBD9B6' },
-  approved: { bg: '#3D5A7A', ink: '#FFFFFF', border: '#3D5A7A' },
-  deposit: { bg: '#DCE9E0', ink: '#2F5B3E', border: '#C6DACC' },
-  purchased: { bg: '#1B1E23', ink: '#FFFFFF', border: '#1B1E23' },
-  cancelled: { bg: '#EFEEEA', ink: '#8A8F96', border: '#EFEEEA', strike: true },
-  prospect: { bg: '#FFFFFF', ink: '#5B6068', border: '#CFCCC4' },
-  active: { bg: '#E7EDF3', ink: '#2C4560' },
-  delivered: { bg: '#DCE9E0', ink: '#2F5B3E' },
-  closed: { bg: '#EFEEEA', ink: '#5B6068' },
-  indice: { bg: '#1B1E23', ink: '#FFFFFF', border: '#1B1E23' },
-  none: { bg: '#FFFFFF', ink: '#5B6068', border: '#CFCCC4' },
-  warn: { bg: '#F6EBD6', ink: '#7A5216', border: '#EBD9B6' },
-  danger: { bg: '#FFFFFF', ink: '#A4442F', border: '#CFCCC4' },
+  to_quote: { bg: 'var(--color-surface)', ink: 'var(--color-ink-2)', border: 'var(--color-line-strong)' },
+  quoted: { bg: 'var(--color-accent-soft)', ink: 'var(--color-accent-ink)', border: 'var(--color-accent-line)' },
+  to_review: { bg: 'var(--color-warn-soft)', ink: 'var(--color-warn)', border: 'var(--color-warn-line)' },
+  approved: { bg: 'var(--color-accent)', ink: 'var(--color-surface)', border: 'var(--color-accent)' },
+  deposit: { bg: 'var(--color-ok-soft)', ink: 'var(--color-ok)', border: 'var(--color-ok-line)' },
+  purchased: { bg: 'var(--color-ink)', ink: 'var(--color-surface)', border: 'var(--color-ink)' },
+  cancelled: { bg: 'var(--color-muted)', ink: 'var(--color-ink-3)', border: 'var(--color-muted)', strike: true },
+  prospect: { bg: 'var(--color-surface)', ink: 'var(--color-ink-2)', border: 'var(--color-line-strong)' },
+  active: { bg: 'var(--color-accent-soft)', ink: 'var(--color-accent-ink)' },
+  delivered: { bg: 'var(--color-ok-soft)', ink: 'var(--color-ok)' },
+  closed: { bg: 'var(--color-muted)', ink: 'var(--color-ink-2)' },
+  indice: { bg: 'var(--color-ink)', ink: 'var(--color-surface)', border: 'var(--color-ink)' },
+  none: { bg: 'var(--color-surface)', ink: 'var(--color-ink-2)', border: 'var(--color-line-strong)' },
+  warn: { bg: 'var(--color-warn-soft)', ink: 'var(--color-warn)', border: 'var(--color-warn-line)' },
+  danger: { bg: 'var(--color-surface)', ink: 'var(--color-danger)', border: 'var(--color-line-strong)' },
 }
 
 export function pillStyle(status: PillStatus): React.CSSProperties {

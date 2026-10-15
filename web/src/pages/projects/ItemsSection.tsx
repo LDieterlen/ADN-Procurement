@@ -18,7 +18,7 @@ import { Pill } from '../../components/ui/Pill'
 import { buttonClass } from '../../components/ui/Button'
 import { StatusSelect } from './StatusSelect'
 
-const ALL = { q: '', includeArchived: false, limit: 200, offset: 0 }
+const ALL = { q: '', includeArchived: true, limit: 1000, offset: 0 } // every supplier, archived ones too: names of existing articles
 
 // An option (ADR-0021) is shown right under its base, on each of the base's placements, with the
 // code of that placement followed by its letter; its amount is indicative (in brackets).
@@ -37,6 +37,11 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
   const suppliers = useSuppliers(ALL)
   const categories = useCategories(false)
   const navigate = useNavigate()
+  // Group totals come from the summary: a location's Prescrit, « Non affecté » (key ''), the fee lines.
+  const subtotalOf = (key: string) =>
+    key === 'fees'
+      ? summary.data?.byType.find((r) => r.key === 'fee')?.specifiedCents
+      : summary.data?.byLocation.find((r) => r.key === (key === 'none' ? '' : key))?.specifiedCents
   const amountsById = useMemo(() => new Map((summary.data?.lines ?? []).map((l) => [l.projectItemId, l])), [summary.data])
   const supplierName = (id: number | null) => suppliers.data?.items.find((s) => s.id === id)?.name ?? ''
   const typeName = (id: number | null) => categories.data?.find((c) => c.id === id)?.name ?? ''
@@ -58,20 +63,19 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
         .sort((a, b) => (a.optionLetter ?? '').localeCompare(b.optionLetter ?? ''))
         .map((o) => ({ ...toRow(o, placement), code: `${placement.code}-${o.optionLetter ?? ''}`, option: true })),
     ]
-    const enabled = locations.filter((l) => l.archivedAt === null)
+    // Active locations, and an archived one while it still holds placements (never hidden under « Non affecté »).
+    const enabled = locations.filter((l) => l.archivedAt === null || list.some((item) => item.placements.some((p) => p.locationId === l.id)))
     const result: Group[] = enabled.map((location) => ({
       key: String(location.id),
       code: location.code,
-      title: location.name,
+      title: location.archivedAt === null ? location.name : `${location.name} (archivée)`,
       detail: [location.zone, location.level].filter(Boolean).join(' · '),
       zone: location.zone,
       level: location.level,
       multiplier: location.multiplier,
       rows: list.flatMap((item) => item.placements.filter((p) => p.locationId === location.id).flatMap((p) => withOptions(item, p))),
     }))
-    const unassigned = list.flatMap((item) =>
-      item.placements.filter((p) => p.locationId === null || !enabled.some((l) => l.id === p.locationId)).flatMap((p) => withOptions(item, p)),
-    )
+    const unassigned = list.flatMap((item) => item.placements.filter((p) => p.locationId === null).flatMap((p) => withOptions(item, p)))
     if (unassigned.length) result.push({ key: 'none', code: '', title: 'Non affecté', detail: '', zone: null, level: null, multiplier: 1, rows: unassigned })
     const fees = list.filter((item) => item.kind === 'fee').map((item) => toRow(item, null))
     if (fees.length) result.push({ key: 'fees', code: '', title: 'Frais', detail: 'livraison, emballage…', zone: null, level: null, multiplier: 1, rows: fees })
@@ -119,6 +123,11 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
       }
     >
       {items.isPending && <p className="px-5 py-4 text-sm text-ink-3">Chargement…</p>}
+      {items.isError && (
+        <p className="px-5 py-6 text-sm text-ink-2">
+          <span className="font-medium text-danger">Impossible de charger les articles</span> · {items.error.message}
+        </p>
+      )}
       {items.data && count === 0 && <p className="px-5 py-6 text-sm text-ink-2">Aucun article. Ajouter le premier avec « + Ajouter un article ».</p>}
       {count > 0 && (
         <div className="grid grid-cols-2 items-end gap-3 border-b border-line bg-sunken px-5 py-3 text-[13px] md:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
@@ -142,7 +151,7 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
               onChange={(event) => setCode(event.target.value)}
               placeholder="LUD, AS-02…"
               aria-label="Code article"
-              className="control h-8 w-full bg-white text-[13px]"
+              className="control control-sm w-full bg-surface"
             />
           </FilterField>
           <button
@@ -193,6 +202,7 @@ export function ItemsSection({ projectId, locations, readOnly }: { projectId: nu
                 key={group.key}
                 group={group}
                 readOnly={readOnly}
+                subtotal={needle ? undefined : subtotalOf(group.key)} // a location's total, meaningless once filtered by code
                 supplierName={supplierName}
                 typeName={typeName}
                 onOpen={(id) => navigate(`/projects/${projectId}/items/${id}`)}
@@ -212,7 +222,7 @@ function distinct(values: (string | null)[]): string[] {
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="mb-1 text-[12px] font-medium text-ink-2">{label}</div>
+      <div className="mb-1 text-xs font-medium text-ink-2">{label}</div>
       {children}
     </div>
   )
@@ -234,14 +244,14 @@ function PhotoThumb({ src, alt }: { src: string; alt: string }) {
       }}
       onMouseLeave={() => setAt(null)}
     >
-      <img src={src} alt={alt} className="h-full w-full rounded-md border border-line bg-white object-contain p-0.5" />
+      <img src={src} alt={alt} className="h-full w-full rounded-md border border-line bg-surface object-contain p-0.5" />
       {at && (
         <img
           src={src}
           alt=""
           aria-hidden="true"
           style={{ top: at.top, left: at.left, width: PREVIEW, height: PREVIEW }}
-          className="pointer-events-none fixed z-50 max-w-none rounded-lg border border-line bg-white object-contain p-1.5 shadow-xl"
+          className="pointer-events-none fixed z-50 max-w-none rounded-lg border border-line bg-surface object-contain p-1.5 shadow-xl"
         />
       )}
     </span>
@@ -250,22 +260,20 @@ function PhotoThumb({ src, alt }: { src: string; alt: string }) {
 
 function GroupRows({
   group,
+  subtotal,
   readOnly,
   supplierName,
   typeName,
   onOpen,
 }: {
   group: Group
+  /** The group's total from the server summary (the front never adds amounts). */
+  subtotal: number | undefined
   readOnly: boolean
   supplierName: (id: number | null) => string
   typeName: (id: number | null) => string
   onOpen: (id: number) => void
 }) {
-  const subtotal = group.rows.reduce<number | null>((sum, { item, placement, amounts, option }) => {
-    if (option || item.status === 'cancelled' || !amounts) return sum
-    const share = placement ? amounts.placements.find((p) => p.placementId === placement.id)?.totalHtCents : amounts.totalHtCents
-    return share === undefined ? sum : (sum ?? 0) + share
-  }, null)
   return (
     <>
       <tr className="border-t border-line bg-sunken">
@@ -278,7 +286,7 @@ function GroupRows({
           )}
         </td>
         <td colSpan={3} className="py-2.5 pr-5 text-right text-[13px] text-ink-2 tabular-nums">
-          {group.rows.length === 0 ? 'Aucun article' : subtotal !== null ? `${centsToText(subtotal)} €` : ''}
+          {group.rows.length === 0 ? 'Aucun article' : subtotal !== undefined ? `${centsToText(subtotal)} €` : ''}
         </td>
       </tr>
       {group.rows.map(({ item, placement, amounts, code, option }) => {

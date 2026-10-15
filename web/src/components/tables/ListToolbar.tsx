@@ -20,7 +20,7 @@ export function ListToolbar({
           onChange={(event) => search.onChange(event.target.value)}
           placeholder={search.placeholder}
           aria-label="Rechercher"
-          className="control h-9 w-72"
+          className="control w-72"
         />
       )}
       {filters}
