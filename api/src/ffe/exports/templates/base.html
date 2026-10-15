@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <title>{{ title }}</title>
 <style>
-  /* Design « Fiche déco 1b Catalogue » (références/Fiche deco, 2026-10-13) : palette chaude, Playfair pour
-     les titres, IBM Plex Sans pour le texte, IBM Plex Mono pour les codes et les libellés. Unités en px :
+  /* Design « Fiche déco 1b Catalogue », v2 (references/Fiche deco/Spec fiche 1b.md, 2026-10-15) : palette
+     chaude, Newsreader pour les titres, IBM Plex Sans pour le texte, IBM Plex Mono pour les codes et les libellés. Unités en px :
      1 px = 1/96 in, la page A4 fait 794 × 1123 px, comme la maquette. */
-  @font-face { font-family: "Playfair Display"; src: url("{{ assets_url }}/PlayfairDisplay[wght].ttf"); font-weight: 400 900; }
+  @font-face { font-family: "Newsreader"; src: url("{{ assets_url }}/Newsreader[opsz,wght].ttf"); font-weight: 200 800; }
   @font-face { font-family: "IBM Plex Sans"; src: url("{{ assets_url }}/IBMPlexSans[wdth,wght].ttf"); font-weight: 100 700; }
   @font-face { font-family: "IBM Plex Mono"; src: url("{{ assets_url }}/IBMPlexMono-Regular.ttf"); font-weight: 400; }
   @font-face { font-family: "IBM Plex Mono"; src: url("{{ assets_url }}/IBMPlexMono-Medium.ttf"); font-weight: 500; }
@@ -21,7 +21,7 @@
   html { background: #fbfaf7; }
   body { font-family: "IBM Plex Sans", "DejaVu Sans", sans-serif; font-size: 13px; line-height: 1.4; color: #1c1a17; margin: 0; }
   a { color: #6d4a3a; text-decoration: none; }
-  h1 { margin: 0; font: 500 36px/1.1 "Playfair Display", serif; letter-spacing: -0.01em; }
+  h1 { margin: 0; font: 500 36px/1.1 "Newsreader", serif; letter-spacing: -0.01em; }
   .mono { font-family: "IBM Plex Mono", monospace; }
   .label { font: 400 10px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6d4a3a; }
   .muted { color: #6b645c; }
@@ -59,48 +59,52 @@
   .pill { display: inline-block; border: 1px solid #1c1a17; border-radius: 10px; padding: 1px 8px; font-size: 10.5px; white-space: nowrap; }
   .pill.filled { background: #1c1a17; color: #fbfaf7; }
 
-  /* Spec sheet (1b) — tables, not CSS grid: WeasyPrint lays tables out reliably */
-  .hero { margin-top: 28px; border-collapse: separate; border-spacing: 0; }
-  .hero td { padding: 0; }
-  .hero td.visual { width: 335px; padding-right: 36px; }
-  .photo-box { width: 335px; height: 335px; background: #ece8e1; border: 1px solid #e3ded6; text-align: center; font: 400 11px "IBM Plex Mono", monospace; color: #6b645c; line-height: 335px; }
-  .photo-box.has-photo { background: #fff; line-height: normal; }
-  .photo-box img { width: 335px; height: 335px; object-fit: contain; display: block; }
-  .drawing { margin-top: 12px; text-align: center; }
-  .drawing img { max-width: 335px; max-height: 120px; object-fit: contain; }
-  .hero td.text { height: 335px; vertical-align: top; }
-  .hero h1.long { font-size: 26px; }  /* long names: the title stays within three lines */
-  .hero .meta { margin-top: 12px; font-size: 13px; color: #6b645c; }
-  .tiles { margin-top: 0; border-collapse: separate; border-spacing: 12px 0; margin-left: -12px; width: calc(100% + 24px); }
-  .tiles td.tile { padding: 14px 16px; vertical-align: top; }
-  .tile.dark { background: #2a2420; color: #fbfaf7; }
-  .tile.dark .label { color: #b8a89c; }
-  .tile.line { border: 1px solid #1c1a17; }
-  .tile .big { font: 500 30px/1.1 "Playfair Display", serif; margin-top: 4px; }
-  .tile .value { font-size: 13px; font-weight: 500; margin-top: 8px; }
-  .section-head { margin-top: 36px; padding-bottom: 8px; border-bottom: 1px solid #1c1a17; }
-  .section-head td { padding: 0; }
+  /* Spec sheet (« Fiche 1b » v2) — px boxes, tables and absolute positions (WeasyPrint lays them out
+     reliably, never CSS grid). Content box: 706 × 1047 px; the sheet is a fixed-height box so the
+     image band and the bottom block never move. */
+  .sheet { position: relative; height: 1030px; }
+  .titling { margin-top: 26px; }
+  .titling td { padding: 0; vertical-align: bottom; }
+  .titling td.gap { width: 32px; }
+  .titling td.where-box { width: 230px; }
+  .titling .label { font-size: 11px; }
+  .titling h1 { margin-top: 10px; font: 500 38px/1.08 "Newsreader", serif; letter-spacing: -0.015em; max-height: 124px; overflow: hidden; }
+  .titling h1.long { font-size: 30px; max-height: 98px; }  /* long names: three lines at most */
+  .titling .meta { margin-top: 12px; font-size: 12px; color: #6b645c; }
+  .titling .meta span { margin-right: 18px; }
+  .titling .meta strong { color: #1c1a17; font-weight: 600; }
+  .loc { background: #2a2420; color: #fbfaf7; padding: 16px 18px; }
+  .loc .label { font-size: 9px; color: #b8a89c; }
+  .loc .name { font: 500 30px/1.1 "Newsreader", serif; margin-top: 6px; }
+  .loc .sub { font-size: 12px; color: #e6dcd3; margin-top: 4px; }
+  .band { position: relative; height: 330px; margin-top: 24px; }
+  .band .img { position: absolute; box-sizing: border-box; overflow: hidden; }
+  .band .img.empty { background: repeating-linear-gradient(135deg, #ece8e1 0, #ece8e1 6px, #e3ded6 6px, #e3ded6 12px); }
+  .band .img img { width: 100%; height: 100%; display: block; }  /* fit and background: pdf.band_layout */
+  .band .img.plan { background: #fff; border: 1px solid #e4e0d9; }
+  .band .tag { position: absolute; left: 10px; bottom: 10px; background: #fbfaf7; padding: 3px 7px; font: 400 9px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6b645c; }
+  .usage-note { margin-top: 4px; font-size: 9px; color: #a39b91; text-align: right; }
+  .section-head { margin-top: 26px; padding-bottom: 8px; border-bottom: 1px solid #1c1a17; }
+  .section-head td { padding: 0; vertical-align: bottom; }
   .section-head .aside { font-size: 11px; color: #6b645c; text-align: right; }
   .cells { border-left: 1px solid #e4e0d9; }
-  .cells td { width: 33.33%; padding: 12px 14px; border-right: 1px solid #e4e0d9; border-bottom: 1px solid #e4e0d9; }
+  .cells td { width: 33.33%; padding: 11px 14px; border-right: 1px solid #e4e0d9; border-bottom: 1px solid #e4e0d9; }
   .cells td.wide { width: auto; }
-  .cell .k, .cells .k { font-size: 10px; color: #6b645c; letter-spacing: 0.06em; text-transform: uppercase; }
+  .cells .k { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #6b645c; }
   .cells .v { font-size: 13px; margin-top: 4px; line-height: 1.4; }
-  .cells .v.mono { font: 400 12.5px "IBM Plex Mono", monospace; }
+  .cells .v.mono { font: 400 13px "IBM Plex Mono", monospace; }
+  .cells .v.link { font: 400 12px "IBM Plex Mono", monospace; word-break: break-all; }
   .cells .v.empty { color: #a39b91; }
-  .columns { margin-top: 24px; border-collapse: separate; border-spacing: 24px 0; margin-left: -24px; width: calc(100% + 48px); }
+  .columns { margin-top: 22px; border-collapse: separate; border-spacing: 24px 0; margin-left: -24px; width: calc(100% + 48px); }
   .columns td { padding: 0; vertical-align: top; }
-  .block-head { padding-bottom: 6px; border-bottom: 1px solid #1c1a17; }
+  .block-head { font-size: 10px; padding-bottom: 6px; border-bottom: 1px solid #1c1a17; }
   .block-body { font-size: 12.5px; line-height: 1.7; padding-top: 8px; }
-  .ruled { padding-top: 8px; font-size: 12.5px; }
-  .rule-line { min-height: 27px; line-height: 27px; border-bottom: 1px solid #e4e0d9; }
-  .text-stack { height: 335px; border-collapse: collapse; }
-  .text-stack td { padding: 0; }
-  .text-stack td.top { vertical-align: top; height: 250px; }
-  .text-stack td.foot { vertical-align: bottom; height: 1px; }
-  .bottom { margin-top: 24px; }
-  .bottom td { vertical-align: bottom; }
-  .sign { height: 56px; border: 1px dashed #c9c2b8; margin-top: 8px; }
+  .ruled { height: 84px; overflow: hidden; font-size: 12.5px; }
+  .rule-line { height: 28px; line-height: 28px; border-bottom: 1px solid #e4e0d9; overflow: hidden; }
+  .sheet-foot { position: absolute; left: -24px; bottom: 0; width: 754px; margin: 0; }  /* 706 + the two 24 px spacings */
+  .frame { height: 60px; box-sizing: border-box; margin-top: 8px; padding: 12px 14px 0; font-size: 12.5px; line-height: 1.5; }
+  .frame.issued { border: 1px solid #e4e0d9; }
+  .frame.sign { border: 1px dashed #c9c2b8; }
 </style>
 </head>
 <body>

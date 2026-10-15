@@ -55,8 +55,25 @@ ITEM_CODE_FEE_ONLY = (
 )
 ITEM_CODE_TAKEN = "Ce code FF&E est déjà utilisé dans le projet."
 ITEM_DELETE_ONLY_NEW = (
-    "Seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon."
+    "Après le premier indice, seul un article « à chiffrer » sans historique se supprime ; "
+    "l'annuler sinon."
 )
+ITEM_HAS_OPTIONS = "Cet article a des options : les supprimer ou en retenir une d'abord."
+OPTION_BASE_INVALID = (
+    "Une option se rattache à un article du même projet qui n'est ni un frais, ni une option."
+)
+OPTION_CANDIDATE_INVALID = (
+    "Seul un article de ce projet, sans options, qui n'est ni un frais ni déjà une option, "
+    "peut devenir une option."
+)
+OPTION_NOT_AN_OPTION = "Cet article n'est pas une option."
+OPTION_HAS_NO_PLACEMENT = "Une option reprend les implantations de son article de base."
+OPTION_ATTACHED_NOTE = "Devenu option {letter}."
+OPTION_RETAINED_NOTE = "Option {letter} retenue à la place de l'article de base."
+OPTION_TYPE_MISMATCH = "Une option est du même type que son article de base."
+OPTION_TYPE_LOCKED = "Une option garde le type de son article de base : changer celui de la base."
+OPTION_DETACHED_NOTE = "Option {letter} détachée : article indépendant, non affecté."
+OPTION_LETTERS_EXHAUSTED = "Plus de lettre libre pour une nouvelle option (Z atteint)."
 PLACEMENT_LOCATION_NOT_IN_PROJECT = "La localisation n'appartient pas à ce projet."
 PLACEMENT_LOCATION_ARCHIVED = "La localisation est archivée."
 PLACEMENT_LOCATION_TAKEN = "L'article est déjà implanté dans cette localisation."
@@ -85,7 +102,7 @@ FILE_TYPE_REFUSED = "Type de fichier refusé : images JPEG, PNG, WebP ou PDF seu
 FILE_EMPTY = "Fichier vide."
 FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
 FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
-FILE_PRIMARY_NOT_IMAGE = "Seule une image peut être la photo principale."
+FILE_PRIMARY_NOT_IMAGE = "Seule une photo peut être la photo principale."
 CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
 SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 

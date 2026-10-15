@@ -93,3 +93,44 @@ def test_a_migration_that_loses_rows_stops_the_start(
     with pytest.raises(StartupError, match="project_item_event") as refused:
         run_startup(v1_settings, clock)
     assert "pre-migrate" in str(refused.value)  # the backup taken just before is named
+
+
+def test_files_of_a_v1_article_survive_the_finish_category(
+    v1_settings: Settings, clock: Clock
+) -> None:
+    """0002 rebuilds `project_item_file` (a value added to its CHECK): every junction is kept."""
+    conn = sqlite3.connect(v1_settings.db_path)
+    now = "2026-10-14T12:00:00Z"
+    conn.execute(
+        "INSERT INTO file (id, sha256, ext, mime_type, size_bytes, original_name, created_at) "
+        "VALUES (1, ?, 'png', 'image/png', 10, 'a.png', ?), (2, ?, 'pdf', 'application/pdf', 10, "
+        "'plan.pdf', ?)",
+        ("a" * 64, now, "b" * 64, now),
+    )
+    conn.execute(
+        "INSERT INTO project_item_file (project_item_id, file_id, kind, is_primary, caption, "
+        "sort_order, created_at, updated_at) VALUES (1, 1, 'image', 1, 'face', 0, ?, ?), "
+        "(1, 2, 'drawing', 0, NULL, 1, ?, ?)",
+        (now, now, now, now),
+    )
+    conn.commit()
+    conn.close()
+    before = _rows(v1_settings.db_path)["project_item_file"]
+    run_startup(v1_settings, clock).close()
+    assert _rows(v1_settings.db_path)["project_item_file"] == before
+    conn = sqlite3.connect(v1_settings.db_path)
+    try:
+        conn.execute(
+            "UPDATE project_item_file SET kind = 'finish', is_primary = 0 WHERE file_id = 1"
+        )
+        conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):  # the CHECK is still there, widened only
+            conn.execute("UPDATE project_item_file SET kind = 'colour' WHERE file_id = 2")
+        sql = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE name = 'project_item_file'"
+        ).fetchone()[0]
+        assert str(sql).rstrip().endswith("STRICT")
+        indexes = {r[1] for r in conn.execute("PRAGMA index_list('project_item_file')")}
+        assert {"ix_project_item_file_file_id", "uq_project_item_file_primary"} <= indexes
+    finally:
+        conn.close()

@@ -2,12 +2,16 @@
 location, photo, supplier contact, never a price, revision letters), listing (amounts, statuses),
 documents kept and listed."""
 
+import base64
 import itertools
 from datetime import timedelta
+from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from conftest import (
@@ -20,8 +24,18 @@ from conftest import (
 )
 from ffe.config import Settings
 from ffe.deps import Clock
-from ffe.exports.pdf import cents_text, count_pages, milli_text, render_html
-from ffe.exports.prescription import list_context, sheets_context
+from ffe.exports.pdf import (
+    BAND_BOXES,
+    ImageTraits,
+    band_layout,
+    cents_text,
+    count_pages,
+    image_traits,
+    milli_text,
+    padded_image,
+    render_html,
+)
+from ffe.exports.prescription import article_rows, list_context, sheets_context
 
 GBP = 1_170_000
 
@@ -121,7 +135,9 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
 def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     world: dict[str, Any], session: Session, settings: Settings, clock: Clock
 ) -> None:
-    context = sheets_context(session, world["project"].id, clock().date(), "A")
+    context = sheets_context(
+        session, world["project"].id, clock().date(), "A", files_dir=settings.files_dir
+    )
     assert context["agency"]["name"] == "Atelier X" and context["indice"] == "A"
     assert [loc["name"] for loc in context["locations"]] == ["Lobby", "Chambre typo A"]
     lobby, room = context["locations"]
@@ -142,6 +158,80 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert "Beat Light Fat</h1>" in html  # the designation as the title
     assert "Beat Light Fat, suspension en laiton" in html  # the name, in the « Nom » cell
     assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # cover, list, three sheets
+
+
+def test_sheet_image_band_takes_photo_then_finish_then_plan_images_only(
+    client: TestClient, world: dict[str, Any], session: Session, settings: Settings, clock: Clock
+) -> None:
+    """Spec « Fiche 1b » v2: one photo, one finish, one plan at most, in that order; a PDF plan is
+    not drawn; without a photo the first image left takes the large box."""
+    url = f"/api/v1/project-items/{world['other']['id']}/files"
+
+    def attach(name: str, data: bytes, mime: str, kind: str) -> None:
+        stored = client.post("/api/v1/files", files={"file": (name, data, mime)}).json()
+        assert client.post(url, json={"fileId": stored["id"], "kind": kind}).status_code == 201
+
+    attach("plan.pdf", b"%PDF-1.4\n" + b"%" * 64, "application/pdf", "drawing")
+    attach("plan.png", PNG_BYTES + b"plan", "image/png", "drawing")
+    attach("bois.png", PNG_BYTES + b"bois", "image/png", "finish")
+
+    def band() -> list[str]:
+        context = sheets_context(
+            session, world["project"].id, clock().date(), files_dir=settings.files_dir
+        )
+        table = next(a for a in context["locations"][0]["articles"] if a["name"] == "Table basse")
+        return [image["label"] for image in table["band"]]
+
+    assert band() == ["Finition", "Plan"]  # no photo: the finish takes the large box
+    attach("table.png", PNG_BYTES + b"table", "image/png", "image")
+    assert band() == ["Photo", "Finition", "Plan"]
+    context = sheets_context(
+        session, world["project"].id, clock().date(), files_dir=settings.files_dir
+    )
+    html = render_html("sheets.html", context)
+    assert html.count('class="img') >= 3 + 2  # three boxes for the table, the photo of Beat Light
+    assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # still one page per sheet
+
+
+def test_band_keeps_the_fixed_grid_cuts_scenes_and_extends_studio_backdrops(
+    tmp_path: Path,
+) -> None:
+    """Spec « Fiche 1b » v2: the boxes never move; a finish or a room fills its box, a studio
+    photo is shown whole with its backdrop stretched to the box, a busy plan whole on white."""
+    studio = tmp_path / "studio.png"  # square product shot: light grey backdrop, dark product
+    shot = Image.new("RGB", (400, 400), (243, 241, 238))
+    shot.paste((90, 60, 40), (150, 120, 250, 300))
+    shot.save(studio)
+    room = tmp_path / "room.png"  # busy edges: a two-tone picture, 3:2
+    picture = Image.new("RGB", (900, 600), (40, 90, 60))
+    picture.paste((200, 120, 80), (0, 0, 450, 600))
+    picture.save(room)
+    square, scene = image_traits(studio), image_traits(room)
+    assert square == ImageTraits(1.0, True, True) and scene == ImageTraits(1.5, False, False)
+
+    (alone,) = band_layout([(square, "image")])  # 1:1 in 706 × 330: whole, backdrop extended
+    assert alone == {"box": (0, 0, 706, 330), "mode": "extend"}
+    photo, finish, plan = band_layout([(scene, "image"), (square, "finish"), (scene, "drawing")])
+    assert [p["box"] for p in (photo, finish, plan)] == BAND_BOXES[3]  # aligned on the margins
+    assert photo["mode"] == finish["mode"] == "cover"  # a room loses its edges, a material too
+    assert plan == {"box": BAND_BOXES[3][2], "mode": "fill", "color": (255, 255, 255)}
+    assert image_traits(tmp_path / "missing.png") == ImageTraits(1.0, False, False)
+
+    # The padded image: the product whole in the middle, the backdrop carried to the edges.
+    uri = padded_image(studio, (706, 330), None)
+    assert uri is not None and uri.startswith("data:image/jpeg;base64,")
+    padded = Image.open(BytesIO(base64.b64decode(uri.split(",", 1)[1]))).convert("RGB")
+    assert padded.size == (1412, 660)
+
+    def rgb(x: int, y: int) -> tuple[int, ...]:
+        value = padded.getpixel((x, y))
+        assert isinstance(value, tuple)
+        return tuple(int(c) for c in value)
+
+    for corner in [(0, 0), (1411, 659), (0, 659)]:  # far from the photo: still its backdrop
+        assert all(abs(a - b) <= 6 for a, b in zip(rgb(*corner), (243, 241, 238), strict=True))
+    assert rgb(706, 400)[0] < 120  # the product, not stretched away
+    assert padded_image(tmp_path / "missing.png", (100, 100), None) is None
 
 
 def test_indice_is_declared_on_the_project_never_by_an_export(
@@ -247,3 +337,25 @@ def test_text_helpers() -> None:
         and cents_text(None) == ""
     )
     assert milli_text(14_000) == "14" and milli_text(12_500) == "12,5"
+
+
+def test_an_option_follows_its_base_in_the_rows_with_its_letter_and_bracketed_amount(
+    client: TestClient, world: dict[str, Any], session: Session
+) -> None:
+    """ADR-0021: one row per base placement, code with the letter, amount indicative."""
+    base_item = world["item"]
+    created = client.post(
+        f"/api/v1/projects/{world['project'].id}/project-items",
+        json={
+            "name": "Variante",
+            "categoryId": base_item["categoryId"],
+            "optionOfId": base_item["id"],
+        },
+    )
+    assert created.status_code == 201, created.text
+    rows = article_rows(session, world["project"].id)
+    codes = [r["item_code"] for r in rows]
+    for placement in base_item["placements"]:
+        assert codes.index(f"{placement['code']}-A") == codes.index(placement["code"]) + 1
+    option_rows = [r for r in rows if r["option"] == "A"]
+    assert option_rows and all(r["total_ht_text"].startswith("(") for r in option_rows)

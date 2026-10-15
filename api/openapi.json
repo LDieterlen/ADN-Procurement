@@ -1376,6 +1376,53 @@
         "title": "FileRead",
         "type": "object"
       },
+      "FileSave": {
+        "description": "One file of the article as it must be after the save (already uploaded by `POST /files`).",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "isPrimary": {
+            "default": false,
+            "title": "Isprimary",
+            "type": "boolean"
+          },
+          "kind": {
+            "default": "image",
+            "enum": [
+              "image",
+              "finish",
+              "drawing",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sortOrder": {
+            "default": 0,
+            "title": "Sortorder",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fileId"
+        ],
+        "title": "FileSave",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1504,6 +1551,7 @@
             "default": "image",
             "enum": [
               "image",
+              "finish",
               "drawing",
               "other"
             ],
@@ -1550,6 +1598,7 @@
           "kind": {
             "enum": [
               "image",
+              "finish",
               "drawing",
               "other"
             ],
@@ -1622,6 +1671,7 @@
               {
                 "enum": [
                   "image",
+                  "finish",
                   "drawing",
                   "other"
                 ],
@@ -1646,6 +1696,84 @@
           }
         },
         "title": "ItemFileUpdate",
+        "type": "object"
+      },
+      "ItemSave": {
+        "description": "« Enregistrer » on the article page: every change at once, one transaction (all or nothing).\nAbsent = unchanged; `placements` and `files` are the full lists wanted.",
+        "properties": {
+          "attachOptions": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Attachoptions",
+            "type": "array"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FileSave"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "optionAction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "retain",
+                  "detach"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionaction"
+          },
+          "placements": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PlacementSave"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placements"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectItemUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ItemSave",
         "type": "object"
       },
       "LineAmountsRead": {
@@ -1954,6 +2082,20 @@
         "title": "LocationUpdate",
         "type": "object"
       },
+      "OptionAttach": {
+        "description": "An existing article of the project becomes an option of the base (ADR-0021).",
+        "properties": {
+          "projectItemId": {
+            "title": "Projectitemid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projectItemId"
+        ],
+        "title": "OptionAttach",
+        "type": "object"
+      },
       "Page_ProfessionalRead_": {
         "properties": {
           "items": {
@@ -2096,6 +2238,46 @@
           "updatedAt"
         ],
         "title": "PlacementRead",
+        "type": "object"
+      },
+      "PlacementSave": {
+        "description": "One placement of the article as it must be after the save: `id` = kept, none = new.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "locationId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locationid"
+          },
+          "qtyMilli": {
+            "default": 1000,
+            "minimum": 0.0,
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "default": 0,
+            "title": "Sortorder",
+            "type": "integer"
+          }
+        },
+        "title": "PlacementSave",
         "type": "object"
       },
       "PlacementUpdate": {
@@ -2886,6 +3068,17 @@
             ],
             "title": "Name"
           },
+          "optionOfId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionofid"
+          },
           "placements": {
             "anyOf": [
               {
@@ -3141,6 +3334,28 @@
             "title": "Name",
             "type": "string"
           },
+          "optionLetter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionletter"
+          },
+          "optionOfId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionofid"
+          },
           "placements": {
             "items": {
               "$ref": "#/components/schemas/PlacementRead"
@@ -3285,6 +3500,8 @@
           "quoteUrl",
           "status",
           "indice",
+          "optionOfId",
+          "optionLetter",
           "sortOrder",
           "createdAt",
           "updatedAt",
@@ -6816,6 +7033,50 @@
         ]
       }
     },
+    "/api/v1/project-items/{item_id}/detach": {
+      "post": {
+        "description": "The option becomes an independent article, unassigned (ADR-0021).",
+        "operationId": "detachProjectItemOption",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Detach Option",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
     "/api/v1/project-items/{item_id}/events": {
       "get": {
         "operationId": "listProjectItemEvents",
@@ -7030,6 +7291,60 @@
         ]
       }
     },
+    "/api/v1/project-items/{item_id}/options": {
+      "post": {
+        "description": "An existing article of the project becomes an option of this one (ADR-0021).",
+        "operationId": "attachProjectItemOption",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptionAttach"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attach Option",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
     "/api/v1/project-items/{item_id}/placements": {
       "post": {
         "operationId": "addPlacement",
@@ -7078,6 +7393,104 @@
           }
         },
         "summary": "Add Placement",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/retain": {
+      "post": {
+        "description": "This option takes its base's place (ADR-0021); returns the option, now the base.",
+        "operationId": "retainProjectItemOption",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retain Option",
+        "tags": [
+          "project-items"
+        ]
+      }
+    },
+    "/api/v1/project-items/{item_id}/save": {
+      "post": {
+        "description": "« Enregistrer » on the article page: sheet, status, placements, files and options at once,\nall or nothing.",
+        "operationId": "saveProjectItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemSave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Item",
         "tags": [
           "project-items"
         ]

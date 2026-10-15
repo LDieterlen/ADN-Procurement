@@ -179,11 +179,13 @@ def summary(
         return found
 
     for item in items:
-        pairs = _pairs(item, locations)
+        # An option has the placements of its base and is never counted (ADR-0021).
+        placed = item.option_of if item.option_of is not None else item
+        pairs = _pairs(placed, locations)
         amounts = money.line_amounts(
             item.unit_cost_cents, item.discount_bp, item.fx_rate_micro, pairs
         )
-        counted = money.is_counted(item.status)
+        counted = money.is_counted(item.status) and item.option_of_id is None
         lines.append(
             {
                 "project_item_id": item.id,
@@ -206,11 +208,11 @@ def summary(
                             else 1,
                         ),
                     }
-                    for p in item.placements
+                    for p in placed.placements
                 ],
             }
         )
-        if not _item_matches(item, filters):
+        if item.option_of_id is not None or not _item_matches(item, filters):
             continue
         # Shares per placement (location and zone axes), the line total for the other axes.
         shares = _shares(item, locations, amounts.net_unit_eur_cents, filters)

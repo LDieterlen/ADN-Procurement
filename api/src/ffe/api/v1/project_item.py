@@ -10,7 +10,9 @@ from ffe.schemas.project_item import (
     ItemFileAttach,
     ItemFileUpdate,
     ItemKind,
+    ItemSave,
     ItemStatus,
+    OptionAttach,
     PlacementCreate,
     PlacementUpdate,
     ProjectItemCreate,
@@ -74,8 +76,8 @@ def update_item(
 
 
 @router.delete("/project-items/{item_id}", status_code=204, operation_id="deleteProjectItem")
-def delete_item(item_id: ItemId, session: SessionDep) -> Response:
-    service.delete_item(session, item_id)
+def delete_item(item_id: ItemId, session: SessionDep, deps: DepsDep) -> Response:
+    service.delete_item(session, item_id, deps.clock)
     return Response(status_code=204)
 
 
@@ -84,6 +86,37 @@ def change_status(
     item_id: ItemId, payload: StatusChange, session: SessionDep, deps: DepsDep
 ) -> ProjectItemRead:
     return ProjectItemRead.from_model(service.change_status(session, item_id, payload, deps.clock))
+
+
+@router.post("/project-items/{item_id}/save", operation_id="saveProjectItem")
+def save_item(
+    item_id: ItemId, payload: ItemSave, session: SessionDep, deps: DepsDep
+) -> ProjectItemRead:
+    """« Enregistrer » on the article page: sheet, status, placements, files and options at once,
+    all or nothing."""
+    return ProjectItemRead.from_model(
+        service.save_item(session, item_id, payload, deps.settings.files_dir, deps.clock)
+    )
+
+
+@router.post("/project-items/{item_id}/options", operation_id="attachProjectItemOption")
+def attach_option(
+    item_id: ItemId, payload: OptionAttach, session: SessionDep, deps: DepsDep
+) -> ProjectItemRead:
+    """An existing article of the project becomes an option of this one (ADR-0021)."""
+    return ProjectItemRead.from_model(service.attach_option(session, item_id, payload, deps.clock))
+
+
+@router.post("/project-items/{item_id}/retain", operation_id="retainProjectItemOption")
+def retain_option(item_id: ItemId, session: SessionDep, deps: DepsDep) -> ProjectItemRead:
+    """This option takes its base's place (ADR-0021); returns the option, now the base."""
+    return ProjectItemRead.from_model(service.retain_option(session, item_id, deps.clock))
+
+
+@router.post("/project-items/{item_id}/detach", operation_id="detachProjectItemOption")
+def detach_option(item_id: ItemId, session: SessionDep, deps: DepsDep) -> ProjectItemRead:
+    """The option becomes an independent article, unassigned (ADR-0021)."""
+    return ProjectItemRead.from_model(service.detach_option(session, item_id, deps.clock))
 
 
 @router.get("/project-items/{item_id}/events", operation_id="listProjectItemEvents")

@@ -1,4 +1,4 @@
-"""`project_item_file`: photos and drawings of a line (DATA_MODEL §4.15), same shape as product_file."""
+"""`project_item_file`: photos, finishes and plans of a line (DATA_MODEL §4.15), sorted by hand."""
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -7,7 +7,7 @@ from sqlalchemy.types import Text
 from ffe.models.base import STRICT, Base, TimestampedMixin
 from ffe.models.file import File
 
-ITEM_FILE_KINDS = ("image", "drawing", "other")
+ITEM_FILE_KINDS = ("image", "finish", "drawing", "other")  # photo · finition · plan · autre
 ITEM_FILE_KINDS_SQL = ", ".join(f"'{k}'" for k in ITEM_FILE_KINDS)
 
 

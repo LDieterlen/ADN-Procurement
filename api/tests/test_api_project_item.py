@@ -90,7 +90,7 @@ def test_create_with_the_full_sheet_and_the_price(
     assert [e["kind"] for e in events] == ["created"]
 
 
-def test_codes_follow_location_then_type_and_never_reuse_a_number(
+def test_codes_follow_location_then_type_without_gap_before_the_first_indice(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     def create(**extra: Any) -> Any:
@@ -106,8 +106,40 @@ def test_codes_follow_location_then_type_and_never_reuse_a_number(
     nowhere = create()
     assert (first["itemCode"], second["itemCode"]) == ("CHA-LUD-01", "CHA-LUD-02")
     assert lobby["itemCode"] == "LOB-LUD-01" and nowhere["itemCode"] == "LUD-01"
-    assert client.delete(f"/api/v1/project-items/{second['id']}").status_code == 204
-    assert create(placements=[{"locationId": world["cha"].id}])["itemCode"] == "CHA-LUD-03"
+    # ADR-0021: before the first indice, a freed code is closed up (02 becomes 01, journaled).
+    assert client.delete(f"/api/v1/project-items/{first['id']}").status_code == 204
+    moved = client.get(f"/api/v1/project-items/{second['id']}").json()
+    assert moved["itemCode"] == "CHA-LUD-01"
+    events = client.get(f"/api/v1/project-items/{second['id']}/events").json()
+    assert events[-1]["kind"] == "placement" and '"CHA-LUD-02"' in events[-1]["oldValue"]
+    assert create(placements=[{"locationId": world["cha"].id}])["itemCode"] == "CHA-LUD-02"
+
+
+def test_after_the_first_indice_codes_never_move_and_the_gap_is_filled(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    def create() -> Any:
+        body = {"name": "Lampe", "categoryId": world["lud"].id}
+        return client.post(
+            base(world), json={**body, "placements": [{"locationId": world["cha"].id}]}
+        ).json()
+
+    first, second, third = create(), create(), create()
+    assert client.post(f"/api/v1/projects/{world['project'].id}/indice").status_code == 200
+    # Moving CHA-LUD-02 elsewhere frees its number; CHA-LUD-03, already issued, does not move.
+    placement = second["placements"][0]["id"]
+    client.patch(f"/api/v1/placements/{placement}", json={"locationId": world["lob"].id})
+    assert client.get(f"/api/v1/project-items/{third['id']}").json()["itemCode"] == "CHA-LUD-03"
+    assert create()["itemCode"] == "CHA-LUD-02"  # the smallest free number
+    assert first["itemCode"] == "CHA-LUD-01"
+
+
+def test_before_the_first_indice_any_article_can_be_deleted(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = client.post(base(world), json={"name": "Lampe", "categoryId": world["lud"].id}).json()
+    client.post(f"/api/v1/project-items/{item['id']}/status", json={"status": "approved"})
+    assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 204
 
 
 def test_a_hand_written_code_must_be_free(client: TestClient, world: dict[str, Any]) -> None:
@@ -225,7 +257,7 @@ def test_patch_sheet_price_and_type_journals_price_and_recodes_placements(
     assert manual.status_code == 422 and manual.json()["details"][0]["field"] == "itemCode"
     client.post(f"{url}/status", json={"status": "quoted"})
     assert (
-        client.patch(url, json={"categoryId": world["lud"].id}).json()["itemCode"] == "CHA-LUD-02"
+        client.patch(url, json={"categoryId": world["lud"].id}).json()["itemCode"] == "CHA-LUD-01"
     )
     assert client.patch(url, json={"name": None}).status_code == 422
     assert client.patch(url, json={"categoryId": None}).status_code == 422
@@ -252,7 +284,7 @@ def test_each_placement_has_its_code_and_follows_its_location(
     assert moved.status_code == 422
     client.delete(f"/api/v1/placements/{second}")
     moved = client.patch(f"/api/v1/placements/{first}", json={"locationId": None}).json()
-    assert [p["code"] for p in moved["placements"]] == ["LUD-02"]  # numbers never reused
+    assert [p["code"] for p in moved["placements"]] == ["LUD-01"]  # no gap (ADR-0021)
 
 
 def make_category_via_api(client: TestClient, code: str, name: str) -> int:
@@ -279,9 +311,10 @@ def test_status_is_free_and_journaled_with_an_optional_note(
     ]
 
 
-def test_delete_only_a_new_article_without_history(
+def test_after_the_first_indice_delete_only_a_new_article_without_history(
     client: TestClient, world: dict[str, Any]
 ) -> None:
+    client.post(f"/api/v1/projects/{world['project'].id}/indice")
     item = client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).json()
     url = f"/api/v1/project-items/{item['id']}"
     client.post(f"{url}/status", json={"status": "quoted"})
@@ -366,6 +399,14 @@ def test_files_photo_and_drawing(
     bad = client.post(url, json={"fileId": photo.id, "kind": "drawing", "isPrimary": True})
     assert bad.status_code == 409  # already attached
     assert client.patch(f"{url}/{drawing.id}", json={"isPrimary": True}).status_code == 422
+    # Sorted by hand: photo · finish · plan ; a main photo sorted as a finish stops being main.
+    finish = client.patch(f"{url}/{photo.id}", json={"kind": "finish"})
+    assert finish.status_code == 200, finish.text
+    assert [(f["kind"], f["isPrimary"]) for f in finish.json()["files"]] == [
+        ("finish", False),
+        ("drawing", False),
+    ]
+    assert client.patch(f"{url}/{photo.id}", json={"kind": "colour"}).status_code == 422
     detached = client.delete(f"{url}/{photo.id}")
     assert detached.status_code == 200 and len(detached.json()["files"]) == 1
     assert not (settings.files_dir / photo.filename).exists()
@@ -406,3 +447,173 @@ def test_the_name_is_required_and_the_designation_defaults_to_it(
     cleared = client.patch(f"/api/v1/project-items/{bare['id']}", json={"productName": None})
     assert cleared.status_code == 422
     assert [d["field"] for d in cleared.json()["details"]] == ["productName"]
+
+
+# --- options (ADR-0021) -------------------------------------------------------------------------
+
+
+def _lamp(client: TestClient, world: dict[str, Any], *locations: Any, **extra: Any) -> Any:
+    body = {"name": "Lampe", "categoryId": world["lud"].id, **extra}
+    if locations:
+        body["placements"] = [{"locationId": loc.id} for loc in locations]
+    response = client.post(base(world), json=body)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_an_option_takes_the_base_codes_with_a_letter_and_no_placement(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"], world["lob"])
+    option = _lamp(client, world, optionOfId=lamp["id"], name="Autre lampe")
+    assert option["optionOfId"] == lamp["id"] and option["optionLetter"] == "A"
+    assert option["placements"] == []
+    assert option["itemCode"] == "CHA-LUD-01-A · LOB-LUD-01-A"
+    second = _lamp(client, world, optionOfId=lamp["id"])
+    assert second["optionLetter"] == "B"
+    placements = f"/api/v1/project-items/{option['id']}/placements"
+    assert client.post(placements, json={"locationId": None}).status_code == 409
+    nested = client.post(
+        base(world), json={"name": "X", "categoryId": world["lud"].id, "optionOfId": option["id"]}
+    )
+    assert nested.status_code == 422 and nested.json()["details"][0]["field"] == "optionOfId"
+    assert client.delete(f"/api/v1/project-items/{lamp['id']}").status_code == 409  # has options
+    # Deleting option A closes the letters up (before the first indice): B becomes A.
+    assert client.delete(f"/api/v1/project-items/{option['id']}").status_code == 204
+    assert client.get(f"/api/v1/project-items/{second['id']}").json()["optionLetter"] == "A"
+
+
+def test_options_are_not_counted_but_have_an_indicative_amount(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"], unitCostCents=10_000)
+    option = _lamp(client, world, optionOfId=lamp["id"], unitCostCents=30_000)
+    summary = client.get(f"/api/v1/projects/{world['project'].id}/summary").json()
+    lines = {line["projectItemId"]: line for line in summary["lines"]}
+    assert lines[option["id"]]["counted"] is False
+    assert lines[option["id"]]["totalHtCents"] == lines[lamp["id"]]["totalHtCents"] * 3
+    assert summary["specifiedCents"] == lines[lamp["id"]]["totalHtCents"]
+
+
+def test_an_existing_article_becomes_an_option_and_frees_its_codes(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    other = _lamp(client, world, world["cha"])  # CHA-LUD-02
+    third = _lamp(client, world, world["cha"])  # CHA-LUD-03
+    url = f"/api/v1/project-items/{lamp['id']}/options"
+    attached = client.post(url, json={"projectItemId": other["id"]})
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["itemCode"] == "CHA-LUD-01-A" and attached.json()["placements"] == []
+    assert client.get(f"/api/v1/project-items/{third['id']}").json()["itemCode"] == "CHA-LUD-02"
+    refused = client.post(url, json={"projectItemId": lamp["id"]})
+    assert refused.status_code == 422
+
+
+def test_retaining_an_option_swaps_the_roles(client: TestClient, world: dict[str, Any]) -> None:
+    lamp = _lamp(client, world, world["cha"], name="Flos")
+    first = _lamp(client, world, optionOfId=lamp["id"], name="Artemide")
+    second = _lamp(client, world, optionOfId=lamp["id"], name="Poulsen")
+    retained = client.post(f"/api/v1/project-items/{second['id']}/retain")
+    assert retained.status_code == 200, retained.text
+    body = retained.json()
+    assert body["optionOfId"] is None and body["itemCode"] == "CHA-LUD-01"
+    old = client.get(f"/api/v1/project-items/{lamp['id']}").json()
+    assert (old["optionOfId"], old["optionLetter"], old["itemCode"]) == (
+        second["id"],
+        "B",
+        "CHA-LUD-01-B",
+    )
+    assert client.get(f"/api/v1/project-items/{first['id']}").json()["optionOfId"] == second["id"]
+    assert client.post(f"/api/v1/project-items/{second['id']}/retain").status_code == 409
+    events = client.get(f"/api/v1/project-items/{second['id']}/events").json()
+    assert events[-1]["note"] == "Option B retenue à la place de l'article de base."
+
+
+def test_an_option_has_the_type_of_its_base(client: TestClient, world: dict[str, Any]) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    tab = make_category_via_api(client, "TAB", "Table")
+    other = client.post(
+        base(world), json={"name": "T", "categoryId": tab, "optionOfId": lamp["id"]}
+    )
+    assert other.status_code == 422 and other.json()["details"][0]["field"] == "categoryId"
+    table = client.post(base(world), json={"name": "Table", "categoryId": tab}).json()
+    url = f"/api/v1/project-items/{lamp['id']}/options"
+    refused = client.post(url, json={"projectItemId": table["id"]})
+    assert refused.status_code == 422 and refused.json()["details"][0]["field"] == "projectItemId"
+    option = _lamp(client, world, optionOfId=lamp["id"])
+    locked = client.patch(f"/api/v1/project-items/{option['id']}", json={"categoryId": tab})
+    assert locked.status_code == 422
+    client.patch(f"/api/v1/project-items/{lamp['id']}", json={"categoryId": tab})
+    moved = client.get(f"/api/v1/project-items/{option['id']}").json()
+    assert moved["categoryId"] == tab and moved["itemCode"] == "CHA-TAB-01-A"
+
+
+def test_a_detached_option_becomes_an_unassigned_article(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    first = _lamp(client, world, optionOfId=lamp["id"])
+    second = _lamp(client, world, optionOfId=lamp["id"])
+    detached = client.post(f"/api/v1/project-items/{first['id']}/detach")
+    assert detached.status_code == 200, detached.text
+    body = detached.json()
+    assert (body["optionOfId"], body["optionLetter"], body["itemCode"]) == (None, None, "LUD-01")
+    assert body["placements"][0]["locationId"] is None
+    assert client.get(f"/api/v1/project-items/{second['id']}").json()["optionLetter"] == "A"
+    assert client.post(f"/api/v1/project-items/{lamp['id']}/detach").status_code == 409
+
+
+# --- « Enregistrer » : every change at once (2026-10-15) ---------------------------------------
+
+
+def test_save_applies_sheet_status_placements_and_options_at_once(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    other = _lamp(client, world, world["lob"], name="Autre")
+    keep = lamp["placements"][0]["id"]
+    saved = client.post(
+        f"/api/v1/project-items/{lamp['id']}/save",
+        json={
+            "sheet": {"finish": "laiton"},
+            "status": {"status": "quoted", "note": None},
+            "placements": [
+                {"id": keep, "locationId": world["cha"].id, "qtyMilli": 2000},
+                {"locationId": world["lob"].id, "qtyMilli": 1000},
+            ],
+            "attachOptions": [other["id"]],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    body = saved.json()
+    assert body["finish"] == "laiton" and body["status"] == "quoted"
+    assert [(p["code"], p["qtyMilli"]) for p in body["placements"]] == [
+        ("CHA-LUD-01", 2000),
+        ("LOB-LUD-01", 1000),  # the code freed by the option is reused (before the first indice)
+    ]
+    option = client.get(f"/api/v1/project-items/{other['id']}").json()
+    assert option["optionOfId"] == lamp["id"]
+    kinds = [e["kind"] for e in client.get(f"/api/v1/project-items/{lamp['id']}/events").json()]
+    assert "status" in kinds and "placement" in kinds
+
+
+def test_save_is_all_or_nothing(client: TestClient, world: dict[str, Any]) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    refused = client.post(
+        f"/api/v1/project-items/{lamp['id']}/save",
+        json={"sheet": {"finish": "laiton"}, "placements": []},  # an article keeps a placement
+    )
+    assert refused.status_code == 409
+    assert client.get(f"/api/v1/project-items/{lamp['id']}").json()["finish"] is None
+
+
+def test_save_can_retain_an_option(client: TestClient, world: dict[str, Any]) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    option = _lamp(client, world, optionOfId=lamp["id"], name="Variante")
+    saved = client.post(
+        f"/api/v1/project-items/{option['id']}/save",
+        json={"sheet": {"name": "Variante retenue"}, "optionAction": "retain"},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["itemCode"] == "CHA-LUD-01" and saved.json()["name"] == "Variante retenue"

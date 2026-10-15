@@ -13,7 +13,7 @@ ItemStatus = Literal[
     "to_quote", "quoted", "to_review", "approved", "deposit", "purchased", "cancelled"
 ]
 ChoiceCode = Annotated[str, Field(min_length=1, max_length=40)]  # code of a `choice` list value
-ItemFileKind = Literal["image", "drawing", "other"]
+ItemFileKind = Literal["image", "finish", "drawing", "other"]
 EventKind = Literal["created", "status", "price", "placement", "indice", "other"]
 
 Short = Annotated[str | None, Field(max_length=200)]
@@ -78,6 +78,7 @@ class ProjectItemCreate(BaseSchema):
     """The whole sheet is typed here (ADR-0016: no catalogue)."""
 
     kind: ItemKind = "product"
+    option_of_id: int | None = None  # an option of this article (ADR-0021): no placements
     category_id: int | None = None
     supplier_id: int | None = None
     name: Short = None
@@ -236,6 +237,8 @@ class ProjectItemRead(BaseSchema):
     quote_url: str | None
     status: ItemStatus
     indice: str | None
+    option_of_id: int | None
+    option_letter: str | None
     sort_order: int
     created_at: str
     updated_at: str
@@ -258,8 +261,50 @@ class ProjectItemRead(BaseSchema):
 
 
 def code_label(item: Any) -> str:
-    """Fee: its `FR-NN`; product: the codes of its placements (ADR-0018)."""
-    return item.item_code or " · ".join(p.code for p in item.placements)
+    """Fee: its `FR-NN`; product: the codes of its placements (ADR-0018); option: the codes of its
+    base followed by its letter (ADR-0021)."""
+    if item.item_code:
+        return item.item_code
+    if item.option_of is not None:
+        return " · ".join(f"{p.code}-{item.option_letter}" for p in item.option_of.placements)
+    return " · ".join(p.code for p in item.placements)
+
+
+class PlacementSave(BaseSchema):
+    """One placement of the article as it must be after the save: `id` = kept, none = new."""
+
+    id: int | None = None
+    location_id: int | None = None
+    qty_milli: Milli = 1000
+    sort_order: int = 0
+
+
+class FileSave(BaseSchema):
+    """One file of the article as it must be after the save (already uploaded by `POST /files`)."""
+
+    file_id: int
+    kind: ItemFileKind = "image"
+    is_primary: bool = False
+    caption: Short = None
+    sort_order: int = 0
+
+
+class ItemSave(BaseSchema):
+    """« Enregistrer » on the article page: every change at once, one transaction (all or nothing).
+    Absent = unchanged; `placements` and `files` are the full lists wanted."""
+
+    sheet: ProjectItemUpdate | None = None
+    status: StatusChange | None = None
+    placements: list[PlacementSave] | None = None
+    files: list[FileSave] | None = None
+    attach_options: list[int] = []
+    option_action: Literal["retain", "detach"] | None = None
+
+
+class OptionAttach(BaseSchema):
+    """An existing article of the project becomes an option of the base (ADR-0021)."""
+
+    project_item_id: int
 
 
 class EventRead(BaseSchema):

@@ -1,5 +1,8 @@
 """`project_item`: one article of a project — its own spec sheet, frozen price, single status
-(DATA_MODEL §4.11, pivot ; ADR-0013). Its FF&E codes are on its placements (ADR-0018)."""
+(DATA_MODEL §4.11, pivot ; ADR-0013). Its FF&E codes are on its placements (ADR-0018); an option
+is an article attached to a base article, with a letter and the base's placements (ADR-0021)."""
+
+from __future__ import annotations
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,6 +37,16 @@ class ProjectItem(TimestampedMixin, Base):
         CheckConstraint("currency <> 'EUR' OR fx_rate_micro = 1000000", name="eur_rate_is_one"),
         CheckConstraint("discount_bp BETWEEN 0 AND 10000", name="discount_bp_range"),
         CheckConstraint(f"status IN ({_sql_list(ITEM_STATUSES)})", name="status_enum"),
+        # Option (ADR-0021): a base and a letter together, or neither.
+        CheckConstraint("option_letter GLOB '[A-Z]'", name="option_letter_format"),
+        CheckConstraint("(option_of_id IS NULL) = (option_letter IS NULL)", name="option_pair"),
+        Index(
+            "uq_project_item_option",
+            "option_of_id",
+            "option_letter",
+            unique=True,
+            sqlite_where=text("option_of_id IS NOT NULL"),
+        ),
         Index(
             "uq_project_item_code",
             "project_id",
@@ -86,7 +99,15 @@ class ProjectItem(TimestampedMixin, Base):
     # Revision letter of the spec-sheet PDF in which the line last changed (ADR-0012).
     indice: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # --- option (ADR-0021, migration 0003) ---
+    # ON DELETE RESTRICT is in migration 0003; not declared here because SQLite does not reflect the
+    # options of a column-level foreign key (added by ADD COLUMN), and `alembic check` would differ.
+    option_of_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("project_item.id"))
+    option_letter: Mapped[str | None] = mapped_column(Text)
 
+    option_of: Mapped[ProjectItem | None] = relationship(
+        "ProjectItem", remote_side=[id], foreign_keys=[option_of_id], lazy="selectin"
+    )
     placements: Mapped[list[ProjectItemPlacement]] = relationship(
         ProjectItemPlacement,
         order_by=(ProjectItemPlacement.sort_order, ProjectItemPlacement.id),

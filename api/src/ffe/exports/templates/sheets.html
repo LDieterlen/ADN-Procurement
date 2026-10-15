@@ -45,31 +45,33 @@
 
 {% for loc in locations %}
   {% for a in loc["articles"] %}
-  <section class="page">
+  <section class="page sheet">
     {{ head(loc["name"]) }}
-    <table class="hero"><tr>
-      <td class="visual">
-        {% if a["photo"] %}
-          <div class="photo-box has-photo"><img src="{{ a["photo"] }}" alt="{{ a["name"] }}"></div>
-          {% if a["license_note"] %}<div class="small faint" style="margin-top:4px">{{ a["license_note"] }}</div>{% endif %}
-        {% else %}
-          <div class="photo-box">photo produit</div>
-        {% endif %}
-        {% if a["drawing"] %}<div class="drawing"><img src="{{ a["drawing"] }}" alt="Dessin {{ a["item_code"] }}"></div>{% endif %}
+    <table class="titling"><tr>
+      <td>
+        <div class="label">Prescription · {{ a["item_code"] }}{% if a["option"] %} · option {{ a["option"] }}{% endif %}</div>
+        <h1{% if a["name"] | length > 60 %} class="long"{% endif %}>{{ a["name"] }}</h1>
+        <div class="meta">{% if a["type"] %}<span>{{ a["type"] }}</span>{% endif %}<span>Quantité <strong>{{ a["qty_text"] }}</strong>{% if loc["multiplier"] > 1 %} par unité · × {{ loc["multiplier"] }}{% endif %}</span>{% if a["supplier_name"] %}<span>{{ a["supplier_name"] }}</span>{% endif %}</div>
       </td>
-      <td class="text">
-        <table class="text-stack"><tr><td class="top">
-        <div class="label">Prescription · {{ a["item_code"] }}</div>
-        <h1 style="margin-top: 12px"{% if a["name"] | length > 60 %} class="long"{% endif %}>{{ a["name"] }}</h1>
-        <div class="meta">{{ a["type"] }} · {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}</div>
-        </td></tr><tr><td class="foot">
-        <table class="tiles"><tr>
-          <td class="tile dark" style="width:50%"><div class="label">Quantité</div><div class="big">{{ a["qty_text"] }}</div>{% if loc["multiplier"] > 1 %}<div class="small" style="color:#b8a89c; margin-top:2px">par unité · {{ a["qty_total_text"] }} au total</div>{% endif %}</td>
-          <td class="tile line" style="width:50%"><div class="label">Indice</div><div class="value">{% if a["indice"] %}Indice {{ a["indice"] }}{% else %}Sans indice{% endif %}<br><span class="muted" style="font-weight:400">{{ issued_on }}</span></div></td>
-        </tr></table>
-        </td></tr></table>
-      </td>
+      <td class="gap"></td>
+      <td class="where-box"><div class="loc">
+        <div class="label">Localisation</div>
+        <div class="name">{{ loc["name"] }}</div>
+        {% if loc["zone"] or loc["level"] %}<div class="sub">{{ loc["zone"] or "" }}{% if loc["zone"] and loc["level"] %} · {% endif %}{% if loc["level"] %}Niveau {{ loc["level"] }}{% endif %}</div>{% endif %}
+      </div></td>
     </tr></table>
+
+    <div class="band">
+      {% set band = a["band"] or [{"src": None, "label": "Photo", "plan": False, "box": (0, 0, 706, 330)}] %}
+      {% for image in band %}
+        {% set box = image["box"] %}
+        <div class="img{% if image["plan"] %} plan{% endif %}{% if not image["src"] %} empty{% endif %}" style="left: {{ box[0] }}px; top: {{ box[1] }}px; width: {{ box[2] }}px; height: {{ box[3] }}px">
+          {% if image["src"] %}<img src="{{ image["src"] }}" alt="{{ image["label"] }} {{ a["item_code"] }}" style="object-fit: cover">{% endif %}
+          <span class="tag">{{ image["label"] }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    {% if a["license_note"] %}<div class="usage-note">{{ a["license_note"] }}</div>{% endif %}
 
     <table class="section-head"><tr><td><span class="label">Produit</span></td><td class="aside">{% if a["supplier_name"] %}Fournisseur : {{ a["supplier_name"] }}{% endif %}</td></tr></table>
     <table class="cells">
@@ -84,7 +86,7 @@
         <td><div class="k">Délai</div>{{ v(a["lead_time"]) }}</td>
       </tr>
       <tr>
-        <td class="wide" colspan="3"><div class="k">Lien</div>{% if a["link"] %}<a class="v mono" style="display:block" href="{{ a["link"] }}">{{ a["link"] }}</a>{% else %}<div class="v empty">—</div>{% endif %}</td>
+        <td class="wide" colspan="3"><div class="k">Lien</div>{% if a["link"] %}<a class="v link" style="display:block" href="{{ a["link"] }}">{{ a["link"] }}</a>{% else %}<div class="v empty">—</div>{% endif %}</td>
       </tr>
     </table>
 
@@ -93,15 +95,16 @@
         <div class="block-head label">Contact</div>
         <div class="block-body">{% if a["representative"] or a["phone"] or a["email"] %}{{ a["representative"] or "" }}{% if a["representative"] %}<br>{% endif %}{{ a["phone"] or "" }}{% if a["phone"] %}<br>{% endif %}{% if a["email"] %}<a href="mailto:{{ a["email"] }}">{{ a["email"] }}</a>{% endif %}{% else %}<span class="faint">—</span>{% endif %}</div>
       </td>
-      <td colspan="2">
+      <td>
         <div class="block-head label">Commentaires</div>
-        <div class="ruled">{% for line in (a["comments"] or "").splitlines() %}<div class="rule-line">{{ line }}</div>{% endfor %}{% for _ in range(3 - ((a["comments"] or "").splitlines() | length) if ((a["comments"] or "").splitlines() | length) < 3 else 0) %}<div class="rule-line"></div>{% endfor %}</div>
+        {% set lines = (a["comments"] or "").splitlines() %}
+        <div class="ruled">{% for line in lines %}<div class="rule-line">{{ line }}</div>{% endfor %}{% for _ in range(3 - lines | length) %}<div class="rule-line"></div>{% endfor %}</div>
       </td>
     </tr></table>
 
-    <table class="bottom columns"><tr>
-      <td style="width:50%"><div class="block-head label">Diffusion</div><div class="block-body">Indice : {% if indice %}{{ indice }}{% else %}Sans indice{% endif %} — {{ issued_on }}</div></td>
-      <td style="width:50%"><div class="block-head label">Validation</div><div class="sign"></div></td>
+    <table class="sheet-foot columns"><tr>
+      <td style="width:50%"><div class="block-head label">Diffusion</div><div class="frame issued">{% if a["indice"] %}Indice {{ a["indice"] }}{% else %}Sans indice{% endif %}<br><span class="muted">{{ issued_on }}</span></div></td>
+      <td style="width:50%"><div class="block-head label">Validation</div><div class="frame sign"></div></td>
     </tr></table>
   </section>
   {% endfor %}

@@ -20,7 +20,7 @@
         <td class="center">{% if a["photo"] %}<img class="thumb" src="{{ a["photo"] }}" alt="">{% endif %}</td>
         <td class="code">{{ a["item_code"] }}</td>
         <td>{{ a["type"] }}</td>
-        <td>{{ a["name"] }}{% if a["comments"] %}<br><span class="muted small">{{ a["comments"] }}</span>{% endif %}{% if a["link"] %}<br><span class="small"><a href="{{ a["link"] }}">{{ a["link"] }}</a></span>{% endif %}</td>
+        <td>{% if a["option"] %}<span class="muted small">Option {{ a["option"] }} · </span>{% endif %}{{ a["name"] }}{% if a["comments"] %}<br><span class="muted small">{{ a["comments"] }}</span>{% endif %}{% if a["link"] %}<br><span class="small"><a href="{{ a["link"] }}">{{ a["link"] }}</a></span>{% endif %}</td>
         <td class="code">{{ a["reference"] or "" }}</td>
         <td>{{ a["supplier_name"] or "" }}{% if a["representative"] %}<br><span class="muted small">{{ a["representative"] }}</span>{% endif %}{% if a["phone"] %}<br><span class="muted small">{{ a["phone"] }}</span>{% endif %}{% if a["email"] %}<br><span class="muted small">{{ a["email"] }}</span>{% endif %}</td>
         <td>{{ a["dimensions"] or "" }}{% if a["finish"] %}<br><span class="muted small">{{ a["finish"] }}</span>{% endif %}</td>

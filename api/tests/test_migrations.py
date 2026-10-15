@@ -22,15 +22,19 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
         assert current_revision(engine) is None
         assert has_pending(engine)
         upgrade_head(engine)
-        assert current_revision(engine) == head_revision() == "0001"
+        assert current_revision(engine) == head_revision() == "0003"
         assert not has_pending(engine)
         check(engine)  # raises when models and migrations differ
     finally:
         engine.dispose()
 
 
-def test_revision_chain_is_a_single_initial_migration_until_v1() -> None:
-    assert revision_chain() == ["0001"]  # ADR-0012/0013: regenerated from the models until v1
+def test_revision_chain_grows_from_the_frozen_v1() -> None:
+    assert revision_chain() == [
+        "0001",
+        "0002",
+        "0003",
+    ]  # ADR-0020: 0001 frozen, then additive migrations
 
 
 def test_initial_migration_seeds_the_single_setting_row(engine: Engine) -> None:
