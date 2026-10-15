@@ -4,11 +4,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ffe.deps import Clock
-from ffe.errors import ArchivedDuplicateError, ConflictError, DuplicateError, NotFoundError
+from ffe.errors import ConflictError
 from ffe.i18n import fr
 from ffe.models import Client
 from ffe.schemas.client import ClientCreate, ClientUpdate
 from ffe.services.base import normalize_key, stamp
+from ffe.services.common import archive as common_archive
+from ffe.services.common import check_duplicate_name, ensure_active, get_or_404
+from ffe.services.common import unarchive as common_unarchive
 from ffe.services.project import open_project_count
 
 RESOURCE = "client"
@@ -28,22 +31,11 @@ def list_clients(
 
 
 def get_client(session: Session, client_id: int) -> Client:
-    client = session.get(Client, client_id)
-    if client is None:
-        raise NotFoundError(RESOURCE, client_id)
-    return client
+    return get_or_404(session, Client, client_id, RESOURCE)
 
 
 def _check_duplicate(session: Session, name: str, exclude_id: int | None, force: bool) -> None:
-    key = normalize_key(name)
-    rows = session.execute(select(Client.id, Client.name, Client.archived_at)).all()
-    for other_id, other_name, archived_at in rows:
-        if other_id == exclude_id or normalize_key(other_name) != key:
-            continue
-        if archived_at is not None:
-            raise ArchivedDuplicateError(RESOURCE, other_id)
-        if not force:
-            raise DuplicateError(RESOURCE, other_id)
+    check_duplicate_name(session, Client, RESOURCE, name, exclude_id, force)
 
 
 def create_client(
@@ -59,11 +51,7 @@ def create_client(
 
 def update_client(session: Session, client_id: int, data: ClientUpdate, clock: Clock) -> Client:
     with session.begin():
-        client = get_client(session, client_id)
-        if client.archived_at is not None:
-            raise ConflictError(
-                fr.ARCHIVED_READ_ONLY.format(resource=fr.resource_label(RESOURCE), id=client_id)
-            )
+        client = ensure_active(get_client(session, client_id), RESOURCE)
         changes = data.model_dump(exclude_unset=True)
         if "name" in changes and changes["name"] != client.name:
             _check_duplicate(session, changes["name"], exclude_id=client_id, force=False)
@@ -74,28 +62,16 @@ def update_client(session: Session, client_id: int, data: ClientUpdate, clock: C
 
 
 def archive_client(session: Session, client_id: int, clock: Clock) -> Client:
+    """Refused while the client has an open project; otherwise the common archive."""
     with session.begin():
         client = get_client(session, client_id)
-        if client.archived_at is not None:
-            raise ConflictError(
-                fr.ALREADY_ARCHIVED.format(resource=fr.resource_label(RESOURCE), id=client_id)
-            )
-        open_projects = open_project_count(session, client_id)
+        open_projects = open_project_count(session, client_id) if client.archived_at is None else 0
         if open_projects:
             raise ConflictError(
                 fr.CLIENT_HAS_OPEN_PROJECTS.format(id=client_id, count=open_projects)
             )
-        client.archived_at = client.updated_at = stamp(clock)
-    return client
+    return common_archive(session, Client, client_id, RESOURCE, clock)
 
 
 def unarchive_client(session: Session, client_id: int, clock: Clock) -> Client:
-    with session.begin():
-        client = get_client(session, client_id)
-        if client.archived_at is None:
-            raise ConflictError(
-                fr.NOT_ARCHIVED.format(resource=fr.resource_label(RESOURCE), id=client_id)
-            )
-        client.archived_at = None
-        client.updated_at = stamp(clock)
-    return client
+    return common_unarchive(session, Client, client_id, RESOURCE, clock)

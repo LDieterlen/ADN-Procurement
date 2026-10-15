@@ -47,4 +47,6 @@ def test_database_constraint_violation_is_409_conflict(deps: Deps) -> None:
     response = client.post("/probe/integrity")
     assert response.status_code == 409
     payload = response.json()
-    assert payload["code"] == "conflict" and "ck_setting_base_currency_eur" in payload["message"]
+    # A French sentence for the user; SQLite's words only in the server log.
+    assert payload["code"] == "conflict" and "rien n'a été enregistré" in payload["message"]
+    assert "ck_setting" not in payload["message"]

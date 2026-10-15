@@ -7,8 +7,6 @@ from sqlalchemy.types import Text
 from ffe.models.base import STRICT, Base
 from ffe.models.file import File
 
-EXPORT_KINDS = ("sheets_pdf", "list_pdf")
-
 
 class ProjectFile(Base):
     __tablename__ = "project_file"

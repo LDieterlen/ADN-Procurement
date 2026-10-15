@@ -5,11 +5,14 @@ validates (the image is stored only when asked for). The front never reaches the
 Extension inbox (ADR-0017): the browser sends the page it displays (URL + HTML, behind the shared
 token); the same extraction runs, the result waits as a `capture` row until « Nouvel article »."""
 
+import ipaddress
 import secrets
+import socket
 import urllib.error
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 from sqlalchemy import select
@@ -43,11 +46,41 @@ def check_url(url: str) -> str:
     return url.strip()
 
 
+def check_public(url: str) -> None:
+    """Refuses a URL whose host is this machine or a private network (loopback, LAN, link-local,
+    reserved): « Coller une adresse » reads public pages only (ADR-0014, audit 2026-10-15)."""
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise _err(fr.CAPTURE_URL_INVALID)
+    try:
+        infos = socket.getaddrinfo(parts.hostname, parts.port or None, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError) as error:
+        raise _err(fr.CAPTURE_UNREACHABLE.format(reason=str(error)[:120])) from error
+    for info in infos:
+        address = ipaddress.ip_address(str(info[4][0]).split("%")[0])
+        if not address.is_global:
+            raise _err(fr.CAPTURE_URL_PRIVATE)
+
+
+class _PublicRedirects(urllib.request.HTTPRedirectHandler):
+    """Every redirect is checked like the first URL (http/https, public address)."""
+
+    def redirect_request(
+        self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
+    ) -> Any:
+        check_public(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_PublicRedirects)
+
+
 def fetch_url(url: str, max_bytes: int = MAX_BYTES) -> tuple[bytes, str]:
     """Default fetcher: one GET, honest User-Agent, bounded size; errors become 422 on `url`."""
+    check_public(url)
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:  # noqa: S310
+        with _OPENER.open(request, timeout=TIMEOUT_S) as response:
             body = response.read(max_bytes + 1)
             content_type = str(response.headers.get("Content-Type", ""))
     except urllib.error.HTTPError as error:

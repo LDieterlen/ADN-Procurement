@@ -30,15 +30,15 @@ def test_create_with_contact(client: TestClient) -> None:
         client,
         {
             "name": "Tom Dixon",
-            "contactName": " Djamel Sabeur ",
-            "email": "djamel@example.com",
+            "contactName": " Jean Exemple ",
+            "email": "jean@example.com",
             "phone": "06 00 00 00 00",
             "website": "https://tomdixon.net",
             "currency": "GBP",
         },
     ).json()
     assert body["currency"] == "GBP"
-    assert body["contactName"] == "Djamel Sabeur" and body["website"] == "https://tomdixon.net"
+    assert body["contactName"] == "Jean Exemple" and body["website"] == "https://tomdixon.net"
 
 
 @pytest.mark.parametrize(
@@ -68,16 +68,16 @@ def test_list_is_paginated_with_total(client: TestClient, session: Session, cloc
         "Fournisseur 04",
         "Fournisseur 05",
     ]
-    assert client.get(URL, params={"limit": 201}).status_code == 422
+    assert client.get(URL, params={"limit": 1001}).status_code == 422
     assert client.get(URL, params={"offset": -1}).status_code == 422
 
 
 def test_search_matches_name_and_contact(
     client: TestClient, session: Session, clock: Clock
 ) -> None:
-    make_supplier(session, clock, name="Tom Dixon", contact_name="Djamel Sabeur")
+    make_supplier(session, clock, name="Tom Dixon", contact_name="Jean Exemple")
     make_supplier(session, clock, name="Flos", contact_name="Anna Rossi")
-    assert [s["name"] for s in client.get(URL, params={"q": "djamel"}).json()["items"]] == [
+    assert [s["name"] for s in client.get(URL, params={"q": "exemple"}).json()["items"]] == [
         "Tom Dixon"
     ]
     assert client.get(URL, params={"q": "flos"}).json()["total"] == 1
@@ -115,14 +115,14 @@ def test_specialty_mobile_and_second_contact_round_trip(client: TestClient) -> N
         {
             "name": "Flos",
             "specialty": "Luminaire",
-            "mobile": " 06 12 80 66 08 ",
+            "mobile": " 06 00 00 00 02 ",
             "contact2Name": "Back office",
-            "contact2Phone": "01 53 85 49 93",
-            "contact2Email": "info@flos.com",
+            "contact2Phone": "01 00 00 00 01",
+            "contact2Email": "info@example.com",
         },
     ).json()
-    assert body["specialty"] == "Luminaire" and body["mobile"] == "06 12 80 66 08"
-    assert body["contact2Name"] == "Back office" and body["contact2Email"] == "info@flos.com"
+    assert body["specialty"] == "Luminaire" and body["mobile"] == "06 00 00 00 02"
+    assert body["contact2Name"] == "Back office" and body["contact2Email"] == "info@example.com"
     assert post(client, {"name": "Y", "contact2Email": "nope"}).status_code == 422
     assert client.get(URL, params={"q": "lumin"}).json()["total"] == 1
 

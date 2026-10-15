@@ -40,7 +40,6 @@ ITEM_STATUS_LABELS: dict[str, str] = {
     "purchased": "Acheté",
     "cancelled": "Annulé",
 }
-ITEM_KIND_LABELS: dict[str, str] = {"product": "Article", "fee": "Frais"}
 CHOICE_UNKNOWN = "Valeur absente de la liste (ou archivée) : la choisir dans Listes."
 CHOICE_NAME_TAKEN = "Ce libellé existe déjà dans cette liste."
 ITEM_SAME_STATUS = "L'article est déjà dans ce statut."
@@ -73,6 +72,15 @@ OPTION_RETAINED_NOTE = "Option {letter} retenue à la place de l'article de base
 OPTION_TYPE_MISMATCH = "Une option est du même type que son article de base."
 OPTION_TYPE_LOCKED = "Une option garde le type de son article de base : changer celui de la base."
 OPTION_DETACHED_NOTE = "Option {letter} détachée : article indépendant, non affecté."
+# Labels of the budget compilations and of the PDFs (never in a service, CLAUDE.md).
+LABEL_PROJECT = "Projet"
+LABEL_UNASSIGNED = "Non affecté"
+LABEL_NO_ZONE = "Sans zone"
+LABEL_NO_FAMILY = "Sans famille"
+LABEL_NO_SUPPLIER = "Sans fournisseur"
+LABEL_FEES = "Frais"
+FILE_KIND_LABELS = {"image": "Photo", "finish": "Finition", "drawing": "Plan", "other": "Autre"}
+OPTION_BASE_CHANGED_NOTE = "Article de base modifié (implantations, codes ou type)."
 OPTION_LETTERS_EXHAUSTED = "Plus de lettre libre pour une nouvelle option (Z atteint)."
 PLACEMENT_LOCATION_NOT_IN_PROJECT = "La localisation n'appartient pas à ce projet."
 PLACEMENT_LOCATION_ARCHIVED = "La localisation est archivée."
@@ -89,6 +97,9 @@ LOCATION_CODE_TAKEN = "Une localisation de ce projet porte déjà ce code."
 LOCATION_REORDER_MISMATCH = "La liste doit contenir exactement les localisations actives du projet."
 
 CAPTURE_URL_INVALID = "Adresse attendue en http:// ou https://."
+CAPTURE_URL_PRIVATE = "Adresse locale ou privée refusée : seules les pages publiques se lisent."
+FOREIGN_ORIGIN = "Requête refusée : elle vient d'une autre page que l'application."
+HOST_NOT_LOCAL = "FFE n'écoute que sur la machine locale : 127.0.0.1 ou localhost."
 CAPTURE_HTTP_ERROR = "La page répond {status}."
 CAPTURE_UNREACHABLE = "Page injoignable ({reason})."
 CAPTURE_TOO_LARGE = "Page ou image trop volumineuse (3 Mo au plus)."
@@ -104,10 +115,10 @@ FILE_ALREADY_ATTACHED = "Ce fichier est déjà joint."
 FILE_NOT_ATTACHED = "Ce fichier n'est pas joint."
 FILE_PRIMARY_NOT_IMAGE = "Seule une photo peut être la photo principale."
 CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
-SUPPLIER_MUST_BE_ACTIVE = "Le fournisseur est archivé."
 
 CATEGORY_NAME_TAKEN = "Un type de produit porte déjà ce nom."
 CATEGORY_CODE_TAKEN = "Ce code est déjà utilisé."
+CATEGORY_CODE_RESERVED = "Code réservé aux frais (FR-01, FR-02…) : en choisir un autre."
 
 NOT_FOUND = "{resource} n° {id} introuvable."
 VALIDATION = "Données invalides."
@@ -120,7 +131,9 @@ DUPLICATE_ARCHIVED = (
 ALREADY_ARCHIVED = "{resource} n° {id} est déjà archivé."
 NOT_ARCHIVED = "{resource} n° {id} n'est pas archivé."
 ARCHIVED_READ_ONLY = "{resource} n° {id} est archivé : le restaurer avant de le modifier."
-INTEGRITY = "Conflit d'intégrité dans la base ({detail})."
+INTEGRITY = (
+    "Opération refusée par la base (doublon ou référence manquante) : rien n'a été enregistré."
+)
 INTERNAL = "Erreur interne : consulter le journal du serveur."
 FIELD_REQUIRED = "Ce champ est obligatoire et ne peut pas être vidé."
 

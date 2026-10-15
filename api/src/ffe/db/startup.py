@@ -15,7 +15,7 @@ from ffe.db.lock import InstanceLock
 from ffe.db.migrate import has_pending, head_revision, schema_drift, upgrade_head
 
 Clock = Callable[[], datetime]
-# Dev only (ADR-0012): rebuilds the database when the schema moved; `ffe.devreset.reset_dev`.
+# Dev only (ADR-0020): rebuilds the database when its schema differs; `ffe.devreset.reset_dev`.
 OnDrift = Callable[[Settings, Engine, Clock], tuple[Engine, str]]
 
 
@@ -93,7 +93,7 @@ def run_startup(
         if verdict != "ok":
             raise StartupError(f"quick_check après migration : {verdict}.")
         reset_note: str | None = None
-        if schema_drift(engine):  # 8 (before v1, ADR-0012: the migration is regenerated)
+        if schema_drift(engine):  # 8 (dev only, ADR-0020: the dev database is rebuilt at head)
             if not settings.is_dev_db:
                 raise StartupError(
                     "schéma en retard sur les modèles : base réelle, migrer à la main."

@@ -28,7 +28,10 @@ class CategoryCreate(BaseSchema):
     @field_validator("code", mode="before")
     @classmethod
     def upper_code(cls, value: Any) -> Any:
-        return value.strip().upper() if isinstance(value, str) else value
+        code = value.strip().upper() if isinstance(value, str) else value
+        if code == "FR":  # the fee lines' series `FR-NN` (ADR-0021)
+            raise ValueError(fr.CATEGORY_CODE_RESERVED)
+        return code
 
 
 class CategoryUpdate(BaseSchema):

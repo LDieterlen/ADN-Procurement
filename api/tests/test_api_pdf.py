@@ -4,7 +4,7 @@ documents kept and listed."""
 
 import base64
 import itertools
-from datetime import timedelta
+from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -70,9 +70,9 @@ def world(client: TestClient, session: Session, clock: Clock) -> dict[str, Any]:
         session,
         clock,
         name="Tom Dixon",
-        contact_name="Djamel Sabeur",
-        phone="06 76 27 17 10",
-        email="djamel@example.com",
+        contact_name="Jean Exemple",
+        phone="06 00 00 00 01",
+        email="jean@example.com",
         currency="GBP",
     )
     base = f"/api/v1/projects/{project.id}/project-items"
@@ -145,7 +145,7 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     assert [a["item_code"] for a in room["articles"]] == ["CHA-LUD-01"]  # ADR-0018
     beat = lobby["articles"][0]
     assert beat["reference"] == "BLS01" and beat["supplier_name"] == "Tom Dixon"
-    assert beat["representative"] == "Djamel Sabeur" and beat["email"] == "djamel@example.com"
+    assert beat["representative"] == "Jean Exemple" and beat["email"] == "jean@example.com"
     assert (
         beat["photo"] == world["photo"]["sha256"] + ".png"
         and beat["link"] == "https://example.com/beat"
@@ -154,7 +154,7 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     html = render_html("sheets.html", context)
     assert "125" not in html.replace("1 250", "") or "1 250,00" not in html
     assert "€" not in html and "Livraison" not in html
-    assert "Djamel Sabeur" in html and "Ø 36 × H 30 cm" in html
+    assert "Jean Exemple" in html and "Ø 36 × H 30 cm" in html
     assert "Beat Light Fat</h1>" in html  # the designation as the title
     assert "Beat Light Fat, suspension en laiton" in html  # the name, in the « Nom » cell
     assert count_pages(html, settings.files_dir) == 1 + 1 + 3  # cover, list, three sheets
@@ -340,7 +340,7 @@ def test_text_helpers() -> None:
 
 
 def test_an_option_follows_its_base_in_the_rows_with_its_letter_and_bracketed_amount(
-    client: TestClient, world: dict[str, Any], session: Session
+    client: TestClient, world: dict[str, Any], session: Session, settings: Settings
 ) -> None:
     """ADR-0021: one row per base placement, code with the letter, amount indicative."""
     base_item = world["item"]
@@ -359,3 +359,11 @@ def test_an_option_follows_its_base_in_the_rows_with_its_letter_and_bracketed_am
         assert codes.index(f"{placement['code']}-A") == codes.index(placement["code"]) + 1
     option_rows = [r for r in rows if r["option"] == "A"]
     assert option_rows and all(r["total_ht_text"].startswith("(") for r in option_rows)
+    # The option's sheet is told apart: its own page style and a badge naming the base code.
+    context = sheets_context(
+        session, world["project"].id, date(2026, 10, 15), files_dir=settings.files_dir
+    )
+    html = render_html("sheets.html", context)
+    first = base_item["placements"][0]["code"]
+    assert f"Option A</span>Alternative à {first}" in html
+    assert html.count('class="page sheet option"') == len(option_rows)

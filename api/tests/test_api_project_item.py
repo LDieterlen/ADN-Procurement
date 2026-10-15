@@ -617,3 +617,150 @@ def test_save_can_retain_an_option(client: TestClient, world: dict[str, Any]) ->
     )
     assert saved.status_code == 200, saved.text
     assert saved.json()["itemCode"] == "CHA-LUD-01" and saved.json()["name"] == "Variante retenue"
+
+
+# --- audit 2026-10-15 ---------------------------------------------------------------------------
+
+
+def _save(client: TestClient, item_id: int, **body: Any) -> Any:
+    return client.post(f"/api/v1/project-items/{item_id}/save", json=body)
+
+
+def test_save_swaps_two_locations_the_codes_staying_with_the_rooms(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = _lamp(client, world, world["cha"], world["lob"])
+    cha, lob = item["placements"]
+    swapped = _save(
+        client,
+        item["id"],
+        placements=[
+            {"id": cha["id"], "locationId": world["lob"].id, "qtyMilli": 3000},
+            {"id": lob["id"], "locationId": world["cha"].id, "qtyMilli": 5000},
+        ],
+    )
+    assert swapped.status_code == 200, swapped.text
+    by_room = {p["locationId"]: (p["code"], p["qtyMilli"]) for p in swapped.json()["placements"]}
+    assert by_room == {world["cha"].id: ("CHA-LUD-01", 5000), world["lob"].id: ("LOB-LUD-01", 3000)}
+
+
+def test_save_removes_then_re_adds_the_same_location(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = _lamp(client, world, world["cha"], world["lob"])
+    lob = item["placements"][1]
+    saved = _save(
+        client,
+        item["id"],
+        placements=[
+            {"id": lob["id"], "locationId": world["lob"].id, "qtyMilli": 1000},
+            {"locationId": world["cha"].id, "qtyMilli": 2000},
+        ],
+    )
+    assert saved.status_code == 200, saved.text
+    assert sorted(p["code"] for p in saved.json()["placements"]) == ["CHA-LUD-01", "LOB-LUD-01"]
+    dup = _save(
+        client,
+        item["id"],
+        placements=[{"locationId": None, "qtyMilli": 1000}, {"locationId": None, "qtyMilli": 1}],
+    )
+    assert dup.status_code == 422
+
+
+def test_renaming_a_location_recodes_its_placements(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    item = _lamp(client, world, world["cha"])
+    renamed = client.patch(f"/api/v1/locations/{world['cha'].id}", json={"code": "CHB"})
+    assert renamed.status_code == 200, renamed.text
+    assert client.get(f"/api/v1/project-items/{item['id']}").json()["itemCode"] == "CHB-LUD-01"
+    assert _lamp(client, world, world["cha"])["itemCode"] == "CHB-LUD-02"
+
+
+def test_an_option_is_dated_and_journaled_when_its_base_changes(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    option = _lamp(client, world, optionOfId=lamp["id"])
+    client.post(f"/api/v1/project-items/{lamp['id']}/placements", json={"locationId": None})
+    events = client.get(f"/api/v1/project-items/{option['id']}/events").json()
+    assert events[-1]["kind"] == "other" and "Article de base modifié" in events[-1]["note"]
+    after = client.get(f"/api/v1/project-items/{option['id']}").json()
+    assert after["itemCode"] == "CHA-LUD-01-A · LUD-01-A"
+
+
+def test_a_hand_written_fee_code_never_collides_when_the_series_closes_up(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    def fee(code: str | None = None) -> Any:
+        body = {
+            "kind": "fee",
+            "name": "Livraison",
+            "supplierId": world["dixon"].id,
+            "currency": "EUR",
+        }
+        if code:
+            body["itemCode"] = code
+        response = client.post(base(world), json=body)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    fee("FR-00")
+    first, second = fee(), fee()
+    assert (first["itemCode"], second["itemCode"]) == ("FR-01", "FR-02")
+    assert client.delete(f"/api/v1/project-items/{first['id']}").status_code == 204
+    assert client.get(f"/api/v1/project-items/{second['id']}").json()["itemCode"] == "FR-01"
+
+
+def test_the_code_fr_is_reserved_for_fees(client: TestClient) -> None:
+    refused = client.post("/api/v1/categories", json={"code": "fr", "name": "Fresque"})
+    assert refused.status_code == 422 and refused.json()["details"][0]["field"] == "code"
+
+
+def test_deleting_an_article_removes_its_photo_from_the_disk(
+    client: TestClient, world: dict[str, Any], settings: Settings
+) -> None:
+    item = _lamp(client, world, world["cha"])
+    stored = client.post("/api/v1/files", files={"file": ("a.png", PNG_BYTES, "image/png")}).json()
+    client.post(
+        f"/api/v1/project-items/{item['id']}/files",
+        json={"fileId": stored["id"], "kind": "image", "isPrimary": True},
+    )
+    assert [p for p in settings.files_dir.rglob("*") if p.is_file()]
+    assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 204
+    assert [p.name for p in settings.files_dir.rglob("*") if p.is_file()] == []
+    assert client.get(f"/api/v1/files/{stored['id']}").status_code == 404
+
+
+def test_renaming_a_location_never_touches_a_location_with_a_similar_code(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    pid = world["project"].id
+    sdb = client.post(
+        f"/api/v1/projects/{pid}/locations", json={"code": "CHA-SDB", "name": "Salle de bain"}
+    ).json()
+    in_room = _lamp(client, world, world["cha"])
+    in_bath = client.post(
+        base(world),
+        json={
+            "name": "Lampe",
+            "categoryId": world["lud"].id,
+            "placements": [{"locationId": sdb["id"]}],
+        },
+    ).json()
+    assert in_bath["itemCode"] == "CHA-SDB-LUD-01"
+    client.patch(f"/api/v1/locations/{world['cha'].id}", json={"code": "CHB"})
+    assert client.get(f"/api/v1/project-items/{in_room['id']}").json()["itemCode"] == "CHB-LUD-01"
+    assert (
+        client.get(f"/api/v1/project-items/{in_bath['id']}").json()["itemCode"] == "CHA-SDB-LUD-01"
+    )
+
+
+def test_a_new_option_stays_deletable_after_its_base_changed(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    client.post(f"/api/v1/projects/{world['project'].id}/indice")
+    option = _lamp(client, world, optionOfId=lamp["id"])
+    client.post(f"/api/v1/project-items/{lamp['id']}/placements", json={"locationId": None})
+    assert client.delete(f"/api/v1/project-items/{option['id']}").status_code == 204

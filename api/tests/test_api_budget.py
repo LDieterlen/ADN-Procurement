@@ -213,6 +213,10 @@ def test_summary_filters_restrict_lines_and_placements(
     assert both["specifiedCents"] == 248_626  # fee has no zone, table is Atelier Bois
     assert summary(client, pid, family="custom")["specifiedCents"] == 50_000
     assert summary(client, pid, categoryId=world["tab"].id)["quotedCents"] == 50_000
+    # The count per status follows the location filter too (audit 2026-10-15).
+    counted = sum(row["count"] for row in lobby["byStatus"])
+    total = sum(row["count"] for row in summary(client, pid)["byStatus"])
+    assert 0 < counted < total
 
 
 def test_cancelling_frees_the_budget_and_empty_project_is_all_zero(

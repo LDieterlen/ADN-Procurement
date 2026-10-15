@@ -1,4 +1,4 @@
-"""`ffe db reset-dev` and step 8 of the startup cycle (dev only, ADR-0012): rebuild the dev
+"""`ffe db reset-dev` and step 8 of the startup cycle (dev only, ADR-0020): rebuild the dev
 database at the models' schema, then the demo project and the contacts directory
 (`FFE_DEV_CONTACTS_CSV`). Lives outside `db/` because it needs the services."""
 

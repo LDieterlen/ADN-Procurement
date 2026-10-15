@@ -32,7 +32,7 @@ from ffe.models import (
 from ffe.services.choice import labels as choice_labels
 from ffe.services.project_item import list_items
 
-BAND = (("image", "Photo"), ("finish", "Finition"), ("drawing", "Plan"))
+BAND = tuple((kind, fr.FILE_KIND_LABELS[kind]) for kind in ("image", "finish", "drawing"))
 
 
 def _images(item: ProjectItem) -> tuple[list[dict[str, Any]], str | None]:
@@ -68,7 +68,7 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
         if item.kind != "product":
             continue
         band, license_note = _images(item)
-        photo = band[0]["src"] if band and band[0]["label"] == "Photo" else None
+        photo = band[0]["src"] if band and band[0]["kind"] == "image" else None
         category = categories.get(item.category_id) if item.category_id else None
         supplier = suppliers.get(item.supplier_id) if item.supplier_id else None
         # An option takes its base's placements and codes, with its letter (ADR-0021).
@@ -87,6 +87,7 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
                 {
                     "item_code": f"{placement.code}{suffix}",
                     "option": item.option_letter,
+                    "base_code": placement.code if item.option_letter else None,
                     "type": category.name if category else "",
                     "name": item.name,
                     "product_name": item.product_name,
@@ -110,7 +111,7 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
                     "license_note": license_note,
                     "location_id": location.id if location else None,
                     "location_code": location.code if location else None,
-                    "location_name": location.name if location else "Non affecté",
+                    "location_name": location.name if location else fr.LABEL_UNASSIGNED,
                     "location_sort": (location.sort_order, location.id) if location else (10**9, 0),
                     "zone": location.zone if location else None,
                     "level": location.level if location else None,

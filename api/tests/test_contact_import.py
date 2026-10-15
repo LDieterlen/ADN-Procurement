@@ -17,15 +17,15 @@ HEADER = (
     "NOM;PRESTATION;SAVOIR-FAIRE;Contact 1;TELEPHONE;PORTABLE;MAIL;Contact 2;Telephone 2;Mail 2\n"
 )
 ROWS = (
-    "Flos;Fournisseur;Luminaire;Sandra Roger;01 53 85 49 93;NC;sandra@flos.com;Mickael  G;06 12;m@flos.com\n"
-    "Jouffre;Fabricant;Confection;Alice Malet;01 47;06 69;alice@jouffre.com;;;\n"
-    "Jouffre;Fabricant;Confection;Alice Malet;01 47;06 69;alice@jouffre.com;;;\n"
-    "Dedar;Editeur;Tissu;Judith G;01 56;;j@dedar.com;;;\n"
-    "Pouenat;Artisan;Ferronier;Jacques R;;;jacques@pouenat.com>;;;\n"
-    "Astéri;Distributeur;Luminaire;Nicolas D;01 30;;n@asteri.fr;;;\n"
-    "Pierre Frey;Editeur;Mobilier;Sabrina B;01 44;;s@pierrefrey.com;;;\n"
-    "Pierre Frey;Fabricant;Mobilier;Elisabeth L;01 44;;e@pierrefrey.com;;;\n"
-    "CVL;Fournisseur;Luminaire;Marie C;02 41;;mcourtaud@cvl luminaires.fr;;;\n"
+    "Flos;Fournisseur;Luminaire;Claire Martin;01 00 00 00 01;NC;claire@example.com;Paul  B;06 12;m@example.com\n"
+    "Jouffre;Fabricant;Confection;Anne Petit;01 47;06 69;anne@example.com;;;\n"
+    "Jouffre;Fabricant;Confection;Anne Petit;01 47;06 69;anne@example.com;;;\n"
+    "Dedar;Editeur;Tissu;Lucie G;01 56;;l@example.com;;;\n"
+    "Pouenat;Artisan;Ferronier;Marc R;;;marc@example.com>;;;\n"
+    "Astéri;Distributeur;Luminaire;Hugo D;01 30;;h@example.com;;;\n"
+    "Pierre Frey;Editeur;Mobilier;Emma B;01 44;;em@example.com;;;\n"
+    "Pierre Frey;Fabricant;Mobilier;Julie L;01 44;;ju@example.com;;;\n"
+    "CVL;Fournisseur;Luminaire;Sophie C;02 00;;sophie@cvl example.fr;;;\n"
     ";;;;;;;;;\n"
 )
 TEXT = HEADER + ROWS
@@ -49,14 +49,11 @@ def test_parse_maps_prestations_and_cleans_fields() -> None:
     )
     flos = rows[0]
     assert flos.fields["mobile"] is None  # « NC »
-    assert flos.fields["contact2_name"] == "Mickael G"  # double space collapsed
+    assert flos.fields["contact2_name"] == "Paul B"  # double space collapsed
     pouenat = next(r for r in rows if r.name == "Pouenat")
-    assert pouenat.fields["email"] == "jacques@pouenat.com"  # trailing « > » stripped
+    assert pouenat.fields["email"] == "marc@example.com"  # trailing « > » stripped
     cvl = next(r for r in rows if r.name == "CVL")
-    assert (
-        cvl.fields["email"] is None
-        and cvl.notes == "E-mail à vérifier : mcourtaud@cvl luminaires.fr"
-    )
+    assert cvl.fields["email"] is None and cvl.notes == "E-mail à vérifier : sophie@cvl example.fr"
 
 
 def test_import_creates_suppliers_and_professionals(session: Session, clock: Clock) -> None:
@@ -64,14 +61,16 @@ def test_import_creates_suppliers_and_professionals(session: Session, clock: Clo
     assert (result.suppliers_created, result.professionals_created) == (2, 6)
     assert result.skipped_duplicate_rows == 1
     assert result.renamed == [("Pierre Frey", "Pierre Frey (Fabricant)")]
-    assert result.emails_to_check == ["mcourtaud@cvl luminaires.fr"]
+    assert result.emails_to_check == ["sophie@cvl example.fr"]
     suppliers = {s.name: s for s in session.scalars(select(Supplier))}
-    assert suppliers["Flos"].contact2_email == "m@flos.com" and suppliers["Flos"].currency == "EUR"
+    assert (
+        suppliers["Flos"].contact2_email == "m@example.com" and suppliers["Flos"].currency == "EUR"
+    )
     professionals = {p.name: p for p in session.scalars(select(Professional))}
     assert (
         professionals["Dedar"].kind == "publisher" and professionals["Dedar"].specialty == "Tissu"
     )
-    assert professionals["Pierre Frey (Fabricant)"].contact_name == "Elisabeth L"
+    assert professionals["Pierre Frey (Fabricant)"].contact_name == "Julie L"
 
 
 def test_second_import_skips_existing_names(session: Session, clock: Clock) -> None:

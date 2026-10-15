@@ -3,7 +3,10 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from ffe.i18n import fr
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WEB_DIST = REPO_ROOT / "web" / "dist"
@@ -30,6 +33,14 @@ class Settings(BaseSettings):
     # Dev only: contacts CSV re-imported by `reset-dev` (automatic at start when the schema moved);
     # ignored when the file is absent. Never read on the real database.
     dev_contacts_csv: Path | None = REPO_ROOT / "references" / "ANNUAIRE FUSION.csv"
+
+    @field_validator("host")
+    @classmethod
+    def local_host_only(cls, value: str) -> str:
+        """The server never listens beyond this machine (CLAUDE.md, audit 2026-10-15)."""
+        if value not in ("127.0.0.1", "localhost"):
+            raise ValueError(fr.HOST_NOT_LOCAL)
+        return value
 
     @property
     def is_dev_db(self) -> bool:

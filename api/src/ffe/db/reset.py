@@ -1,5 +1,5 @@
-"""Dev-only database rebuild (ADR-0012, design phase): the single migration is regenerated from the
-models at every schema change, so the dev database is thrown away and rebuilt. The new database is
+"""Dev-only database rebuild (kept by ADR-0020): when the dev database's schema differs from the
+models (a migration being written, a branch switched), it is thrown away and rebuilt at head. The new database is
 built whole in a side file (schema, product types, then the demo project and the contacts directory
 added by `ffe.devreset`, which needs the services) and only then swapped in, after a backup: an
 interrupted rebuild (a `--reload` restart) leaves the old database untouched. Never on the real
@@ -44,7 +44,9 @@ def build_dev_database(settings: Settings, clock: Clock) -> tuple[Engine, int]:
     if schema_drift(building):
         building.dispose()
         _unlink(path)
-        raise DbError("reset-dev : la migration 0001 ne correspond pas aux modèles (la régénérer).")
+        raise DbError(
+            "reset-dev : les migrations ne correspondent pas aux modèles : écrire une migration additive NNNN (ADR-0020)."
+        )
     return building, seed_categories(building, clock)
 
 

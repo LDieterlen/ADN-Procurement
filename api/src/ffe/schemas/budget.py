@@ -11,7 +11,6 @@ Long = Annotated[str | None, Field(max_length=2000)]
 
 BudgetScope = Literal["global", "location", "zone", "family", "supplier"]
 BudgetAlertLevel = Literal["none", "warning", "over"]
-SummaryAxis = Literal["location", "zone", "family", "type", "supplier"]
 
 
 class BudgetLineIn(BaseSchema):

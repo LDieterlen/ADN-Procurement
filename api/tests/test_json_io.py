@@ -5,13 +5,17 @@ from typing import Any
 
 import pytest
 from sqlalchemy import Engine, insert, text
+from sqlalchemy.orm import Session
 
+from conftest import make_item, make_project
 from ffe.db import DbError
 from ffe.db.engine import create_db_engine
 from ffe.db.json_io import export_json, import_json
 from ffe.db.migrate import upgrade_head
 from ffe.deps import Clock
 from ffe.models import Client
+from ffe.schemas.project_item import OptionAttach
+from ffe.services.project_item import attach_option
 
 NOW = "2026-10-09T12:00:00Z"
 
@@ -96,6 +100,23 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
         assert export_json(fresh, clock) == document
     finally:
         fresh.dispose()
+
+
+def test_round_trip_keeps_an_option_pointing_to_a_newer_base(
+    engine: Engine, session: Session, clock: Clock, ext4_tmp: Path
+) -> None:
+    """ADR-0021: an older article attached as an option of a newer one (option_of_id > id)."""
+    project = make_project(session, clock)
+    older = make_item(session, clock, project.id)
+    newer = make_item(session, clock, project.id, category_id=older.category_id)
+    option = attach_option(session, newer.id, OptionAttach(project_item_id=older.id), clock)
+    assert option.option_of_id == newer.id > older.id
+    document = export_json(engine, clock)
+    fresh = create_db_engine(ext4_tmp / "fresh-option.sqlite")
+    upgrade_head(fresh)
+    imported = import_json(fresh, document)
+    assert imported["project_item"] == 2
+    fresh.dispose()
 
 
 def test_import_refuses_a_non_empty_table_without_replace(engine: Engine, clock: Clock) -> None:

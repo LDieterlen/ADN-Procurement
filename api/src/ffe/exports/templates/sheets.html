@@ -36,7 +36,7 @@
     {% for loc in locations %}
       <tr class="location"><td colspan="6">{{ loc["code"] or "—" }} — {{ loc["name"] }} <span class="where">{% if loc["zone"] %}· {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} · × {{ loc["multiplier"] }}{% endif %}</span></td></tr>
       {% for a in loc["articles"] %}
-      <tr><td class="nowrap">{{ a["type"] }}</td><td class="code">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td class="nowrap">{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
+      <tr{% if a["option"] %} class="option"{% endif %}><td class="nowrap">{{ a["type"] }}</td><td class="code ffe">{{ a["item_code"] }}</td><td>{% if a["option"] %}<span class="opt-name">Option {{ a["option"] }}</span>{% endif %}{{ a["name"] }}</td><td class="nowrap">{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
       {% endfor %}
     {% endfor %}
     </tbody>
@@ -45,11 +45,12 @@
 
 {% for loc in locations %}
   {% for a in loc["articles"] %}
-  <section class="page sheet">
+  <section class="page sheet{% if a["option"] %} option{% endif %}">
     {{ head(loc["name"]) }}
     <table class="titling"><tr>
       <td>
-        <div class="label">Prescription · {{ a["item_code"] }}{% if a["option"] %} · option {{ a["option"] }}{% endif %}</div>
+        {% if a["option"] %}<div class="option-kicker"><span class="tag">Option {{ a["option"] }}</span>Alternative à {{ a["base_code"] }}</div>{% endif %}
+        <div class="label">Prescription · {{ a["item_code"] }}</div>
         <h1{% if a["name"] | length > 60 %} class="long"{% endif %}>{{ a["name"] }}</h1>
         <div class="meta">{% if a["type"] %}<span>{{ a["type"] }}</span>{% endif %}<span>Quantité <strong>{{ a["qty_text"] }}</strong>{% if loc["multiplier"] > 1 %} par unité · × {{ loc["multiplier"] }}{% endif %}</span>{% if a["supplier_name"] %}<span>{{ a["supplier_name"] }}</span>{% endif %}</div>
       </td>

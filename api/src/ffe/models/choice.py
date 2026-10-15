@@ -8,8 +8,6 @@ from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
 
-CHOICE_LISTS = ("family", "usage", "prestation")
-
 # Values present from the start (inserted by the migration, then freely edited).
 DEFAULT_CHOICES: dict[str, tuple[tuple[str, str], ...]] = {
     "family": (

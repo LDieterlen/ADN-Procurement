@@ -74,6 +74,20 @@
   .titling .meta span { margin-right: 18px; }
   .titling .meta strong { color: #1c1a17; font-weight: 600; }
   .loc { background: #2a2420; color: #fbfaf7; padding: 16px 18px; }
+  /* An option (ADR-0021) on the same plain paper, told apart by one colour, terracotta, used as a
+     thread: an edge strip along the page (like a divider tab), a filled tag naming it, the location
+     box in that colour instead of the dark brown; in the lists, its row is tinted and marked on
+     its left edge. */
+  .sheet.option::before { content: ""; position: absolute; left: -44px; top: -36px; width: 10px; height: 1123px; background: #b0623e; }
+  .option-kicker { margin-bottom: 10px; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #b0623e; }
+  .option-kicker .tag { display: inline-block; padding: 4px 9px 3px; margin-right: 9px; background: #b0623e; color: #fbfaf7; }
+  .sheet.option .loc { background: #b0623e; }
+  .sheet.option .loc .label { color: #f3d9cc; }
+  .sheet.option .loc .sub { color: #f8e7de; }
+  tr.option td { background: #f6ece6; }  /* lists only: the sheets keep one plain paper */
+  tr.option td:first-child { border-left: 3px solid #b0623e; padding-left: 8px; }
+  tr.option td.ffe { padding-left: 14px; color: #6b645c; }
+  .opt-name { font: 500 9.5px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #b0623e; margin-right: 6px; }
   .loc .label { font-size: 9px; color: #b8a89c; }
   .loc .name { font: 500 30px/1.1 "Newsreader", serif; margin-top: 6px; }
   .loc .sub { font-size: 12px; color: #e6dcd3; margin-top: 4px; }

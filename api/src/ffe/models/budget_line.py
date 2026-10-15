@@ -7,8 +7,6 @@ from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
 
-BUDGET_SCOPES = ("global", "location", "zone", "family", "supplier")
-
 
 class BudgetLine(TimestampedMixin, Base):
     __tablename__ = "budget_line"

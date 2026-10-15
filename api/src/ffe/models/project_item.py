@@ -96,7 +96,7 @@ class ProjectItem(TimestampedMixin, Base):
     quote_url: Mapped[str | None] = mapped_column(Text)
     # --- state ---
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="to_quote")
-    # Revision letter of the spec-sheet PDF in which the line last changed (ADR-0012).
+    # Letter of the last declared indice in which the article changed (`project_indice`, 2026-10-13).
     indice: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     # --- option (ADR-0021, migration 0003) ---

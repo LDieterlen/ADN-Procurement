@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import Engine, Table, delete, insert, select
+from sqlalchemy import Engine, Table, delete, insert, select, update
 
 from ffe.db import DbError
 from ffe.db.backup import sync_files
@@ -125,6 +125,7 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
     _validate_document(document, engine)
     tables = document.get("tables", {})
     imported: dict[str, int] = {}
+    links: list[tuple[int, int, str]] = []
     with engine.begin() as conn:
         if replace:
             for table in reversed(_tables()):
@@ -158,7 +159,19 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                             f"{table.name}[{index}] : {'.'.join(str(p) for p in first['loc'])} "
                             f"— {first['msg']}"
                         ) from None
+                if table.name == "project_item" and data.get("option_of_id") is not None:
+                    # An option may point to a base with a larger id (retained option, older
+                    # article attached to a newer one; ADR-0021): the link is set in a second pass.
+                    links.append((data["id"], data["option_of_id"], data["option_letter"]))
+                    data = {**data, "option_of_id": None, "option_letter": None}
                 conn.execute(insert(table).values(**data))
+            if table.name == "project_item":
+                for item_id, base_id, letter in links:
+                    conn.execute(
+                        update(table)
+                        .where(table.c.id == item_id)
+                        .values(option_of_id=base_id, option_letter=letter)
+                    )
             imported[table.name] = len(rows)
     return imported
 

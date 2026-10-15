@@ -3,6 +3,7 @@
 Root-of-package module, stdlib only: importable from services and routers alike (ARCHITECTURE §6).
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -92,7 +93,9 @@ class IntegrityConflictError(ConflictError):
     """A database constraint fired past Pydantic (the last-resort net, DATA_MODEL §3)."""
 
     def __init__(self, detail: str) -> None:
-        super().__init__(fr.INTEGRITY.format(detail=detail))
+        # The user reads a French sentence; SQLite's own words go to the server log.
+        logging.getLogger("ffe").warning("conflit d'intégrité : %s", detail)
+        super().__init__(fr.INTEGRITY)
 
 
 class ArchivedDuplicateError(ConflictError):

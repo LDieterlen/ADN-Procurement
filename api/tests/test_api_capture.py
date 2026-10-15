@@ -18,6 +18,7 @@ from ffe.captures.extract import (
 )
 from ffe.deps import Deps
 from ffe.errors import ErrorDetail, ValidationAppError
+from ffe.services.capture import check_public
 
 JSON_LD_PAGE = """<html><head><title>Santino | Tikamoon</title>
 <meta property="og:title" content="Santino - Chaise">
@@ -309,6 +310,43 @@ def test_only_a_chrome_extension_origin_gets_cors_headers(client: TestClient) ->
         headers={"Origin": "https://evil.example.com", "Access-Control-Request-Method": "POST"},
     )
     assert "access-control-allow-origin" not in other.headers
+
+
+def test_the_extension_gets_cors_on_the_inbox_only(client: TestClient) -> None:
+    """Audit 2026-10-15: no other route answers a cross-origin read (token, data)."""
+    extension = "chrome-extension://" + "a" * 32
+    settings = client.get("/api/v1/settings", headers={"Origin": extension})
+    assert settings.status_code == 200 and "access-control-allow-origin" not in settings.headers
+
+
+def test_a_write_from_another_site_is_refused(client: TestClient) -> None:
+    foreign = client.post(
+        "/api/v1/clients",
+        json={"name": "Intrus", "kind": "company"},
+        headers={"Origin": "https://evil.example.com"},
+    )
+    assert foreign.status_code == 403 and foreign.json()["code"] == "forbidden"
+    same = client.post(
+        "/api/v1/clients",
+        json={"name": "Maison", "kind": "company"},
+        headers={"Origin": "http://127.0.0.1"},
+    )
+    assert same.status_code == 201, same.text
+    dev = client.post(  # the Vite dev server (another port, Host rewritten by its proxy)
+        "/api/v1/clients",
+        json={"name": "Atelier", "kind": "company"},
+        headers={"Origin": "http://localhost:5180"},
+    )
+    assert dev.status_code == 201, dev.text
+
+
+@pytest.mark.parametrize(
+    "url", ["http://127.0.0.1:8000/api/v1/settings", "http://localhost/", "http://10.0.0.5/"]
+)
+def test_a_local_or_private_address_is_never_fetched(url: str) -> None:
+    with pytest.raises(ValidationAppError) as raised:
+        check_public(url)
+    assert raised.value.details[0].field == "url"
 
 
 def test_guesses_type_dimensions_and_lead_time_generically() -> None:

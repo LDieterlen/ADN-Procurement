@@ -267,7 +267,7 @@ def import_json_cmd(
 def reset_dev_cmd() -> None:
     """Base de dev seulement : sauvegarde, recréation au schéma des modèles, types, projet d'exemple,
     annuaire si FFE_DEV_CONTACTS_CSV pointe sur un fichier. Automatique au démarrage quand le schéma
-    a changé (ADR-0012, avant la v1)."""
+    a changé (ADR-0020)."""
     with _opened(False) as (settings, engine):
         try:
             _fresh, summary = reset_dev(settings, engine, utcnow)

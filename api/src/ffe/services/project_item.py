@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from ffe import money
@@ -45,7 +45,6 @@ from ffe.services.project import ensure_open, get_project
 
 RESOURCE = "project_item"
 FEE_PREFIX = "FR"
-PRICE_FIELDS = ("unit_cost_cents", "currency", "fx_rate_micro", "discount_bp")
 
 
 def _err(field: str, message: str) -> ValidationAppError:
@@ -84,6 +83,21 @@ def write_event(
     new_value: str | None = None,
     note: str | None = None,
 ) -> None:
+    if kind == "placement" and item.option_of_id is None:
+        # The options show the base's placements and codes (ADR-0021): their sheets change too,
+        # so they are journaled and dated (they take the next indice).
+        for option in session.scalars(
+            select(ProjectItem).where(ProjectItem.option_of_id == item.id)
+        ):
+            option.updated_at = stamp(clock)
+            session.add(
+                ProjectItemEvent(
+                    project_item_id=option.id,
+                    kind="other",
+                    changed_at=stamp(clock),
+                    note=fr.OPTION_BASE_CHANGED_NOTE,
+                )
+            )
     session.add(
         ProjectItemEvent(
             project_item_id=item.id,
@@ -180,7 +194,11 @@ def location_code_of(session: Session, location_id: int | None) -> str:
 def _number(code: str, head: str) -> int | None:
     """Number of `code` in the series `head` (`CHA-LUD-`, `LUD-`, `FR-`), None outside it."""
     rest = code[len(head) :] if code.startswith(head) else ""
-    return int(rest) if rest.isdigit() else None
+    # Only canonical numbers belong to the series (`01`…`99`, `100`…): a hand-written fee code such
+    # as `FR-1` or `FR-00` stays outside, so closing up a series never collides with it.
+    if not rest.isdigit() or int(rest) < 1 or rest != f"{int(rest):02d}":
+        return None
+    return int(rest)
 
 
 def _series_head(location_code: str, prefix: str) -> str:
@@ -279,7 +297,7 @@ def _check_code_free(session: Session, project_id: int, code: str, exclude_id: i
         raise _err("itemCode", fr.ITEM_CODE_TAKEN)
 
 
-# --- references and defaults (création depuis le catalogue ou libre) --------------------------
+# --- references and defaults of a new article --------------------------------------------------
 
 
 def _check_reference(
@@ -359,20 +377,6 @@ def _check_location(session: Session, project_id: int, location_id: int | None) 
     if location.archived_at is not None:
         raise _err("locationId", fr.PLACEMENT_LOCATION_ARCHIVED)
     return location
-
-
-def placement_pairs(session: Session, item: ProjectItem) -> list[tuple[int, int]]:
-    """`(qty_milli, multiplier)` per placement; a fee line counts once."""
-    if item.kind == "fee":
-        return [(money.MILLI_SCALE, 1)]
-    pairs: list[tuple[int, int]] = []
-    for placement in item.placements:
-        multiplier = 1
-        if placement.location_id is not None:
-            location = session.get(Location, placement.location_id)
-            multiplier = location.multiplier if location is not None else 1
-        pairs.append((placement.qty_milli, multiplier))
-    return pairs
 
 
 def _placements_json(item: ProjectItem) -> str:
@@ -626,7 +630,7 @@ def _update_item(
     return item
 
 
-def delete_item(session: Session, item_id: int, clock: Clock) -> None:
+def delete_item(session: Session, item_id: int, clock: Clock, files_dir: Path) -> None:
     """Physical deletion (DATA_MODEL §5, ADR-0021): any article before the project's first indice;
     after it, « à chiffrer » with no event other than `created`. Never a base with options. The
     freed codes (or option letter) are closed up before the first indice."""
@@ -642,6 +646,11 @@ def delete_item(session: Session, item_id: int, clock: Clock) -> None:
                 .where(
                     ProjectItemEvent.project_item_id == item_id,
                     ProjectItemEvent.kind != "created",
+                    # an option's note « base modified » is not its own history
+                    or_(
+                        ProjectItemEvent.note.is_(None),
+                        ProjectItemEvent.note != fr.OPTION_BASE_CHANGED_NOTE,
+                    ),
                 )
             )
             if item.status != "to_quote" or others:
@@ -651,12 +660,15 @@ def delete_item(session: Session, item_id: int, clock: Clock) -> None:
             freed.append(_head_of(item.item_code))
         base_id = item.option_of_id
         project_id = item.project_id
+        file_ids = [j.file_id for j in item.files]
         session.delete(item)
         session.flush()
         for head in freed:
             _compact(session, project_id, head, clock)
         if base_id is not None:
             _compact_letters(session, base_id, clock)
+    for file_id in file_ids:  # a photo no other article uses leaves the disk too
+        unlink_if_orphan(session, files_dir, file_id)
 
 
 # --- options (ADR-0021) -----------------------------------------------------------------------
@@ -1015,8 +1027,11 @@ def save_item(
 def _save_placements(
     session: Session, item: ProjectItem, wanted: list[PlacementSave], clock: Clock
 ) -> None:
-    """Updates, then additions, then removals (so the article never lacks a placement)."""
-    current = {p.id: (p.location_id, p.qty_milli, p.sort_order) for p in item.placements}
+    """Brings the placements to the wanted list. The code follows the room (ADR-0018): a wanted
+    location already placed keeps that placement and its code (only the quantity and order move),
+    whatever row of the page it came from, so swapping two locations or removing then re-adding
+    one never collides. Then: removals, quantity changes, moves of a kept row to a new location,
+    additions; the final list is checked first (at least one, one per location)."""
     if item.kind == "fee" or item.option_of_id is not None:
         if wanted:
             raise ConflictError(
@@ -1025,34 +1040,68 @@ def _save_placements(
         return
     if not wanted:
         raise ConflictError(fr.PLACEMENT_LAST_ONE)
+    if len({row.location_id for row in wanted}) != len(wanted):
+        raise _err("placements", fr.PLACEMENT_LOCATION_TAKEN)
+    placed = {p.location_id for p in item.placements}
     for row in wanted:
-        if row.id is None:
-            continue
-        if row.id not in current:
+        if row.location_id not in placed:  # a new room must belong to the project and be active
+            _check_location(session, item.project_id, row.location_id)
+    current = {p.id: p for p in item.placements}
+    by_location = {p.location_id: p for p in item.placements}
+    for row in wanted:
+        if row.id is not None and row.id not in current:
             raise NotFoundError("placement", row.id)
-        location, qty, order = current[row.id]
+    kept: dict[int, PlacementSave] = {}  # placement id → wanted row
+    pending: list[PlacementSave] = []  # rows for a location not placed yet
+    for row in wanted:
+        same_room = by_location.get(row.location_id)
+        if same_room is not None:
+            kept[same_room.id] = row
+        else:
+            pending.append(row)
+    moves: list[tuple[int, PlacementSave]] = []
+    additions: list[PlacementSave] = []
+    for row in pending:
+        if row.id is not None and row.id not in kept and row.id not in {m[0] for m in moves}:
+            moves.append((row.id, row))
+        else:
+            additions.append(row)
+    moved = {placement_id for placement_id, _ in moves}
+    for placement_id in [pid for pid in current if pid not in kept and pid not in moved]:
+        placement = current[placement_id]
+        before = _placements_json(item)
+        freed = _head_of(placement.code)
+        item.placements.remove(placement)
+        item.updated_at = stamp(clock)
+        _journal_placements(session, item, before, clock)
+        _compact(session, item.project_id, freed, clock)
+    for placement_id, row in kept.items():
+        placement = current[placement_id]
         changes: dict[str, Any] = {}
-        if row.location_id != location:
-            changes["location_id"] = row.location_id
-        if row.qty_milli != qty:
+        if row.qty_milli != placement.qty_milli:
             changes["qty_milli"] = row.qty_milli
-        if row.sort_order != order:
+        if row.sort_order != placement.sort_order:
             changes["sort_order"] = row.sort_order
         if changes:
-            _update_placement(session, row.id, PlacementUpdate(**changes), clock)
-    for row in wanted:
-        if row.id is None:
-            _add_placement(
-                session,
-                item.id,
-                PlacementCreate(
-                    location_id=row.location_id, qty_milli=row.qty_milli, sort_order=row.sort_order
-                ),
-                clock,
-            )
-    kept = {row.id for row in wanted if row.id is not None}
-    for placement_id in [pid for pid in current if pid not in kept]:
-        _delete_placement(session, placement_id, clock)
+            _update_placement(session, placement_id, PlacementUpdate(**changes), clock)
+    for placement_id, row in moves:
+        _update_placement(
+            session,
+            placement_id,
+            PlacementUpdate(
+                location_id=row.location_id, qty_milli=row.qty_milli, sort_order=row.sort_order
+            ),
+            clock,
+        )
+    for row in additions:
+        _add_placement(
+            session,
+            item.id,
+            PlacementCreate(
+                location_id=row.location_id, qty_milli=row.qty_milli, sort_order=row.sort_order
+            ),
+            clock,
+        )
 
 
 def _save_files(
@@ -1097,3 +1146,45 @@ def _save_files(
                 clock,
             )
     return removed
+
+
+def recode_location(
+    session: Session, location_id: int, old_code: str, new_code: str, clock: Clock
+) -> None:
+    """A location's code changed: its placements move to the new series, keeping their numbers
+    when free (ADR-0018: the code names the room). Inside the caller's transaction, journaled."""
+    old_code, new_code = old_code.upper(), new_code.upper()
+    # The placements of this location only (another location's code may share a prefix, a type
+    # code may equal a location code): selected by location, never by code.
+    placements = [
+        p
+        for p in session.scalars(
+            select(ProjectItemPlacement).where(ProjectItemPlacement.location_id == location_id)
+        )
+        if p.code.startswith(f"{old_code}-")
+    ]
+    project_id = placements[0].project_id if placements else 0
+    befores: dict[int, tuple[ProjectItem, str]] = {}
+    for placement in placements:
+        item = session.get(ProjectItem, placement.project_item_id)
+        assert item is not None
+        befores.setdefault(item.id, (item, _placements_json(item)))
+        placement.code = f"{placement.code}~"  # out of every series while the new codes are set
+    session.flush()
+    for placement in placements:
+        wanted = new_code + placement.code[len(old_code) : -1]
+        head = _head_of(wanted)
+        number = _number(wanted, head) if head else None
+        taken = any(n == number for n, _ in _series(session, project_id, head)) if head else True
+        if number is None or taken:
+            item = befores[placement.project_item_id][0]
+            wanted = placement_code(
+                session, project_id, placement.location_id, _prefix_of(session, item)
+            )
+        placement.code = wanted
+        session.flush()
+    for item, before in befores.values():
+        item.updated_at = stamp(clock)
+        write_event(
+            session, item, "placement", clock, old_value=before, new_value=_placements_json(item)
+        )

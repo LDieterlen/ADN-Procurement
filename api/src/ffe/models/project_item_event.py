@@ -9,8 +9,6 @@ from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base
 
-EVENT_KINDS = ("created", "status", "price", "placement", "indice", "other")
-
 
 class ProjectItemEvent(Base):
     __tablename__ = "project_item_event"

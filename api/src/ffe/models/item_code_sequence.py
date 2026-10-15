@@ -1,5 +1,6 @@
-"""`item_code_sequence`: next item number per project, location code and type prefix; never
-decremented (DATA_MODEL §4.14, ADR-0013). `location_code = ''` for lines placed in no location."""
+"""`item_code_sequence`: no longer read nor written since ADR-0021 (codes without gaps take the
+smallest free number of their series); kept because the v1 only allows additive migrations
+(ADR-0020). DATA_MODEL §4.13."""
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column

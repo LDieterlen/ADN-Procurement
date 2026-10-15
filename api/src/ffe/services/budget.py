@@ -170,7 +170,7 @@ def summary(
         "type": {},
         "supplier": {},
     }
-    total = _Bucket("Projet")
+    total = _Bucket(fr.LABEL_PROJECT)
 
     def bucket(axis: str, key: str, label: str, order: tuple[Any, ...]) -> _Bucket:
         found = axes[axis].get(key)
@@ -216,6 +216,8 @@ def summary(
             continue
         # Shares per placement (location and zone axes), the line total for the other axes.
         shares = _shares(item, locations, amounts.net_unit_eur_cents, filters)
+        if not shares:  # outside the location / zone filter: not counted at all
+            continue
         kept = sum(share for _, share in shares)
         by_status[item.status][0] += 1
         if not counted:
@@ -224,8 +226,10 @@ def summary(
         _add(total, item.status, kept)
         for location, share in shares:
             if location is None:
-                _add(bucket("location", UNASSIGNED, "Non affecté", (1, 0)), item.status, share)
-                _add(bucket("zone", UNASSIGNED, "Sans zone", (1, "")), item.status, share)
+                _add(
+                    bucket("location", UNASSIGNED, fr.LABEL_UNASSIGNED, (1, 0)), item.status, share
+                )
+                _add(bucket("zone", UNASSIGNED, fr.LABEL_NO_ZONE, (1, "")), item.status, share)
             else:
                 _add(
                     bucket(
@@ -239,20 +243,20 @@ def summary(
                 )
                 zone = location.zone or ""
                 _add(
-                    bucket("zone", zone, zone or "Sans zone", (0 if zone else 1, zone)),
+                    bucket("zone", zone, zone or fr.LABEL_NO_ZONE, (0 if zone else 1, zone)),
                     item.status,
                     share,
                 )
         if item.kind == "fee":
-            _add(bucket("family", FEE_KEY, "Frais", (2, "")), item.status, kept)
-            _add(bucket("type", FEE_KEY, "Frais", (2, "")), item.status, kept)
+            _add(bucket("family", FEE_KEY, fr.LABEL_FEES, (2, "")), item.status, kept)
+            _add(bucket("type", FEE_KEY, fr.LABEL_FEES, (2, "")), item.status, kept)
         else:
             family = item.family or ""
             _add(
                 bucket(
                     "family",
                     family,
-                    families.get(family, "Sans famille") if family else "Sans famille",
+                    families.get(family, fr.LABEL_NO_FAMILY) if family else fr.LABEL_NO_FAMILY,
                     (0 if family else 1, family),
                 ),
                 item.status,
@@ -274,7 +278,7 @@ def summary(
             bucket(
                 "supplier",
                 str(item.supplier_id) if supplier else UNASSIGNED,
-                supplier.name if supplier else "Sans fournisseur",
+                supplier.name if supplier else fr.LABEL_NO_SUPPLIER,
                 (0, supplier.name) if supplier else (1, ""),
             ),
             item.status,

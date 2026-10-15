@@ -24,7 +24,7 @@ def list_professionals(
     session: SessionDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
     include_archived: Annotated[bool, Query(alias="includeArchived")] = False,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     specialty: Annotated[str | None, Query(max_length=200)] = None,
     kind: ProfessionalKind | None = None,

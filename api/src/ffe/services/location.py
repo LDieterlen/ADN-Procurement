@@ -78,9 +78,16 @@ def update_location(
         changes = data.model_dump(exclude_unset=True)
         if "code" in changes and changes["code"].lower() != location.code.lower():
             _check_code_free(session, location.project_id, changes["code"], location_id)
+        old_code = location.code
         for field_name, value in changes.items():
             setattr(location, field_name, value)
         location.updated_at = stamp(clock)
+        if location.code.upper() != old_code.upper():
+            # The FF&E codes name the room (ADR-0018): its placements follow the new code.
+            from ffe.services.project_item import recode_location
+
+            session.flush()
+            recode_location(session, location.id, old_code, location.code, clock)
     return location
 
 

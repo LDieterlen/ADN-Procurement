@@ -1,4 +1,4 @@
-"""`project_item` schemas: creation (from the catalogue or free), partial update, placements,
+"""`project_item` schemas: creation (the whole sheet typed, ADR-0016), partial update, placements,
 status, journal (ADR-0013)."""
 
 from typing import Annotated, Any, Literal
@@ -14,7 +14,6 @@ ItemStatus = Literal[
 ]
 ChoiceCode = Annotated[str, Field(min_length=1, max_length=40)]  # code of a `choice` list value
 ItemFileKind = Literal["image", "finish", "drawing", "other"]
-EventKind = Literal["created", "status", "price", "placement", "indice", "other"]
 
 Short = Annotated[str | None, Field(max_length=200)]
 Long = Annotated[str | None, Field(max_length=4000)]

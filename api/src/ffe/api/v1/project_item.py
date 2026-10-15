@@ -77,7 +77,7 @@ def update_item(
 
 @router.delete("/project-items/{item_id}", status_code=204, operation_id="deleteProjectItem")
 def delete_item(item_id: ItemId, session: SessionDep, deps: DepsDep) -> Response:
-    service.delete_item(session, item_id, deps.clock)
+    service.delete_item(session, item_id, deps.clock, deps.settings.files_dir)
     return Response(status_code=204)
 
 
