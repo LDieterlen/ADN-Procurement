@@ -1,6 +1,6 @@
 # ADR-0013 — Recentrage : fiche d'article autonome, statut unique, localisations, budget par axes, modules d'achat retirés
 Date : 2026-10-12
-Statut : acceptée (douze décisions prises avec l'utilisateur le 2026-10-12, questionnaire dans le JOURNAL)
+Statut : acceptée (douze décisions prises avec l'utilisateur le 2026-10-12, questionnaire dans le JOURNAL) ; partiellement remplacée par ADR-0016 (catalogue), ADR-0018 (code par implantation) et ADR-0021 (codes sans trou)
 
 ## Contexte
 L'outil était devenu complet et complexe (devis, commandes, réceptions, factures, import de tarifs, machine à neuf statuts, quinze colonnes). L'utilisateur veut « commencer petit » sur un besoin limité, décrit par une liste de données (fiche de spec, listing FF&E, budget et synthèse) et par l'UX d'un outil antérieur : une page par élément, formulaires courts. Aucune donnée réelle n'existe : le schéma repart de zéro (ADR-0012).

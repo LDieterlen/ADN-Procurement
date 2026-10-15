@@ -1,8 +1,10 @@
 # Feuille de route
 
-Outil de procurement FF&E, local, mono-utilisateur. Back Python (`api/`), front TypeScript (`web/`), base SQLite sur `~/.persist/ffe/`. Décisions structurantes : `docs/decisions/ADR-0001` à `ADR-0005`. Modèle : `docs/DATA_MODEL.md`. Compte rendu de chaque session : `docs/JOURNAL.md`.
+Outil de procurement FF&E, local, mono-utilisateur. Back Python (`api/`), front TypeScript (`web/`), base SQLite sur `~/.persist/ffe/`. Décisions structurantes : `docs/decisions/ADR-0001` à `ADR-0021` (index : `docs/decisions/README.md`). Modèle : `docs/DATA_MODEL.md`. Compte rendu de chaque session : `docs/JOURNAL.md`.
 
-> **v1 déclarée le 2026-10-14** (ADR-0020) : base réelle sur le Mac de l'utilisatrice, sans projet d'exemple ni faux contacts ; schéma `0001` figé, évolutions par migrations additives. Usage réel à démarrer sur signal de l'utilisateur.
+> **v1 déclarée le 2026-10-14** (ADR-0020) : base réelle sur le Mac de l'utilisatrice, sans projet d'exemple ni faux contacts ; schéma `0001` figé, évolutions par migrations additives (`0002_item_file_finish`, `0003_item_option`). Usage réel à démarrer sur signal de l'utilisateur.
+
+> **État au 2026-10-15** : phase de conception par retouches (depuis le 2026-10-13), commits groupés à la demande. Depuis l'étape 12 : « Coller une adresse » (ADR-0014), annuaire des professionnels (ADR-0015), catalogue retiré (ADR-0016), extension Chrome (ADR-0017), code FF&E par implantation (ADR-0018), poste Mac (ADR-0019), v1 déclarée (ADR-0020), options d'article et codes sans trou (ADR-0021) ; listes éditables famille · usage · prestation (`choice`), indice déclaré sur le projet, page article en brouillon enregistrée d'un bloc (`POST /project-items/{id}/save`, alerte de sortie), fiche PDF v2, catégorie « finition » des fichiers ; audit du 2026-10-15 (sécurité locale : origine des écritures, CORS limité à `/captures`, adresses privées refusées ; réimport JSON des options ; recodage des implantations ; listes déroulantes flottantes). Détail : `JOURNAL.md`.
 
 ## Mode d'emploi
 
@@ -14,7 +16,7 @@ Outil de procurement FF&E, local, mono-utilisateur. Back Python (`api/`), front 
 - **Cocher ici** : `[x] faite le AAAA-MM-JJ` avec le hash du dernier commit, et copier le compte rendu (≤ 10 lignes) dans `JOURNAL.md`.
 - Les livrables ci-dessous sont transposés d'une conception initiale en TypeScript unique ; les chemins `api/src/ffe/…` des étapes futures (F1 à F6) sont indicatifs et se tranchent à leur étape.
 
-Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client` · 5 front `client` · 6a référentiel · 6b produits · 6c projets/zones · 7a/b/c lignes · 8 budgets · 9 fiabilité · 10a/b/c achats · 11 prescription simple · **12 recentrage (ADR-0013 : fiche d'article, statut unique, localisations, budget par axes ; achats et import retirés, tag `v0-complet`)** · F3, F5, F6 futures ; F1 et F4 livrées puis retirées.
+Vue d'ensemble : 0 outils · 1 squelette · 2 modèle · 3 base · 4 API `client` · 5 front `client` · 6a référentiel · 6b produits · 6c projets/zones · 7a/b/c lignes · 8 budgets · 9 fiabilité · 10a/b/c achats · 11 prescription simple · **12 recentrage (ADR-0013 : fiche d'article, statut unique, localisations, budget par axes ; achats et import retirés, tag `v0-complet`)** · F5 et F6 livrées ; F3 à faire ; F1 et F4 livrées puis retirées.
 
 ---
 
@@ -258,4 +260,4 @@ Tout besoin apparu hors de l'étape en cours s'inscrit ici, en une ligne (date, 
 
 ## Reporté volontairement
 
-Accroches additives prévues par le plan (marge de revente, options A/B, achats de l'étape 10, recherche d'entreprises F3, capture et import F4–F6, exports émis F1–F2, zones hiérarchiques, multi-utilisateur, bureau) : liste maîtresse dans `DATA_MODEL.md` §9 ; le modèle v1 n'en contient aucune colonne.
+Accroches additives prévues par le plan (marge de revente, remplacement tracé, achats de l'étape 10, recherche d'entreprises F3, import de tarifs F4, exports xlsx F1, TVA, date de besoin, zones hiérarchiques, multi-utilisateur, bureau) : liste maîtresse dans `DATA_MODEL.md` §8 ; le modèle v1 n'en contient aucune colonne. Les options A/B ne sont plus reportées : réalisées par ADR-0021 (migration `0003_item_option`) ; la capture (F5, F6) et les exports PDF (F2) sont livrés.

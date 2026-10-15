@@ -1,6 +1,6 @@
 # ADR-0012 — Prescription simple : codes zone-typologie, localisation, indice de diffusion, schéma repris de zéro jusqu'à la v1
 Date : 2026-10-12
-Statut : acceptée (décisions prises avec l'utilisateur le 2026-10-12). Complément du 2026-10-13 : la base de dev se recrée seule au démarrage quand le schéma a changé (`db/reset.py`, cycle étape 8), `ffe db reset-dev` à la main ; jamais sur la base réelle.
+Statut : acceptée (décisions prises avec l'utilisateur le 2026-10-12) ; partiellement remplacée par ADR-0013 (codes, localisation), ADR-0020 (régénération du schéma, close par la v1) et ADR-0021 (`item_code_sequence` jamais décrémentée). Complément du 2026-10-13 : la base de dev se recrée seule au démarrage quand le schéma a changé (`db/reset.py`, cycle étape 8), `ffe db reset-dev` à la main ; jamais sur la base réelle.
 
 ## Contexte
 L'écran projet était devenu trop complexe pour l'usage premier : prescrire. L'utilisateur a montré ses fiches d'un outil antérieur (liste Typologie · Code FF&E · Désignation · Localisation · Indice, puis une fiche par article avec photo, dessin, fabricant, référence, contact fournisseur, diffusion, validation). Aucune donnée réelle n'existe encore ; les treize migrations incrémentales ne protégeaient rien.

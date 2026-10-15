@@ -1,6 +1,6 @@
 # ADR-0018 — Un code FF&E par implantation
 Date : 2026-10-14
-Statut : acceptée (demande de l'utilisateur du 2026-10-14) ; remplace la règle « un article garde un seul `item_code` » d'ADR-0013
+Statut : acceptée (demande de l'utilisateur du 2026-10-14) ; remplace la règle « un article garde un seul `item_code` » d'ADR-0013 ; partiellement remplacée par ADR-0021 (« un numéro n'est jamais réutilisé » → plus petit numéro libre, tassement avant le premier indice)
 
 ## Contexte
 Le code `<LOC>-<TYPE>-NN` était porté par l'article et pris à sa première implantation. Deux défauts relevés par l'utilisateur : changer la localisation ne changeait pas le code, et un article implanté dans plusieurs pièces n'avait qu'un code. En FF&E, un code désigne un article **dans une pièce** : c'est ce que lisent le listing et les fiches (une ligne et une fiche par implantation).

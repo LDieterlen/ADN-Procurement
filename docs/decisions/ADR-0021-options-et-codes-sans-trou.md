@@ -14,7 +14,7 @@ L'utilisatrice veut proposer des alternatives à un article (options), codées c
 - **Codes sans trou** : un nouveau code prend le plus petit numéro libre de sa série (projet, localisation, type ; `FR` pour les frais), de même pour les lettres. **Avant le premier indice** du projet, un code libéré (suppression, déplacement, changement de type, article devenu option) est comblé : les codes suivants de la série descendent d'un cran (événement `placement` sur les articles touchés). **Après**, aucun code diffusé ne bouge : le trou sera comblé par le prochain article. Un article annulé garde son code.
 - **Avant le premier indice**, tout article se supprime (quel que soit son statut ou son historique) ; après, seul un article « à chiffrer » sans historique. Une base avec des options ne se supprime pas.
 - `item_code_sequence` n'est plus lue ni écrite ; la table reste (v1, migrations additives, ADR-0020).
-- PDF : l'option suit sa base dans le listing et a sa propre fiche, avec son code à lettre.
+- PDF : l'option suit sa base dans le listing et a sa propre fiche, avec son code à lettre ; elle se distingue d'un coup d'œil (2026-10-15) : même papier uni et une seule couleur, terre cuite (`#b0623e`), en fil conducteur : bande verticale au bord gauche de la page, étiquette « Option A » suivie de « Alternative à CHA-TAB-01 », cadre de localisation en terre cuite au lieu du brun foncé ; dans le listing et la liste des fiches, ligne légèrement teintée marquée d'un filet terre cuite à gauche, code FF&E en retrait, « OPTION A » devant la désignation.
 
 ## Alternatives écartées
 - Tasser toujours : des codes déjà envoyés au client changeraient.
