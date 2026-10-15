@@ -1,5 +1,6 @@
 """Programmatic Alembic: same scripts and configuration as the `alembic` CLI (api/alembic.ini)."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 from alembic import command
@@ -42,14 +43,26 @@ def has_pending(engine: Engine) -> bool:
     return current_revision(engine) != head_revision()
 
 
+def _atomically(engine: Engine, step: Callable[[Connection], None]) -> None:
+    """One explicit SQLite transaction around every migration (ADR-0020): pysqlite opens none
+    before a schema statement, so without it a failure halfway left a half-migrated database (a
+    leftover table blocking every later start). Now a failure leaves the file exactly as before."""
+    with engine.connect() as conn:
+        conn.exec_driver_sql("BEGIN IMMEDIATE")
+        try:
+            step(conn)
+        except BaseException:
+            conn.rollback()
+            raise
+        conn.commit()
+
+
 def upgrade_head(engine: Engine) -> None:
-    with engine.begin() as conn:
-        command.upgrade(alembic_config(conn), "head")
+    _atomically(engine, lambda conn: command.upgrade(alembic_config(conn), "head"))
 
 
 def downgrade_base(engine: Engine) -> None:
-    with engine.begin() as conn:
-        command.downgrade(alembic_config(conn), "base")
+    _atomically(engine, lambda conn: command.downgrade(alembic_config(conn), "base"))
 
 
 def schema_drift(engine: Engine) -> bool:

@@ -134,3 +134,45 @@ def test_files_of_a_v1_article_survive_the_finish_category(
         assert {"ix_project_item_file_file_id", "uq_project_item_file_primary"} <= indexes
     finally:
         conn.close()
+
+
+def _schema(db: Path) -> list[tuple[str, str]]:
+    conn = sqlite3.connect(db)
+    try:
+        return [(str(n), str(q)) for n, q in conn.execute("SELECT name, sql FROM sqlite_master")]
+    finally:
+        conn.close()
+
+
+def test_a_migration_failing_halfway_leaves_the_v1_database_untouched_then_restarts(
+    v1_settings: Settings, clock: Clock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A crash on the very last statement of the chain: the file is exactly the v1 one again
+    (schema and rows), the start stops, and the next start migrates it normally."""
+    from alembic.operations import Operations
+
+    before_rows, before_schema = _rows(v1_settings.db_path), _schema(v1_settings.db_path)
+    real_execute = Operations.execute
+    last = "CREATE UNIQUE INDEX uq_project_item_option"
+
+    def crashing(self: Operations, sql: Any, *args: Any, **kwargs: Any) -> Any:
+        if last in str(sql):
+            raise RuntimeError("panne simulée")
+        return real_execute(self, sql, *args, **kwargs)
+
+    monkeypatch.setattr(Operations, "execute", crashing)
+    with pytest.raises(RuntimeError, match="panne simulée"):
+        run_startup(v1_settings, clock)
+    assert _schema(v1_settings.db_path) == before_schema  # no leftover table, no half change
+    assert _rows(v1_settings.db_path) == before_rows
+    monkeypatch.setattr(Operations, "execute", real_execute)
+    started = run_startup(v1_settings, clock)
+    try:
+        assert current_revision(started.engine) == head_revision()
+    finally:
+        started.close()
+    after = _rows(v1_settings.db_path)
+    for table, (columns, rows) in before_rows.items():  # every v1 row and value still there
+        new_columns, new_rows = after[table]
+        kept = [new_columns.index(c) for c in columns]
+        assert {r: tuple(v[i] for i in kept) for r, v in new_rows.items()} == rows, table
