@@ -534,6 +534,26 @@ export interface paths {
         patch: operations["updateProjectItem"];
         trace?: never;
     };
+    "/api/v1/project-items/{item_id}/detach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Detach Option
+         * @description The option becomes an independent article, unassigned (ADR-0021).
+         */
+        post: operations["detachProjectItemOption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/project-items/{item_id}/events": {
         parameters: {
             query?: never;
@@ -586,6 +606,26 @@ export interface paths {
         patch: operations["updateProjectItemFile"];
         trace?: never;
     };
+    "/api/v1/project-items/{item_id}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach Option
+         * @description An existing article of the project becomes an option of this one (ADR-0021).
+         */
+        post: operations["attachProjectItemOption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/project-items/{item_id}/placements": {
         parameters: {
             query?: never;
@@ -597,6 +637,47 @@ export interface paths {
         put?: never;
         /** Add Placement */
         post: operations["addPlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/retain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retain Option
+         * @description This option takes its base's place (ADR-0021); returns the option, now the base.
+         */
+        post: operations["retainProjectItemOption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/project-items/{item_id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Item
+         * @description « Enregistrer » on the article page: sheet, status, placements, files and options at once,
+         *     all or nothing.
+         */
+        post: operations["saveProjectItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1348,6 +1429,32 @@ export interface components {
             /** Sourceurl */
             sourceUrl: string | null;
         };
+        /**
+         * FileSave
+         * @description One file of the article as it must be after the save (already uploaded by `POST /files`).
+         */
+        FileSave: {
+            /** Caption */
+            caption?: string | null;
+            /** Fileid */
+            fileId: number;
+            /**
+             * Isprimary
+             * @default false
+             */
+            isPrimary: boolean;
+            /**
+             * Kind
+             * @default image
+             * @enum {string}
+             */
+            kind: "image" | "finish" | "drawing" | "other";
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1390,7 +1497,7 @@ export interface components {
              * @default image
              * @enum {string}
              */
-            kind: "image" | "drawing" | "other";
+            kind: "image" | "finish" | "drawing" | "other";
             /**
              * Sortorder
              * @default 0
@@ -1411,7 +1518,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "image" | "drawing" | "other";
+            kind: "image" | "finish" | "drawing" | "other";
             /** Mimetype */
             mimeType: string;
             /** Originalname */
@@ -1430,9 +1537,29 @@ export interface components {
             /** Isprimary */
             isPrimary?: boolean | null;
             /** Kind */
-            kind?: ("image" | "drawing" | "other") | null;
+            kind?: ("image" | "finish" | "drawing" | "other") | null;
             /** Sortorder */
             sortOrder?: number | null;
+        };
+        /**
+         * ItemSave
+         * @description « Enregistrer » on the article page: every change at once, one transaction (all or nothing).
+         *     Absent = unchanged; `placements` and `files` are the full lists wanted.
+         */
+        ItemSave: {
+            /**
+             * Attachoptions
+             * @default []
+             */
+            attachOptions: number[];
+            /** Files */
+            files?: components["schemas"]["FileSave"][] | null;
+            /** Optionaction */
+            optionAction?: ("retain" | "detach") | null;
+            /** Placements */
+            placements?: components["schemas"]["PlacementSave"][] | null;
+            sheet?: components["schemas"]["ProjectItemUpdate"] | null;
+            status?: components["schemas"]["StatusChange"] | null;
         };
         /**
          * LineAmountsRead
@@ -1523,6 +1650,14 @@ export interface components {
             /** Zone */
             zone?: string | null;
         };
+        /**
+         * OptionAttach
+         * @description An existing article of the project becomes an option of the base (ADR-0021).
+         */
+        OptionAttach: {
+            /** Projectitemid */
+            projectItemId: number;
+        };
         /** Page[ProfessionalRead] */
         Page_ProfessionalRead_: {
             /** Items */
@@ -1580,6 +1715,26 @@ export interface components {
             sortOrder: number;
             /** Updatedat */
             updatedAt: string;
+        };
+        /**
+         * PlacementSave
+         * @description One placement of the article as it must be after the save: `id` = kept, none = new.
+         */
+        PlacementSave: {
+            /** Id */
+            id?: number | null;
+            /** Locationid */
+            locationId?: number | null;
+            /**
+             * Qtymilli
+             * @default 1000
+             */
+            qtyMilli: number;
+            /**
+             * Sortorder
+             * @default 0
+             */
+            sortOrder: number;
         };
         /** PlacementUpdate */
         PlacementUpdate: {
@@ -1754,6 +1909,8 @@ export interface components {
             leadTime?: string | null;
             /** Name */
             name?: string | null;
+            /** Optionofid */
+            optionOfId?: number | null;
             /** Placements */
             placements?: components["schemas"]["PlacementCreate"][] | null;
             /** Productname */
@@ -1817,6 +1974,10 @@ export interface components {
             leadTime: string | null;
             /** Name */
             name: string;
+            /** Optionletter */
+            optionLetter: string | null;
+            /** Optionofid */
+            optionOfId: number | null;
             /** Placements */
             placements: components["schemas"]["PlacementRead"][];
             /** Productname */
@@ -3583,6 +3744,37 @@ export interface operations {
             };
         };
     };
+    detachProjectItemOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listProjectItemEvents: {
         parameters: {
             query?: never;
@@ -3717,6 +3909,41 @@ export interface operations {
             };
         };
     };
+    attachProjectItemOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptionAttach"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     addPlacement: {
         parameters: {
             query?: never;
@@ -3734,6 +3961,72 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retainProjectItemOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    saveProjectItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

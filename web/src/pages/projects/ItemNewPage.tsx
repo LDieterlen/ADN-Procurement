@@ -1,8 +1,9 @@
 // New article (ADR-0013, ADR-0016): the same sheet as the article page, optionally pre-filled by
-// « Coller une adresse », with a first placement.
-import { useState } from 'react'
+// « Coller une adresse », with a first placement; `?optionOf=<id>` makes it an option of that
+// article (ADR-0021): no placement, the base's type pre-selected.
+import { useEffect, useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useCaptures, useDeleteCapture, type CaptureRead } from '../../api/queries/capture'
 import { useCategories } from '../../api/queries/category'
@@ -10,7 +11,7 @@ import { fileContentUrl } from '../../api/queries/file'
 import { centsToText } from '../../components/forms/MoneyField'
 import type { FileRead } from '../../api/queries/file'
 import { CLOSED_STATUSES, locationLabel, useLocations, useProject } from '../../api/queries/project'
-import { useAttachItemFile, useCreateItem } from '../../api/queries/projectItem'
+import { useAttachItemFile, useCreateItem, useProjectItem } from '../../api/queries/projectItem'
 import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
@@ -50,6 +51,14 @@ export function ItemNewPage() {
   const [formKey, setFormKey] = useState(0)
   const [banner, setBanner] = useState<string | null>(null)
   const form = useForm<ItemFormValues>({ defaultValues: EMPTY_ITEM })
+  const [search] = useSearchParams()
+  const optionOf = Number(search.get('optionOf')) || undefined
+  const base = useProjectItem(optionOf)
+
+  useEffect(() => {
+    // An option starts with its base's type (still editable).
+    if (base.data && form.getValues('categoryId') === null) form.setValue('categoryId', base.data.categoryId)
+  }, [base.data, form])
 
   /** The brand read on a page never creates a supplier (brands are not suppliers): the existing
    * suppliers whose name resembles it are suggested; a single match is pre-selected, still editable. */
@@ -79,12 +88,10 @@ export function ItemNewPage() {
     if (milli === undefined || milli === null) return setBanner('Quantité invalide.')
     if (!values.productName.trim()) return form.setError('productName', { type: 'required', message: 'Un nom est nécessaire.' })
     try {
+      const payload = toCreatePayload(values, { locationId: locationId ? Number(locationId) : null, qtyMilli: milli })
       const created = await create.mutateAsync({
         projectId,
-        data: toCreatePayload(values, {
-          locationId: locationId ? Number(locationId) : null,
-          qtyMilli: milli,
-        }),
+        data: optionOf ? { ...payload, placements: null, optionOfId: optionOf } : payload,
       })
       for (const [index, file] of photos.entries()) {
         await attach
@@ -96,7 +103,8 @@ export function ItemNewPage() {
         kind: 'success',
         message: `${created.itemCode} ajouté${photos.length > 1 ? ` avec ${photos.length} photos` : photos.length ? ' avec sa photo' : ' ; ajouter sa photo si besoin'}.`,
       })
-      navigate(`/projects/${projectId}`) // back to the project: the article is in its list
+      // Back to the project (the article is in its list), or to the base article for an option.
+      navigate(optionOf ? `/projects/${projectId}/items/${optionOf}` : `/projects/${projectId}`)
     } catch (error) {
       if (!isApiError(error)) throw error
       if (error.code === 'validation_error') {
@@ -134,7 +142,14 @@ export function ItemNewPage() {
   return (
     <section className="max-w-[960px]">
       <PageHeader
-        title="Nouvel article"
+        title={optionOf ? 'Nouvelle option' : 'Nouvel article'}
+        subtitle={
+          optionOf && base.data ? (
+            <span>
+              Option de <span className="font-mono">{base.data.itemCode}</span> — {base.data.name} ; elle reprend ses localisations et quantités.
+            </span>
+          ) : undefined
+        }
         crumbs={
           <>
             <Link to="/projects" className="hover:underline">
@@ -230,44 +245,48 @@ export function ItemNewPage() {
                 key={formKey}
                 form={form}
                 kind="product"
-                categories={(categories.data ?? []).map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
+                categories={(categories.data ?? [])
+                  .filter((c) => !base.data || c.id === base.data.categoryId) // an option has its base's type
+                  .map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
                 suppliers={options(suppliers.data?.items)}
                 onCreateSupplier={() => setModal('supplier')}
               />
             </div>
           </Card>
-          <Card title="Implantation" label="Implantation" className="mt-6">
-            <div className="flex flex-wrap items-end gap-4">
-              <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
-                Localisation
-                <select
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  className="min-w-64 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-normal"
-                >
-                  <option value="">Non affecté</option>
-                  {(locations.data ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {locationLabel(l)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
-                Quantité
-                <input
-                  value={qty}
-                  onChange={(e) => setQty(e.target.value)}
-                  inputMode="decimal"
-                  className="w-24 rounded-lg border border-line-strong px-3 py-2 text-right text-sm font-normal"
-                />
-              </label>
-              <span className="pb-2 text-xs text-ink-3">Par localisation ; d'autres implantations s'ajoutent ensuite sur la page de l'article.</span>
-            </div>
-          </Card>
+          {!optionOf && (
+            <Card title="Implantation" label="Implantation" className="mt-6">
+              <div className="flex flex-wrap items-end gap-4">
+                <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
+                  Localisation
+                  <select
+                    value={locationId}
+                    onChange={(e) => setLocationId(e.target.value)}
+                    className="min-w-64 rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-normal"
+                  >
+                    <option value="">Non affecté</option>
+                    {(locations.data ?? []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {locationLabel(l)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
+                  Quantité
+                  <input
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    inputMode="decimal"
+                    className="w-24 rounded-lg border border-line-strong px-3 py-2 text-right text-sm font-normal"
+                  />
+                </label>
+                <span className="pb-2 text-xs text-ink-3">Par localisation ; d'autres implantations s'ajoutent ensuite sur la page de l'article.</span>
+              </div>
+            </Card>
+          )}
           <div className="mt-6 flex gap-2">
             <Button type="submit" variant="primary" disabled={create.isPending}>
-              Créer l'article
+              {optionOf ? "Créer l'option" : "Créer l'article"}
             </Button>
             <Link to={`/projects/${p.id}`}>
               <Button variant="ghost">Annuler</Button>

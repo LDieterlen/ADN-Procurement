@@ -2,7 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { installFakeApi, placementRow, type FakeApi } from '../../../tests/helpers/fakeApi'
+import { installFakeApi, itemRow, placementRow, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
 
 let api: FakeApi
@@ -36,6 +36,9 @@ beforeEach(() => {
 })
 afterEach(() => api.restore())
 
+/** « Enregistrer » is in the header and in the bottom bar: the header one. */
+const saveButton = () => screen.getAllByRole('button', { name: 'Enregistrer' })[0]!
+
 describe('page article', () => {
   test('fiche et budget en un formulaire : PATCH complet, montant total et contact fournisseur affichés', async () => {
     const user = userEvent.setup()
@@ -55,7 +58,7 @@ describe('page article', () => {
     await user.type(screen.getByLabelText('N° de devis'), 'DV-118')
     await user.clear(screen.getByLabelText('Remise'))
     await user.type(screen.getByLabelText('Remise'), '20')
-    await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    await user.click(saveButton())
     await screen.findByText('Article enregistré.')
     expect(api.items[0]).toMatchObject({
       reference: 'BLS01',
@@ -81,13 +84,13 @@ describe('page article', () => {
     expect(input.value).toBe('https://www.tomdixon.net/beat-light-fat')
     await user.clear(input)
     await user.type(input, 'https://www.tomdixon.net/beat-light-tall')
-    await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    await user.click(saveButton())
     await screen.findByText('Article enregistré.')
     expect(api.items[0]?.sourceUrl).toBe('https://www.tomdixon.net/beat-light-tall')
     expect(await screen.findByRole('link', { name: 'tomdixon.net/beat-light-tall' })).toBeTruthy()
   })
 
-  test('implantation : ajouter une localisation, modifier une quantité, retirer ; photo jointe', async () => {
+  test('implantation et photos : tout attend « Enregistrer », puis part en une fois', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/1')
     const card = await screen.findByRole('region', { name: 'Implantation' })
@@ -95,23 +98,43 @@ describe('page article', () => {
     await user.clear(within(card).getByLabelText('Quantité à ajouter'))
     await user.type(within(card).getByLabelText('Quantité à ajouter'), '2')
     await user.click(within(card).getByRole('button', { name: 'Ajouter' }))
-    await waitFor(() =>
-      expect(api.items[0]?.placements.map((p) => [p.locationId, p.qtyMilli])).toEqual([
-        [2, 1000],
-        [1, 2000],
-      ]),
-    )
-    const qty = await within(card).findByLabelText('Quantité dans CHA')
+    expect(within(card).getByText("à l'enregistrement")).toBeTruthy()
+    const qty = within(card).getByLabelText('Quantité dans CHA')
     await user.clear(qty)
     await user.type(qty, '3')
     await user.tab()
-    await waitFor(() => expect(api.items[0]?.placements[0]?.qtyMilli).toBe(3000))
-    await user.click(within(card).getByRole('button', { name: 'Retirer de LOB' }))
-    await waitFor(() => expect(api.items[0]?.placements).toHaveLength(1))
     await user.upload(screen.getByLabelText('Photo à joindre'), PNG)
-    await waitFor(() => expect(api.items[0]?.files).toHaveLength(1))
-    expect(api.items[0]?.files[0]).toMatchObject({ kind: 'image', isPrimary: true })
     expect(await screen.findByText('Principale')).toBeTruthy()
+    // Sorted by hand: the photo becomes a finish, and stops being the main photo.
+    await user.selectOptions(screen.getByLabelText('Catégorie de photo.png'), 'finish')
+    expect([...(screen.getByLabelText('Catégorie de photo.png') as HTMLSelectElement).options].map((o) => o.text)).toEqual(['Photo', 'Finition', 'Plan'])
+    // Nothing reached the server yet: the bar says so.
+    expect(api.items[0]?.placements).toHaveLength(1)
+    expect(api.items[0]?.files).toHaveLength(0)
+    expect(screen.getByRole('region', { name: 'Modifications non enregistrées' })).toBeTruthy()
+    await user.click(saveButton())
+    await screen.findByText('Article enregistré.')
+    expect(api.items[0]?.placements.map((p) => [p.locationId, p.qtyMilli])).toEqual([
+      [2, 3000],
+      [1, 2000],
+    ])
+    expect(api.items[0]?.files[0]).toMatchObject({ kind: 'finish', isPrimary: false })
+    expect(api.requests.filter((r) => r.path.endsWith('/save'))).toHaveLength(1)
+    expect(screen.queryByRole('region', { name: 'Modifications non enregistrées' })).toBeNull()
+  })
+
+  test('quitter avec des modifications non enregistrées demande quoi faire', async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/1')
+    await user.type(await screen.findByLabelText('Référence'), 'BLS01')
+    await user.click(screen.getByRole('button', { name: 'Retour au projet' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Modifications non enregistrées' })
+    await user.click(within(dialog).getByRole('button', { name: 'Rester sur la page' }))
+    expect(screen.getByRole('heading', { name: 'Beat Light Fat' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Retour au projet' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enregistrer et quitter' }))
+    expect(await screen.findByRole('heading', { name: 'Rénovation' })).toBeTruthy()
+    expect(api.items[0]?.reference).toBe('BLS01')
   })
 
   test('un fournisseur est créé depuis la fiche sans quitter la page', async () => {
@@ -137,6 +160,50 @@ describe('page article', () => {
     expect(await screen.findByRole('heading', { name: 'Rénovation' })).toBeTruthy()
   })
 
+  test('options : une nouvelle option reprend les localisations de la base, avec une lettre', async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/items/1')
+    const card = await screen.findByRole('region', { name: 'Options' })
+    expect(within(card).getByText(/Aucune option/)).toBeTruthy()
+    await user.click(within(card).getByRole('button', { name: '+ Nouvelle option' }))
+    expect(await screen.findByRole('heading', { name: 'Nouvelle option' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Implantation' })).toBeNull()
+    await user.type(screen.getByLabelText('Nom'), 'Lampe Artemide')
+    await user.click(screen.getByRole('button', { name: "Créer l'option" }))
+    const options = await screen.findByRole('table', { name: "Options de l'article" })
+    expect(within(options).getByText('CHA-LUD-01-A')).toBeTruthy()
+    expect(api.items.at(-1)).toMatchObject({ optionOfId: 1, optionLetter: 'A', placements: [] })
+  })
+
+  test('options : un article existant se rattache, puis une option se retient à la place de la base', async () => {
+    const user = userEvent.setup()
+    api.items.push(itemRow({ itemCode: 'LOB-LUD-01', name: 'Lampe Poulsen', placements: [placementRow(2, 1)] }, 2))
+    renderApp('/projects/1/items/1')
+    const card = await screen.findByRole('region', { name: 'Options' })
+    await user.click(within(card).getByRole('button', { name: 'Article existant à rattacher' }))
+    await user.type(screen.getByLabelText('Rechercher un article à rattacher'), 'poulsen')
+    expect(screen.getByText('1 sur 1')).toBeTruthy()
+    await user.keyboard('{Enter}')
+    await user.click(within(card).getByRole('button', { name: 'Rattacher comme option' }))
+    expect(within(card).getByText('à enregistrer')).toBeTruthy()
+    expect(api.items.find((i) => i.id === 2)?.optionOfId).toBeNull() // pending
+    await user.click(saveButton())
+    await screen.findByText('Article enregistré.')
+    expect(api.items.find((i) => i.id === 2)?.optionOfId).toBe(1)
+    const options = await screen.findByRole('table', { name: "Options de l'article" })
+    await user.click(within(options).getByText('Lampe Poulsen'))
+    expect(await screen.findByRole('region', { name: 'Option' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Retenir cette option' }))
+    await user.click(saveButton())
+    await waitFor(() => expect(api.items.find((i) => i.id === 2)?.optionOfId).toBeNull())
+    expect(api.items.find((i) => i.id === 1)).toMatchObject({ optionOfId: 2, optionLetter: 'A' })
+    // The former base, now option A, is detached: an independent article again.
+    await user.click(within(await screen.findByRole('table', { name: "Options de l'article" })).getByText('Beat Light Fat'))
+    await user.click(await screen.findByRole('button', { name: 'Détacher' }))
+    await user.click(saveButton())
+    await waitFor(() => expect(api.items.find((i) => i.id === 1)?.optionOfId).toBeNull())
+  })
+
   test("la localisation d'une implantation se change en place, sans la recréer", async () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/1')
@@ -145,6 +212,7 @@ describe('page article', () => {
     const select = within(table).getAllByRole('combobox')[0] as HTMLSelectElement
     const target = Array.from(select.options).find((o) => o.value !== '' && o.value !== select.value)!
     await user.selectOptions(select, target.value)
+    await user.click(saveButton())
     await waitFor(() => expect(api.items[0]?.placements.map((p) => p.locationId)).toContain(Number(target.value)))
     expect(api.items[0]?.placements).toHaveLength(1)
   })

@@ -26,6 +26,56 @@ beforeEach(() => {
 afterEach(() => api.restore())
 
 describe('page projet', () => {
+  test('articles : une option suit sa base, avec la lettre et un montant entre parenthèses, hors compteur', async () => {
+    api.items.push(
+      itemRow({ itemCode: 'CHA-LUD-01', name: 'Lampe Flos', unitCostCents: 10_000, placements: [placementRow(1, 2)] }, 1),
+      itemRow({ itemCode: 'CHA-LUD-01-A', name: 'Lampe Artemide', unitCostCents: 20_000, optionOfId: 1, optionLetter: 'A' }, 2),
+    )
+    renderApp('/projects/1')
+    const table = await screen.findByRole('table', { name: 'Articles du projet' })
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((r) => r.getAttribute('aria-label'))
+    expect(rows.indexOf('CHA-LUD-01-A dans CHA')).toBe(rows.indexOf('CHA-LUD-01 dans CHA') + 1)
+    const option = within(table).getByRole('row', { name: 'CHA-LUD-01-A dans CHA' })
+    expect(within(option).getByText('Option A')).toBeTruthy()
+    expect(option.textContent).toMatch(/\(2\s?400,00\s€\)/) // 200 € × 12, indicative
+    expect(screen.getByText(/^1 article/)).toBeTruthy()
+  })
+
+  test('articles : filtres par localisation, zone, niveau et code article, combinés', async () => {
+    const user = userEvent.setup()
+    api.items.push(
+      itemRow({ itemCode: 'LOB-AS-01', name: 'Fauteuil lobby', categoryId: 2, placements: [placementRow(1, 1)] }, 1),
+      itemRow({ itemCode: 'CHA-LUD-01', name: 'Lampe chambre', placements: [placementRow(2, 2)] }, 2),
+    )
+    renderApp('/projects/1')
+    const table = await screen.findByRole('table', { name: 'Articles du projet' })
+    await within(table).findByText('Fauteuil lobby')
+    await user.click(screen.getByRole('button', { name: 'Zone' }))
+    await user.click(within(screen.getByRole('group', { name: 'Zone' })).getByLabelText('Hébergement'))
+    expect(within(table).queryByText('Fauteuil lobby')).toBeNull()
+    expect(within(table).getByText('Lampe chambre')).toBeTruthy()
+    expect(screen.getByText(/1 sur 2 articles/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Effacer les filtres' }))
+    await user.click(screen.getByRole('button', { name: 'Niveau' }))
+    await user.click(within(screen.getByRole('group', { name: 'Niveau' })).getByLabelText('R0'))
+    expect(within(table).getByText('Fauteuil lobby')).toBeTruthy()
+    expect(within(table).queryByText('Lampe chambre')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Effacer les filtres' }))
+    await user.click(screen.getByRole('button', { name: 'Localisation' }))
+    await user.click(within(screen.getByRole('group', { name: 'Localisation' })).getByLabelText('LOB — Lobby'))
+    expect(within(table).getByText('Fauteuil lobby')).toBeTruthy()
+    expect(within(table).queryByText('Lampe chambre')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Effacer les filtres' }))
+    await user.type(screen.getByLabelText('Code article'), 'lud')
+    expect(within(table).queryByText('Fauteuil lobby')).toBeNull()
+    expect(within(table).getByText('Lampe chambre')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Niveau' }))
+    await user.click(within(screen.getByRole('group', { name: 'Niveau' })).getByLabelText('R0'))
+    expect(screen.getByText('Aucun article ne correspond aux filtres.')).toBeTruthy()
+  })
+
   test('localisations : liste avec zone, niveau et nombre ; ajout en bas de tableau ; code dupliqué refusé', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1')

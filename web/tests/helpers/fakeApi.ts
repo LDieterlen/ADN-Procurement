@@ -218,6 +218,8 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     quoteUrl: null,
     status: 'to_quote',
     indice: null,
+    optionOfId: null,
+    optionLetter: null,
     sortOrder: 0,
     createdAt: NOW,
     updatedAt: NOW,
@@ -333,6 +335,7 @@ function handleJunctions(state: FakeApi, owner: { files: Junction[] }, method: s
   if (!junction) return error(409, 'conflict', "Ce fichier n'est pas joint.")
   if (method === 'PATCH') {
     if (payload.isPrimary) owner.files.forEach((f) => (f.isPrimary = false))
+    if (payload.kind && payload.kind !== 'image' && payload.isPrimary === undefined) payload.isPrimary = false
     Object.assign(junction, payload)
     return json(200, owner)
   }
@@ -363,8 +366,18 @@ function placementCode(state: FakeApi, projectId: number, locationId: number | n
   return nextCode(state, projectId, loc, typeCode(state, categoryId))
 }
 
-function relabel(item: ProjectItemRead) {
-  if (item.kind !== 'fee') item.itemCode = item.placements.map((p) => p.code).join(' · ')
+function relabel(item: ProjectItemRead, state?: FakeApi) {
+  if (item.kind === 'fee') return
+  if (item.optionOfId !== null) {
+    const base = state?.items.find((i) => i.id === item.optionOfId)
+    item.itemCode = (base?.placements ?? []).map((p) => `${p.code}-${item.optionLetter ?? ''}`).join(' · ')
+  } else item.itemCode = item.placements.map((p) => p.code).join(' · ')
+}
+
+/** Options of a base (ADR-0021): smallest free letter. */
+function nextLetter(state: FakeApi, baseId: number): string {
+  const used = new Set(state.items.filter((i) => i.optionOfId === baseId).map((i) => i.optionLetter))
+  return [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].find((l) => !used.has(l)) ?? 'Z'
 }
 
 function pushEvent(state: FakeApi, itemId: number, kind: string, extra: Partial<EventRead> = {}) {
@@ -402,8 +415,11 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
   if (currency === 'EUR' && typeof p.fxRateMicro === 'number' && p.fxRateMicro !== 1_000_000)
     return validation('fxRateMicro', 'En euros, le taux de change vaut 1 000 000 (parité).')
   const id = state.items.length + 1
+  const optionOf = (p.optionOfId as number | null | undefined) ?? null
   const placementsIn =
-    kind === 'fee' ? [] : ((p.placements as { locationId: number | null; qtyMilli: number }[] | null) ?? [{ locationId: null, qtyMilli: 1000 }])
+    kind === 'fee' || optionOf !== null
+      ? []
+      : ((p.placements as { locationId: number | null; qtyMilli: number }[] | null) ?? [{ locationId: null, qtyMilli: 1000 }])
   for (const pl of placementsIn) {
     if (pl.locationId !== null && !state.locations.some((l) => l.id === pl.locationId && l.projectId === project.id))
       return validation('locationId', "La localisation n'appartient pas à ce projet.")
@@ -440,9 +456,12 @@ function createItem(state: FakeApi, project: ProjectRead, p: Record<string, unkn
       quoteUrl: (p.quoteUrl as string | null) ?? null,
       placements: placementsIn.map((pl, index) => placementRow(id, pl.locationId, pl.qtyMilli, codes[index])),
       files: [],
+      optionOfId: optionOf,
+      optionLetter: optionOf !== null ? nextLetter(state, optionOf) : null,
     },
     id,
   )
+  if (optionOf !== null) relabel(created, state)
   state.items.push(created)
   pushEvent(state, id, 'created', { toStatus: 'to_quote', changedAt: NOW })
   return json(201, created)
@@ -686,12 +705,16 @@ function summaryOf(state: FakeApi, projectId: number, url: URL): ProjectSummaryR
       const pairs =
         i.kind === 'fee'
           ? [{ qty: 1000, mult: 1, loc: null as LocationRead | null | undefined }]
-          : i.placements.map((p) => ({ qty: p.qtyMilli, mult: locationOf(p.locationId)?.multiplier ?? 1, loc: locationOf(p.locationId) }))
+          : (i.optionOfId !== null ? (state.items.find((b) => b.id === i.optionOfId)?.placements ?? []) : i.placements).map((p) => ({
+              qty: p.qtyMilli,
+              mult: locationOf(p.locationId)?.multiplier ?? 1,
+              loc: locationOf(p.locationId),
+            }))
       const qty = pairs.reduce((s, p) => s + p.qty * p.mult, 0)
       const net = divRound(i.unitCostCents * (10000 - i.discountBp), 10000)
       const eur = divRound(net * i.fxRateMicro, 1_000_000)
       const totalHt = divRound(eur * qty, 1000)
-      const counted = i.status !== 'cancelled'
+      const counted = i.status !== 'cancelled' && i.optionOfId === null
       const matches =
         (!f.family || (i.family ?? '') === f.family) &&
         (!f.categoryId || i.categoryId === Number(f.categoryId)) &&
@@ -746,7 +769,10 @@ function summaryOf(state: FakeApi, projectId: number, url: URL): ProjectSummaryR
         placements:
           i.kind === 'fee'
             ? []
-            : i.placements.map((p) => ({ placementId: p.id, totalHtCents: divRound(eur * p.qtyMilli * (locationOf(p.locationId)?.multiplier ?? 1), 1000) })),
+            : (i.optionOfId !== null ? (state.items.find((b) => b.id === i.optionOfId)?.placements ?? []) : i.placements).map((p) => ({
+                placementId: p.id,
+                totalHtCents: divRound(eur * p.qtyMilli * (locationOf(p.locationId)?.multiplier ?? 1), 1000),
+              })),
       }
     })
   const budgets = state.budgets.filter((b) => b.projectId === projectId)
@@ -845,10 +871,104 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
     return json(200, item)
   }
   if (!sub && method === 'DELETE') {
-    if (item.status !== 'to_quote' || state.events.some((e) => e.projectItemId === item.id && e.kind !== 'created'))
-      return error(409, 'conflict', "Seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon.")
+    if (state.items.some((i) => i.optionOfId === item.id)) return error(409, 'conflict', "Cet article a des options : les supprimer ou en retenir une d'abord.")
+    if (project.indice !== null && (item.status !== 'to_quote' || state.events.some((e) => e.projectItemId === item.id && e.kind !== 'created')))
+      return error(409, 'conflict', "Après le premier indice, seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon.")
     state.items = state.items.filter((i) => i.id !== item.id)
     return new Response(null, { status: 204 })
+  }
+  if (sub === 'save' && method === 'POST') {
+    // « Enregistrer » (2026-10-15): replays each part through the fake's own routes, stops at the first refusal.
+    const save = payload as {
+      sheet?: Record<string, unknown> | null
+      status?: { status: string; note: string | null } | null
+      placements?: { id: number | null; locationId: number | null; qtyMilli: number; sortOrder: number }[] | null
+      files?: { fileId: number; kind: string; isPrimary: boolean; caption: string | null; sortOrder: number }[] | null
+      attachOptions?: number[]
+      optionAction?: 'retain' | 'detach' | null
+    }
+    const steps: (() => Response | undefined)[] = []
+    if (save.sheet) steps.push(() => handleItems(state, 'PATCH', String(item.id), save.sheet))
+    if (save.status && save.status.status !== item.status) steps.push(() => handleItems(state, 'POST', `${item.id}/status`, save.status))
+    if (save.placements) {
+      const wanted = save.placements
+      for (const row of wanted.filter((r) => r.id !== null)) {
+        const current = item.placements.find((pl) => pl.id === row.id)
+        if (current && (current.locationId !== row.locationId || current.qtyMilli !== row.qtyMilli))
+          steps.push(() =>
+            handlePlacements(state, 'PATCH', String(row.id), {
+              ...(current.locationId !== row.locationId ? { locationId: row.locationId } : {}),
+              ...(current.qtyMilli !== row.qtyMilli ? { qtyMilli: row.qtyMilli } : {}),
+            }),
+          )
+      }
+      for (const row of wanted.filter((r) => r.id === null)) steps.push(() => handleItems(state, 'POST', `${item.id}/placements`, row))
+      for (const pl of item.placements.filter((pl) => !wanted.some((r) => r.id === pl.id)))
+        steps.push(() => handlePlacements(state, 'DELETE', String(pl.id), undefined))
+    }
+    if (save.files) {
+      const wanted = save.files
+      for (const f of item.files.filter((f) => !wanted.some((w) => w.fileId === f.fileId)))
+        steps.push(() => handleItems(state, 'DELETE', `${item.id}/files/${f.fileId}`, undefined))
+      for (const w of wanted) {
+        const current = item.files.find((f) => f.fileId === w.fileId)
+        if (!current) steps.push(() => handleItems(state, 'POST', `${item.id}/files`, w))
+        else if (current.kind !== w.kind || current.isPrimary !== w.isPrimary)
+          steps.push(() => handleItems(state, 'PATCH', `${item.id}/files/${w.fileId}`, { kind: w.kind, isPrimary: w.isPrimary }))
+      }
+    }
+    for (const id of save.attachOptions ?? []) steps.push(() => handleItems(state, 'POST', `${item.id}/options`, { projectItemId: id }))
+    if (save.optionAction) steps.push(() => handleItems(state, 'POST', `${item.id}/${save.optionAction}`, undefined))
+    for (const step of steps) {
+      const response = step()
+      if (response && !response.ok) return response
+    }
+    return json(
+      200,
+      state.items.find((i) => i.id === item.id),
+    )
+  }
+  if (sub === 'options' && method === 'POST') {
+    const other = state.items.find((i) => i.id === (payload as { projectItemId: number }).projectItemId)
+    if (
+      !other ||
+      other.id === item.id ||
+      other.optionOfId !== null ||
+      other.categoryId !== item.categoryId ||
+      state.items.some((i) => i.optionOfId === other.id)
+    )
+      return validation('projectItemId', 'Seul un article de ce projet, sans options, qui n’est ni un frais ni déjà une option, peut devenir une option.')
+    other.placements = []
+    other.optionOfId = item.id
+    other.optionLetter = nextLetter(state, item.id)
+    relabel(other, state)
+    pushEvent(state, other.id, 'placement')
+    return json(200, other)
+  }
+  if (sub === 'detach' && method === 'POST') {
+    if (item.optionOfId === null) return error(409, 'conflict', "Cet article n'est pas une option.")
+    item.optionOfId = null
+    item.optionLetter = null
+    item.placements = [placementRow(item.id, null, 1000, placementCode(state, item.projectId, null, item.categoryId))]
+    relabel(item, state)
+    pushEvent(state, item.id, 'placement')
+    return json(200, item)
+  }
+  if (sub === 'retain' && method === 'POST') {
+    const baseItem = state.items.find((i) => i.id === item.optionOfId)
+    if (!baseItem) return error(409, 'conflict', "Cet article n'est pas une option.")
+    const letter = item.optionLetter
+    for (const o of state.items) if (o.optionOfId === baseItem.id && o.id !== item.id) o.optionOfId = item.id
+    item.placements = baseItem.placements.map((pl) => ({ ...pl, projectItemId: item.id }))
+    item.optionOfId = null
+    item.optionLetter = null
+    baseItem.placements = []
+    baseItem.optionOfId = item.id
+    baseItem.optionLetter = letter
+    relabel(item, state)
+    for (const o of state.items) if (o.optionOfId === item.id) relabel(o, state)
+    pushEvent(state, item.id, 'placement')
+    return json(200, item)
   }
   if (sub === 'placements' && method === 'POST') {
     if (item.kind === 'fee') return error(409, 'conflict', "Une ligne de frais n'a pas d'implantation.")

@@ -109,6 +109,46 @@ export function useDeleteItem() {
   })
 }
 
+export type ItemSave = components['schemas']['ItemSave']
+
+/** « Enregistrer » on the article page: every pending change at once, all or nothing. */
+export function useSaveItem() {
+  const invalidate = useInvalidateItems()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: ItemSave }) =>
+      call(api.POST('/api/v1/project-items/{item_id}/save', { params: { path: { item_id: id } }, body: data })),
+    onSuccess: invalidate,
+  })
+}
+
+/** An existing article of the project becomes an option of `baseId` (ADR-0021). */
+export function useAttachOption() {
+  const invalidate = useInvalidateItems()
+  return useMutation({
+    mutationFn: ({ baseId, itemId }: { baseId: number; itemId: number }) =>
+      call(api.POST('/api/v1/project-items/{item_id}/options', { params: { path: { item_id: baseId } }, body: { projectItemId: itemId } })),
+    onSuccess: invalidate,
+  })
+}
+
+/** The option becomes an independent article, unassigned (ADR-0021). */
+export function useDetachOption() {
+  const invalidate = useInvalidateItems()
+  return useMutation({
+    mutationFn: (optionId: number) => call(api.POST('/api/v1/project-items/{item_id}/detach', { params: { path: { item_id: optionId } } })),
+    onSuccess: invalidate,
+  })
+}
+
+/** The option takes its base's place; returns the option, now the base (ADR-0021). */
+export function useRetainOption() {
+  const invalidate = useInvalidateItems()
+  return useMutation({
+    mutationFn: (optionId: number) => call(api.POST('/api/v1/project-items/{item_id}/retain', { params: { path: { item_id: optionId } } })),
+    onSuccess: invalidate,
+  })
+}
+
 export function useChangeItemStatus() {
   const invalidate = useInvalidateItems()
   return useMutation({
