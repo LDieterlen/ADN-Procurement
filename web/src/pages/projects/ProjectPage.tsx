@@ -196,9 +196,9 @@ export function ProjectPage() {
         </p>
       )}
       <div className="space-y-6">
-        <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
         <ItemsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
-        <div>
+        <div className="grid grid-cols-[1.4fr_1fr] items-start gap-6">
+          <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
           <Card title="Documents émis" label="Documents émis" padding="table">
             {exports.data && exports.data.length > 0 ? (
               <ul className="p-2 text-sm" aria-label="Documents émis">
