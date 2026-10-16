@@ -357,6 +357,133 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/installation-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Plan */
+        delete: operations["deleteInstallationPlan"];
+        options?: never;
+        head?: never;
+        /** Update Plan */
+        patch: operations["updateInstallationPlan"];
+        trace?: never;
+    };
+    "/api/v1/installation-sheets/{sheet_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sheet */
+        get: operations["getInstallationSheet"];
+        put?: never;
+        post?: never;
+        /** Delete Sheet */
+        delete: operations["deleteInstallationSheet"];
+        options?: never;
+        head?: never;
+        /** Update Sheet */
+        patch: operations["updateInstallationSheet"];
+        trace?: never;
+    };
+    "/api/v1/installation-sheets/{sheet_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Items */
+        put: operations["setInstallationSheetItems"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/installation-sheets/{sheet_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Sheet */
+        get: operations["exportInstallationSheet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/listing-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Profiles */
+        get: operations["listListingProfiles"];
+        put?: never;
+        /** Create Profile */
+        post: operations["createListingProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/listing-profiles/columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Columns
+         * @description The column catalogue, in printing order, with its French labels.
+         */
+        get: operations["listListingColumns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/listing-profiles/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Profile */
+        delete: operations["deleteListingProfile"];
+        options?: never;
+        head?: never;
+        /** Update Profile */
+        patch: operations["updateListingProfile"];
+        trace?: never;
+    };
     "/api/v1/locations/{location_id}": {
         parameters: {
             query?: never;
@@ -755,6 +882,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/diffusions/last": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revert Last Diffusion
+         * @description Takes the last official diffusion back (ADR-0022): indices and rules as before it.
+         */
+        delete: operations["revertLastDiffusion"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/exports": {
         parameters: {
             query?: never;
@@ -779,7 +926,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Export List */
+        /**
+         * Export List
+         * @description Listing PDF: the columns of listing profile `profile` (ADR-0023), all of them without;
+         *     the options only with `options=true`.
+         */
         get: operations["exportList"];
         put?: never;
         post?: never;
@@ -789,24 +940,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/exports/sheets.pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Export Sheets */
-        get: operations["exportSheets"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{project_id}/indice": {
+    "/api/v1/projects/{project_id}/exports/sheets": {
         parameters: {
             query?: never;
             header?: never;
@@ -816,15 +950,71 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Next Project Indice
-         * @description Declares the next diffusion letter; the articles changed since the previous one take it.
+         * Issue Sheets
+         * @description « Fiches PDF » (ADR-0022): issues the sheets on each paper asked, as an official diffusion
+         *     (indices moved) or a working document; the PDFs are then downloaded from `/files/{id}`.
          */
-        post: operations["nextProjectIndice"];
+        post: operations["issueSheets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/installation-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Plans */
+        get: operations["listInstallationPlans"];
+        put?: never;
         /**
-         * Revert Project Indice
-         * @description Takes the last declaration back (wrong click): previous letter on the project and its articles.
+         * Create Plan
+         * @description `fileId`: an uploaded image, or a PDF whose first page is drawn.
          */
-        delete: operations["revertProjectIndice"];
+        post: operations["createInstallationPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/installation-sheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sheets */
+        get: operations["listInstallationSheets"];
+        put?: never;
+        /** Create Sheet */
+        post: operations["createInstallationSheet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/installation.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Installation
+         * @description Every sheet of the project, or of one room with `locationId`.
+         */
+        get: operations["exportInstallation"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1387,6 +1577,15 @@ export interface components {
             /** Siren */
             siren?: string | null;
         };
+        /** DiffusionRead */
+        DiffusionRead: {
+            /** Id */
+            id: number;
+            /** Issuedat */
+            issuedAt: string;
+            /** Number */
+            number: number;
+        };
         /** EventRead */
         EventRead: {
             /** Changedat */
@@ -1480,6 +1679,258 @@ export interface components {
             ok: boolean;
             /** Schemarevision */
             schemaRevision: string | null;
+        };
+        /**
+         * InstallationArticle
+         * @description A placement as the sheet shows it: its code, its article and its photo.
+         */
+        InstallationArticle: {
+            /** Code */
+            code: string;
+            /** Color */
+            color: string;
+            /** Itemid */
+            itemId: number;
+            /** Markers */
+            markers: components["schemas"]["InstallationMarker"][];
+            /** Name */
+            name: string;
+            /** Othersheets */
+            otherSheets: string[];
+            /** Outofroom */
+            outOfRoom: boolean;
+            /** Photofileid */
+            photoFileId: number | null;
+            /** Placementid */
+            placementId: number;
+            /** Qtymilli */
+            qtyMilli: number;
+            /** Typename */
+            typeName: string | null;
+        };
+        /** InstallationCellIn */
+        InstallationCellIn: {
+            /**
+             * Markers
+             * @default []
+             */
+            markers: components["schemas"]["InstallationMarker"][];
+            /** Placementid */
+            placementId: number;
+        };
+        /**
+         * InstallationLayout
+         * @description A page's grid (`ffe.installation.layout`): column widths and row heights in px of the A3
+         *     page, the block the plan spans, the article cells in reading order.
+         */
+        InstallationLayout: {
+            /**
+             * Arrangement
+             * @enum {string}
+             */
+            arrangement: "ring" | "sides" | "ends" | "right";
+            /** Colwidths */
+            colWidths: number[];
+            /** Perpage */
+            perPage: number;
+            plan: components["schemas"]["InstallationPlanBox"];
+            /** Rowheights */
+            rowHeights: number[];
+            /** Slots */
+            slots: components["schemas"]["InstallationSlot"][];
+        };
+        /**
+         * InstallationMarker
+         * @description A numbered dot on the plan, in thousandths of the plan as stored (before any rotation).
+         */
+        InstallationMarker: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** InstallationPlanBox */
+        InstallationPlanBox: {
+            /** Col */
+            col: number;
+            /** Cols */
+            cols: number;
+            /** Row */
+            row: number;
+            /** Rows */
+            rows: number;
+        };
+        /** InstallationPlanCreate */
+        InstallationPlanCreate: {
+            /** Fileid */
+            fileId: number;
+            /** Name */
+            name?: string | null;
+        };
+        /** InstallationPlanRead */
+        InstallationPlanRead: {
+            /** Createdat */
+            createdAt: string;
+            /** Fileid */
+            fileId: number;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Projectid */
+            projectId: number;
+            /** Sourcefileid */
+            sourceFileId: number | null;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** InstallationPlanUpdate */
+        InstallationPlanUpdate: {
+            /** Name */
+            name: string;
+        };
+        /** InstallationSheetCreate */
+        InstallationSheetCreate: {
+            /**
+             * Arrangement
+             * @default ring
+             * @enum {string}
+             */
+            arrangement: "ring" | "sides" | "ends" | "right";
+            /**
+             * Colorbytype
+             * @default false
+             */
+            colorByType: boolean;
+            /** Locationid */
+            locationId: number;
+            /** Name */
+            name: string;
+            /**
+             * Perpage
+             * @default 12
+             * @enum {integer}
+             */
+            perPage: 8 | 12 | 16;
+            /** Planid */
+            planId?: number | null;
+            /**
+             * Planrotation
+             * @default 0
+             * @enum {integer}
+             */
+            planRotation: 0 | 90 | 180 | 270;
+        };
+        /** InstallationSheetDetail */
+        InstallationSheetDetail: {
+            /**
+             * Arrangement
+             * @enum {string}
+             */
+            arrangement: "ring" | "sides" | "ends" | "right";
+            /** Candidates */
+            candidates: components["schemas"]["InstallationArticle"][];
+            /** Colorbytype */
+            colorByType: boolean;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Itemcount */
+            itemCount: number;
+            /** Items */
+            items: (components["schemas"]["InstallationArticle"] | null)[];
+            /** Layouts */
+            layouts: components["schemas"]["InstallationLayout"][];
+            /** Locationid */
+            locationId: number;
+            /** Name */
+            name: string;
+            /** Pagecount */
+            pageCount: number;
+            /** Perpage */
+            perPage: number;
+            /** Planid */
+            planId: number | null;
+            /**
+             * Planrotation
+             * @enum {integer}
+             */
+            planRotation: 0 | 90 | 180 | 270;
+            /** Projectid */
+            projectId: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /**
+         * InstallationSheetItemsSet
+         * @description The sheet's cells in order, saved at once: an article and its dots on the plan, or null
+         *     for a cell left empty.
+         */
+        InstallationSheetItemsSet: {
+            /** Cells */
+            cells: (components["schemas"]["InstallationCellIn"] | null)[];
+        };
+        /** InstallationSheetRead */
+        InstallationSheetRead: {
+            /**
+             * Arrangement
+             * @enum {string}
+             */
+            arrangement: "ring" | "sides" | "ends" | "right";
+            /** Colorbytype */
+            colorByType: boolean;
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Itemcount */
+            itemCount: number;
+            /** Locationid */
+            locationId: number;
+            /** Name */
+            name: string;
+            /** Pagecount */
+            pageCount: number;
+            /** Perpage */
+            perPage: number;
+            /** Planid */
+            planId: number | null;
+            /**
+             * Planrotation
+             * @enum {integer}
+             */
+            planRotation: 0 | 90 | 180 | 270;
+            /** Projectid */
+            projectId: number;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** InstallationSheetUpdate */
+        InstallationSheetUpdate: {
+            /** Arrangement */
+            arrangement?: ("ring" | "sides" | "ends" | "right") | null;
+            /** Colorbytype */
+            colorByType?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Perpage */
+            perPage?: (8 | 12 | 16) | null;
+            /** Planid */
+            planId?: number | null;
+            /** Planrotation */
+            planRotation?: (0 | 90 | 180 | 270) | null;
+        };
+        /** InstallationSlot */
+        InstallationSlot: {
+            /** Col */
+            col: number;
+            /** Row */
+            row: number;
         };
         /** ItemFileAttach */
         ItemFileAttach: {
@@ -1586,6 +2037,47 @@ export interface components {
             totalHtCents: number;
             /** Totalqtymilli */
             totalQtyMilli: number;
+        };
+        /** ListingColumnRead */
+        ListingColumnRead: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "photo" | "code" | "type" | "name" | "comments" | "link" | "reference" | "supplier" | "contact" | "dimensions" | "finish" | "family" | "usage" | "lead_time" | "quantity" | "amount" | "status" | "indice";
+            /** Label */
+            label: string;
+        };
+        /** ListingProfileCreate */
+        ListingProfileCreate: {
+            /** Columns */
+            columns: ("photo" | "code" | "type" | "name" | "comments" | "link" | "reference" | "supplier" | "contact" | "dimensions" | "finish" | "family" | "usage" | "lead_time" | "quantity" | "amount" | "status" | "indice")[];
+            /** Name */
+            name: string;
+        };
+        /** ListingProfileRead */
+        ListingProfileRead: {
+            /** Columns */
+            columns: ("photo" | "code" | "type" | "name" | "comments" | "link" | "reference" | "supplier" | "contact" | "dimensions" | "finish" | "family" | "usage" | "lead_time" | "quantity" | "amount" | "status" | "indice")[];
+            /** Createdat */
+            createdAt: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Sortorder */
+            sortOrder: number;
+            /** Updatedat */
+            updatedAt: string;
+        };
+        /** ListingProfileUpdate */
+        ListingProfileUpdate: {
+            /** Columns */
+            columns?: ("photo" | "code" | "type" | "name" | "comments" | "link" | "reference" | "supplier" | "contact" | "dimensions" | "finish" | "family" | "usage" | "lead_time" | "quantity" | "amount" | "status" | "indice")[] | null;
+            /** Name */
+            name?: string | null;
+            /** Sortorder */
+            sortOrder?: number | null;
         };
         /** LocationCreate */
         LocationCreate: {
@@ -1699,12 +2191,21 @@ export interface components {
         };
         /** PlacementRead */
         PlacementRead: {
+            /** Change */
+            change?: ("new" | "revised") | null;
             /** Code */
             code: string;
             /** Createdat */
             createdAt: string;
+            /**
+             * Diffused
+             * @default false
+             */
+            diffused: boolean;
             /** Id */
             id: number;
+            /** Indice */
+            indice: string | null;
             /** Locationid */
             locationId: number | null;
             /** Projectitemid */
@@ -1851,17 +2352,26 @@ export interface components {
             name: string;
             /** Notes */
             notes?: string | null;
+            /** Procurementlogofileid */
+            procurementLogoFileId?: number | null;
+            /** Procurementname */
+            procurementName?: string | null;
             /** Siteaddress */
             siteAddress?: string | null;
         };
         /** ProjectFileRead */
         ProjectFileRead: {
+            /** Diffusionnumber */
+            diffusionNumber?: number | null;
+            /**
+             * Diffusionrevoked
+             * @default false
+             */
+            diffusionRevoked: boolean;
             /** Fileid */
             fileId: number;
             /** Id */
             id: number;
-            /** Indice */
-            indice?: string | null;
             /** Issuedat */
             issuedAt: string;
             /**
@@ -1947,6 +2457,8 @@ export interface components {
             createdAt: string;
             /** Currency */
             currency: string;
+            /** Diffused */
+            diffused: boolean;
             /** Dimensions */
             dimensions: string | null;
             /** Discountbp */
@@ -1961,8 +2473,6 @@ export interface components {
             fxRateMicro: number;
             /** Id */
             id: number;
-            /** Indice */
-            indice: string | null;
             /** Itemcode */
             itemCode: string;
             /**
@@ -2071,20 +2581,26 @@ export interface components {
             code: string;
             /** Createdat */
             createdAt: string;
+            /**
+             * Diffusioncount
+             * @default 0
+             */
+            diffusionCount: number;
             /** Dueon */
             dueOn: string | null;
             /** Id */
             id: number;
-            /** Indice */
-            indice: string | null;
-            /** Indicechangedat */
-            indiceChangedAt: string | null;
             /** Itemcount */
             itemCount: number;
+            lastDiffusion?: components["schemas"]["DiffusionRead"] | null;
             /** Name */
             name: string;
             /** Notes */
             notes: string | null;
+            /** Procurementlogofileid */
+            procurementLogoFileId: number | null;
+            /** Procurementname */
+            procurementName: string | null;
             /** Siteaddress */
             siteAddress: string | null;
             /** Specifiedcents */
@@ -2105,18 +2621,24 @@ export interface components {
             code: string;
             /** Createdat */
             createdAt: string;
+            /**
+             * Diffusioncount
+             * @default 0
+             */
+            diffusionCount: number;
             /** Dueon */
             dueOn: string | null;
             /** Id */
             id: number;
-            /** Indice */
-            indice: string | null;
-            /** Indicechangedat */
-            indiceChangedAt: string | null;
+            lastDiffusion?: components["schemas"]["DiffusionRead"] | null;
             /** Name */
             name: string;
             /** Notes */
             notes: string | null;
+            /** Procurementlogofileid */
+            procurementLogoFileId: number | null;
+            /** Procurementname */
+            procurementName: string | null;
             /** Siteaddress */
             siteAddress: string | null;
             /**
@@ -2181,6 +2703,10 @@ export interface components {
             name?: string | null;
             /** Notes */
             notes?: string | null;
+            /** Procurementlogofileid */
+            procurementLogoFileId?: number | null;
+            /** Procurementname */
+            procurementName?: string | null;
             /** Siteaddress */
             siteAddress?: string | null;
         };
@@ -2190,6 +2716,8 @@ export interface components {
             agencyAddress: string | null;
             /** Agencyemail */
             agencyEmail: string | null;
+            /** Agencylogofileid */
+            agencyLogoFileId?: number | null;
             /** Agencyname */
             agencyName: string;
             /** Agencyphone */
@@ -2215,12 +2743,48 @@ export interface components {
             agencyAddress?: string | null;
             /** Agencyemail */
             agencyEmail?: string | null;
+            /** Agencylogofileid */
+            agencyLogoFileId?: number | null;
             /** Agencyname */
             agencyName?: string | null;
             /** Agencyphone */
             agencyPhone?: string | null;
             /** Projectcodeprefix */
             projectCodePrefix?: string | null;
+        };
+        /**
+         * SheetsIssue
+         * @description « Fiches PDF » (ADR-0022): an official diffusion or a working document, on one or two
+         *     papers (tinted for the screen, white for a printer), options included or not.
+         */
+        SheetsIssue: {
+            /**
+             * Diffuse
+             * @default false
+             */
+            diffuse: boolean;
+            /**
+             * Hideagencylogo
+             * @default false
+             */
+            hideAgencyLogo: boolean;
+            /**
+             * Hideagencyname
+             * @default false
+             */
+            hideAgencyName: boolean;
+            /**
+             * Hidestudio
+             * @default false
+             */
+            hideStudio: boolean;
+            /**
+             * Includeoptions
+             * @default false
+             */
+            includeOptions: boolean;
+            /** Papers */
+            papers?: ("color" | "white")[];
         };
         /** StatusChange */
         StatusChange: {
@@ -3203,6 +3767,370 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthRead"];
+                };
+            };
+        };
+    };
+    deleteInstallationPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateInstallationPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationPlanUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationPlanRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getInstallationSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sheet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSheetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteInstallationSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sheet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateInstallationSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sheet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationSheetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSheetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setInstallationSheetItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sheet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationSheetItemsSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSheetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportInstallationSheet: {
+        parameters: {
+            query?: {
+                print?: boolean;
+            };
+            header?: never;
+            path: {
+                sheet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listListingProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingProfileRead"][];
+                };
+            };
+        };
+    };
+    createListingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingProfileCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listListingColumns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingColumnRead"][];
+                };
+            };
+        };
+    };
+    deleteListingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateListingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4277,6 +5205,37 @@ export interface operations {
             };
         };
     };
+    revertLastDiffusion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listProjectExports: {
         parameters: {
             query?: never;
@@ -4310,7 +5269,11 @@ export interface operations {
     };
     exportList: {
         parameters: {
-            query?: never;
+            query?: {
+                print?: boolean;
+                profile?: number | null;
+                options?: boolean;
+            };
             header?: never;
             path: {
                 project_id: number;
@@ -4339,9 +5302,179 @@ export interface operations {
             };
         };
     };
-    exportSheets: {
+    issueSheets: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetsIssue"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFileRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listInstallationPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationPlanRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createInstallationPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationPlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationPlanRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listInstallationSheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSheetRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createInstallationSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationSheetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationSheetDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportInstallation: {
+        parameters: {
+            query?: {
+                print?: boolean;
+                locationId?: number | null;
+            };
             header?: never;
             path: {
                 project_id: number;
@@ -4357,68 +5490,6 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    nextProjectIndice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    revertProjectIndice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectRead"];
                 };
             };
             /** @description Validation Error */

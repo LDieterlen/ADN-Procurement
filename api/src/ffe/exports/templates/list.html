@@ -1,35 +1,51 @@
 {% extends "base.html" %}
 {% set landscape = true %}
+{# One cell per printed group of the profile's columns (ADR-0023, `ffe.listing.GROUPS`): details
+   (comments, link, contact, lead time, finish, usage) are smaller lines inside their cell. #}
+{% macro cell(c, a, loc) -%}
+  {%- set show = c["show"] -%}
+  {%- if c.key == "photo" -%}<td class="center">{% if a["photo"] %}<img class="thumb" src="{{ a["photo"] }}" alt="">{% endif %}</td>
+  {%- elif c.key == "code" -%}<td class="code ffe">{{ a["item_code"] }}</td>
+  {%- elif c.key == "type" -%}<td>{{ a["type"] }}</td>
+  {%- elif c.key == "name" -%}<td>
+    {%- if "name" in show %}{% if a["option"] %}<span class="opt-name">Option {{ a["option"] }}</span>{% endif %}{{ a["name"] }}{% endif %}
+    {%- if "comments" in show and a["comments"] %}<div class="muted small">{{ a["comments"] }}</div>{% endif %}
+    {%- if "link" in show and a["link"] %}<div class="small"><a href="{{ a["link"] }}">Lien</a></div>{% endif %}</td>
+  {%- elif c.key == "reference" -%}<td class="code">{{ a["reference"] or "" }}</td>
+  {%- elif c.key == "supplier" -%}<td>
+    {%- if "supplier" in show %}{{ a["supplier_name"] or "" }}{% endif %}
+    {%- if "contact" in show %}{% for line in [a["representative"], a["phone"], a["email"]] if line %}<div class="muted small">{{ line }}</div>{% endfor %}{% endif %}
+    {%- if "lead_time" in show and a["lead_time"] %}<div class="muted small">Délai {{ a["lead_time"] }}</div>{% endif %}</td>
+  {%- elif c.key == "dimensions" -%}<td>
+    {%- if "dimensions" in show %}{{ a["dimensions"] or "" }}{% endif %}
+    {%- if "finish" in show and a["finish"] %}<div class="{% if "dimensions" in show %}muted small{% endif %}">{{ a["finish"] }}</div>{% endif %}</td>
+  {%- elif c.key == "family" -%}<td>
+    {%- if "family" in show %}{{ a["family"] }}{% endif %}
+    {%- if "usage" in show and a["usage"] %}<div class="{% if "family" in show %}muted small{% endif %}">{{ a["usage"] }}</div>{% endif %}</td>
+  {%- elif c.key == "quantity" -%}<td class="num">{{ a["qty_text"] }}{% if loc["multiplier"] > 1 %}<br><span class="muted small">{{ a["qty_total_text"] }} au total</span>{% endif %}</td>
+  {%- elif c.key == "amount" -%}<td class="num">{{ a["total_ht_text"] }}</td>
+  {%- elif c.key == "status" -%}<td><span class="pill">{{ a["status"] }}</span></td>
+  {%- elif c.key == "indice" -%}<td class="center">{{ a["indice"] }}</td>
+  {%- endif -%}
+{%- endmacro %}
 {% block body %}
 <section>
-  <table class="head"><tr>
-    <td><strong>{{ agency.name or "FFE" }}</strong></td>
-    <td style="text-align:center"><strong>{{ project.name }}</strong><br><span class="muted">{{ client_name }}</span></td>
-    <td class="num"><span class="muted small">LISTING FF&amp;E</span><br><strong>{{ issued_on }}</strong></td>
+  {# Same three fixed columns as the sheets: the agency's logo (or name), the project centred, the
+     listing's profile and date at right. #}
+  <table class="sheet-head" style="margin-bottom: 14px"><tr>
+    <td class="side">{% if agency.logo %}<img src="{{ agency.logo }}" alt="{{ agency.name }}">{% else %}<strong>{{ agency.name }}</strong>{% endif %}</td>
+    <td class="project"><div class="name">{{ project.name }}</div><div class="sub">Projet {{ project.code }}{% if client_name %} · {{ client_name }}{% endif %}</div></td>
+    <td class="side procurement"><span class="muted small">Listing FF&amp;E{% if profile_name %} · {{ profile_name }}{% endif %}</span><br>{{ issued_on }}</td>
   </tr></table>
   <table class="list">
     <thead><tr>
-      <th>Photo</th><th>Code FF&amp;E</th><th>Type</th><th>Désignation</th><th>Référence</th><th>Fournisseur</th>
-      <th>Dimensions · Finitions</th><th>Famille · Usage</th><th>Qté</th><th>Montant HT €</th><th>État</th><th>Ind.</th>
+      {% for c in columns %}<th{% if c.key in ("quantity", "amount") %} class="num"{% endif %}>{{ c.label }}</th>{% endfor %}
     </tr></thead>
     <tbody>
     {% for loc in locations %}
-      <tr class="location"><td colspan="12">{{ loc["code"] or "—" }} — {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} (× {{ loc["multiplier"] }}){% endif %}</td></tr>
+      <tr class="location"><td colspan="{{ columns | length }}">{{ loc["code"] or "—" }} — {{ loc["name"] }}{% if loc["zone"] %} · {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} (× {{ loc["multiplier"] }}){% endif %}</td></tr>
       {% for a in loc["articles"] %}
-      <tr{% if a["option"] %} class="option"{% endif %}>
-        <td class="center">{% if a["photo"] %}<img class="thumb" src="{{ a["photo"] }}" alt="">{% endif %}</td>
-        <td class="code ffe">{{ a["item_code"] }}</td>
-        <td>{{ a["type"] }}</td>
-        <td>{% if a["option"] %}<span class="opt-name">Option {{ a["option"] }}</span>{% endif %}{{ a["name"] }}{% if a["comments"] %}<br><span class="muted small">{{ a["comments"] }}</span>{% endif %}{% if a["link"] %}<br><span class="small"><a href="{{ a["link"] }}">{{ a["link"] }}</a></span>{% endif %}</td>
-        <td class="code">{{ a["reference"] or "" }}</td>
-        <td>{{ a["supplier_name"] or "" }}{% if a["representative"] %}<br><span class="muted small">{{ a["representative"] }}</span>{% endif %}{% if a["phone"] %}<br><span class="muted small">{{ a["phone"] }}</span>{% endif %}{% if a["email"] %}<br><span class="muted small">{{ a["email"] }}</span>{% endif %}</td>
-        <td>{{ a["dimensions"] or "" }}{% if a["finish"] %}<br><span class="muted small">{{ a["finish"] }}</span>{% endif %}</td>
-        <td>{{ a["family"] }}{% if a["usage"] %}<br><span class="muted small">{{ a["usage"] }}</span>{% endif %}</td>
-        <td class="num">{{ a["qty_text"] }}{% if loc["multiplier"] > 1 %}<br><span class="muted small">{{ a["qty_total_text"] }} au total</span>{% endif %}</td>
-        <td class="num">{{ a["total_ht_text"] }}</td>
-        <td><span class="pill">{{ a["status"] }}</span></td>
-        <td class="center">{{ a["indice"] }}</td>
-      </tr>
+      <tr{% if a["option"] %} class="mark mark-option"{% endif %}>{% for c in columns %}{{ cell(c, a, loc) }}{% endfor %}</tr>
       {% endfor %}
     {% endfor %}
     </tbody>

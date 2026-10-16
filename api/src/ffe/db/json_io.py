@@ -36,12 +36,14 @@ TABLE_ORDER: tuple[str, ...] = (
     "client",
     "category",
     "choice",
+    "listing_profile",
     "professional",
     "supplier",
     "file",
     "capture",
     "capture_image",
     "project",
+    "project_diffusion",
     "project_indice",
     "location",
     "project_item",
@@ -49,6 +51,10 @@ TABLE_ORDER: tuple[str, ...] = (
     "project_item_event",
     "item_code_sequence",
     "project_item_file",
+    "installation_plan",
+    "installation_sheet",
+    "installation_sheet_item",
+    "installation_sheet_marker",
     "budget_line",
     "project_file",
 )
@@ -126,8 +132,13 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
     tables = document.get("tables", {})
     imported: dict[str, int] = {}
     links: list[tuple[int, int, str]] = []
+    agency_logo: int | None = None
     with engine.begin() as conn:
         if replace:
+            # The settings row points at a file (agency logo) yet comes first: unlinked before
+            # the files are emptied.
+            setting = Base.metadata.tables["setting"]
+            conn.execute(update(setting).values(agency_logo_file_id=None))
             for table in reversed(_tables()):
                 conn.execute(delete(table))
         for table in _tables():
@@ -135,9 +146,9 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
             existing: list[Any] = (
                 list(conn.execute(select(table.c.id)).all()) if "id" in table.c else []
             )
-            if table.name in ("setting", "choice"):
-                # Seeded by migration 0001 (single settings row, default list values): an import
-                # overwrites them.
+            if table.name in ("setting", "choice", "listing_profile"):
+                # Seeded by migrations 0001 and 0007 (single settings row, default list values,
+                # default listing profiles): an import overwrites them.
                 conn.execute(delete(table))
             elif existing:
                 raise JsonIoError(
@@ -151,8 +162,13 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                 if unknown:
                     raise JsonIoError(f"Colonnes inconnues pour {table.name} : {sorted(unknown)}.")
                 if schema is not None:
+                    # An export of an older revision lacks the columns added since (additive
+                    # migrations, ADR-0020): a nullable one absent is validated as null.
+                    absent = {
+                        to_camel(c.name): None for c in table.c if c.nullable and c.name not in data
+                    }
                     try:
-                        schema.model_validate(row)
+                        schema.model_validate({**absent, **row})
                     except ValidationError as error:
                         first = error.errors()[0]
                         raise JsonIoError(
@@ -164,6 +180,10 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                     # article attached to a newer one; ADR-0021): the link is set in a second pass.
                     links.append((data["id"], data["option_of_id"], data["option_letter"]))
                     data = {**data, "option_of_id": None, "option_letter": None}
+                if table.name == "setting" and data.get("agency_logo_file_id") is not None:
+                    # The logo's file comes later in the order: linked in a second pass.
+                    agency_logo = data["agency_logo_file_id"]
+                    data = {**data, "agency_logo_file_id": None}
                 conn.execute(insert(table).values(**data))
             if table.name == "project_item":
                 for item_id, base_id, letter in links:
@@ -173,6 +193,9 @@ def import_json(engine: Engine, document: dict[str, Any], replace: bool = False)
                         .values(option_of_id=base_id, option_letter=letter)
                     )
             imported[table.name] = len(rows)
+        if agency_logo is not None:
+            setting = Base.metadata.tables["setting"]
+            conn.execute(update(setting).values(agency_logo_file_id=agency_logo))
     return imported
 
 

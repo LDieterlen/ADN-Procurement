@@ -21,4 +21,6 @@ def generate_extension_token(session: SessionDep, deps: DepsDep) -> SettingRead:
 
 @router.patch("", operation_id="updateSettings")
 def update_settings(payload: SettingUpdate, session: SessionDep, deps: DepsDep) -> SettingRead:
-    return SettingRead.model_validate(service.update_settings(session, payload, deps.clock))
+    return SettingRead.model_validate(
+        service.update_settings(session, payload, deps.clock, deps.settings.files_dir)
+    )

@@ -1,6 +1,7 @@
 // The toolbar above every list (Projets, Clients, Fournisseurs, Professionnels, Listes): search on the
 // left, then filters, then « Afficher les archivés » on the right. Same height and spacing everywhere.
 import type { ReactNode } from 'react'
+import { Checkbox } from '../forms/Checkbox'
 
 export function ListToolbar({
   search,
@@ -25,10 +26,12 @@ export function ListToolbar({
       )}
       {filters}
       {archived && (
-        <label className="ml-auto flex items-center gap-1.5 text-sm text-ink-2">
-          <input type="checkbox" checked={archived.value} onChange={(event) => archived.onChange(event.target.checked)} />
-          Afficher les archivés
-        </label>
+        <Checkbox
+          className="ml-auto text-sm text-ink-2"
+          label="Afficher les archivés"
+          checked={archived.value}
+          onChange={(event) => archived.onChange(event.target.checked)}
+        />
       )}
     </div>
   )

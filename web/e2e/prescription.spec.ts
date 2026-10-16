@@ -1,6 +1,6 @@
 // Parcours 1 (ADR-0013) : type → client → projet avec budget → localisation ×12 → article libre 450 €
 // → code CHA-LUD-01, montant et reste venus du serveur, fiches PDF émises (mis à jour le 2026-10-15 :
-// page « Listes », champ « Nom », retour au projet après création, indice déclaré à part).
+// page « Listes », champ « Nom », retour au projet après création ; diffusion choisie dans la fenêtre « Fiches PDF », ADR-0022).
 import { expect, test } from '@playwright/test'
 
 test('créer un projet, une localisation et un article : les totaux viennent du serveur', async ({ page }) => {
@@ -43,9 +43,14 @@ test('créer un projet, une localisation et un article : les totaux viennent du 
   await expect(page.getByRole('region', { name: 'Synthèse budget' })).toContainText('5 400,00 €')
   await expect(page.getByRole('region', { name: 'Synthèse budget' })).toContainText('44 600,00 €')
 
+  // « Fiches PDF »: the first official diffusion (ADR-0022), downloaded.
+  await page.getByRole('button', { name: 'Fiches PDF' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Fiches PDF' })
+  await dialog.getByLabel(/Diffusion officielle/).check()
   const download = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Fiches PDF' }).click()
-  expect((await download).suggestedFilename()).toMatch(/-fiches(-[A-Z])?-\d{4}-\d{2}-\d{2}\.pdf$/) // no indice declared yet
+  await dialog.getByRole('button', { name: 'Diffuser (diffusion 1)' }).click()
+  expect((await download).suggestedFilename()).toMatch(/-fiches-diffusion1-\d{4}-\d{2}-\d{2}\.pdf$/)
+  await expect(page.getByText('Diffusion 1', { exact: true }).first()).toBeVisible()
 
   // The article page shows the same server amount.
   await page.getByRole('row', { name: 'CHA-LUD-01 dans CHA' }).click()

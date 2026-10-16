@@ -85,11 +85,18 @@ def test_delete_only_when_empty_else_archive(
     make_item(session, clock, project.id, placements=[{"location_id": used.id}])
     assert client.delete(f"/api/v1/locations/{empty.id}").status_code == 204
     blocked = client.delete(f"/api/v1/locations/{used.id}")
-    assert blocked.status_code == 409
+    assert blocked.status_code == 409 and "implantation" in blocked.json()["message"]
     assert client.post(f"/api/v1/locations/{used.id}/archive").status_code == 200
     assert client.get(url(project.id)).json() == []
     assert len(client.get(url(project.id), params={"includeArchived": "true"}).json()) == 1
     assert client.post(f"/api/v1/locations/{used.id}/unarchive").status_code == 200
+    with_sheet = make_location(session, clock, project.id, code="SHT", name="Planche")
+    client.post(
+        f"/api/v1/projects/{project.id}/installation-sheets",
+        json={"locationId": with_sheet.id, "name": "Coin TV"},
+    )
+    refused = client.delete(f"/api/v1/locations/{with_sheet.id}")
+    assert refused.status_code == 409 and "planche" in refused.json()["message"]
 
 
 def test_closed_project_is_read_only(client: TestClient, session: Session, clock: Clock) -> None:

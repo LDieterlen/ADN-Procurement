@@ -410,3 +410,144 @@ Détail de la session du 2026-10-09 (code) ci-dessous ; clôture documentaire le
 **Passe de contrôle 2026-10-15 après l'audit.** Relecture des régressions et tour complet de l'application dans un navigateur (API et données jetables, port 8002). Corrigé : le renommage d'une localisation ne recode que ses propres implantations (sélection par localisation, plus par préfixe de code : `CHA` ne touche plus `CHA-SDB`, un type `CH` non affecté reste intact) ; la note « Article de base modifié » ne compte pas comme historique d'une option (elle reste supprimable après le premier indice) ; sous-total de groupe masqué quand le filtre « Code article » est actif ; messages ramenés en bas à droite, au-dessus du bandeau « Enregistrer » ; les listes déroulantes suivent leur champ au défilement au lieu de se fermer ; après « Enregistrer », l'article renvoyé est mis en cache aussitôt (le bandeau ne restait plus affiché à tort pendant le rechargement). Tests ajoutés côté API ; porte verte, 2 parcours e2e verts.
 
 **Retouche 2026-10-15 — localisations sous les articles.** Ordre de la page projet rétabli : Budget, Articles, puis Localisations et Documents émis côte à côte.
+
+**Retouche 2026-10-15 — fournisseur une seule fois sur la fiche.** Le fournisseur n’apparaît plus que dans sa case « Fournisseur » du bloc Produit (retiré de la ligne sous le titre et de l’en-tête du bloc Produit). Rendu vérifié sur le projet de dev (PDF généré en lecture seule).
+
+**Retouche 2026-10-15 — en-tête et pied des fiches, société de procurement par projet.** En-tête des fiches en trois colonnes : à gauche un monogramme « AD » temporaire (`exports/assets/ad-logo.svg`) et « Réalisé par Astrid Dieterlen » ; au milieu le nom du projet (code et localisation dessous) ; à droite la société de procurement et son logo. Pied de page centré, discret : logo Racoon et « RACOON STUDIO » (`racoon-footer.svg`, gris, fiches seulement ; `logo.svg` retiré). La société de procurement se saisit par projet (outil d'indépendant, plusieurs donneurs d'ordre) : migration additive `0004_project_procurement` (`project.procurement_name`, `procurement_logo_file_id` → `file`), logo = image déposée (422 sinon), un logo remplacé est effacé du disque s'il n'est plus utilisé ; champs « Société de procurement » et « Logo de la société » sur le formulaire du projet. Tests API et front ajoutés ; rendu vérifié sur le projet de dev (PDF généré en lecture seule, société d'essai). La base de dev passera en 0004 au prochain démarrage de `ffe serve`.
+
+**Retouche 2026-10-15 — marque Racoon alignée.** Le pied « Racoon Studio » n’est plus un contenu de marge (image et texte mal alignés) : bloc fixe répété sur chaque page des fiches, logo à gauche et « RACOON / STUDIO » sur deux lignes, centrés l’un sur l’autre, au milieu de la marge basse, centré sur la ligne du texte de gauche et du numéro de page.
+
+**Retouche 2026-10-15 — « FF&E » dans le pied de page.** Sans nom d’agence dans les Réglages, le pied des PDF et l’en-tête du listing écrivent « FF&E » (au lieu de « FFE ») ; le texte du pied est une chaîne CSS, insérée sans échappement HTML (« & » restait sinon « &amp; »), guillemets échappés.
+
+**Retouche 2026-10-15 — mode imprimable des PDF.** Case « Mode imprimable » à côté de « Fiches PDF » et « Listing PDF » (page projet, retenue par le navigateur) : les deux documents sortent sur papier blanc au lieu du papier teinté (`?print=true`, gabarits `base.html` : variable `paper`), « -impression » dans le nom du fichier ; le reste du rendu est identique (couleurs des options, cadres). Document émis et conservé comme les autres ; aucun changement de base. Tests API et front ajoutés ; rendu blanc vérifié sur le projet de dev (PDF généré en lecture seule).
+
+**Retouche 2026-10-15 — onglet « Historique » sur la page projet.** Les documents émis quittent la page principale du projet : deux onglets sous le bandeau budget, « Articles et localisations » (articles puis localisations, pleine largeur) et « Historique » (documents émis, fiches de référence) ; onglet dans l’adresse (`?vue=historique`).
+
+**Retouche 2026-10-15 — diffusions et indices (ADR-0022).** Demande de l'utilisatrice : la diffusion se décide à la génération des fiches, plus par un « Nouvel indice » déclaré à part ; la 1ère diffusion sort sans indice (« - ») ; l'indice est propre à chaque code (A puis B…) et ne bouge que si le produit présenté sous ce code change (option retenue), un changement de caractéristiques est sans effet, un code ajouté depuis la diffusion précédente apparaît avec A ; après la 1ère diffusion les codes sont figés, un article diffusé s'annule et seuls les articles jamais diffusés se suppriment ; les options restent hors des fiches sauf case ; la dernière diffusion peut s'annuler. Questionnaire (réponses) : compteur par code ; ajout = A ; seul le changement de produit compte ; annulation possible ; options hors fiches avec case « Inclure les options » ; déplacer ou retirer une implantation diffusée interdit ; aucune diffusion à reprendre dans les bases existantes ; listing inchangé. Fait : migration additive `0005_diffusion` (table `project_diffusion`, `project_item.first_diffusion_id`, `project_item_placement.indice` et `diffused_item_id`, `project_file.diffusion_id` ; l'ancien régime `project.indice`, `project_indice`, `project_item.indice`, `project_file.indice` reste, inutilisé) ; `services/diffusion.py` (`issue_sheets`, `revert_last_diffusion`, `next_letter`) et règles après la 1ère diffusion dans `services/project_item.py` et `services/location.py` ; routes `POST /projects/{id}/exports/sheets` `{diffuse, papers, includeOptions}` et `DELETE /projects/{id}/diffusions/last` (fin de `GET …/sheets.pdf` et des routes `/indice`) ; fiches « Diffusion n » / « Document de travail », indice par code ; fenêtre « Fiches PDF » (`SheetsDialog`), historique des documents émis avec « Annuler la diffusion n », case « Listing imprimable », colonne « Ind. » des implantations ; tests API (`test_api_pdf.py`, `test_api_project_item.py`) et front (`ProjectPage.test.tsx`, `ItemPage.test.tsx`) ; parcours e2e `prescription.spec.ts` adapté (diffusion 1 dans la fenêtre). Docs maîtres alignées (CLAUDE.md, DATA_MODEL, API, ARCHITECTURE, GLOSSARY, index des ADR).
+
+**Retouche 2026-10-16 — indice en direct (ADR-0022).** Constat de l'utilisatrice : un nouvel indice (option retenue, code ajouté) n'apparaissait qu'après la diffusion suivante, ni sur la page projet ni dans les fiches de travail. Désormais l'indice montré est celui que la prochaine diffusion donnera, calculé par la même règle que la diffusion (`ProjectItemPlacement.coming_indice`, `ProjectItem.live_indice`) : page projet, page article (colonne « Ind. ») et fiches émises en document de travail. Un indice pas encore officiel est en couleur d'alerte, infobulle « Nouvel indice : officiel à la prochaine diffusion » (DTO `placements[].indicePending`). Annuler une diffusion fait réapparaître l'indice à venir. Test `test_diffusions_move_the_indice_only_when_the_product_changes` étendu (indice en direct, `indicePending`, ligne de fiche de travail).
+
+**Correctif 2026-10-16 — retenir une option : « Une option reprend les implantations de son article de base ».** Cause : la page article comparait son brouillon à la dernière version rechargée de l'article, pas à celle dont il était parti ; un article ouvert depuis le cache puis rechargé devenu option (implantations perdues) gardait ses anciennes implantations dans le brouillon, vues comme une modification et renvoyées à l'enregistrement, refusées par le serveur. Correction : le brouillon se compare à l'article dont il est parti (`startedFrom`), et une option ou un frais n'envoie jamais d'implantations. Test `ItemPage.test.tsx` « un article devenu option entre-temps… » (échoue sans la correction).
+
+**Retouche 2026-10-16 — options grisées sur les fiches.** Le terracotta des fiches d'option ressortait trop : pastille « Option X », mention « Alternative à », encart de localisation et filet de bord passent en gris chaud discret (`exports/templates/base.html`). Teinte des lignes d'option dans le sommaire et le listing inchangée.
+
+**Retouche 2026-10-16 — indice et évolutions séparés (ADR-0022 révisée).** Demande de l'utilisatrice : chaque article est indépendant, un nouvel article commence sans indice ; l'indice compte les changements de produit d'un code ; l'évolution d'une diffusion à l'autre (nouveau produit, nouvel indice) se marque à part, par une couleur en bord de page et un encart, sans rouge ni orange, sans toucher l'encart de localisation ; puis : même système pour les options, autre couleur. Fait : un code jamais diffusé prend « - » à toute diffusion (`ProjectItemPlacement.coming_indice`) ; `coming_change` / `ProjectItem.live_change` → DTO `placements[].change` (`new`, `revised`), remplace `indicePending` ; fiches : un système de marques (`.mark-new` bleu #0072b2, `.mark-revised` vert-bleu #00876a, `.mark-option` gris chaud), bandeau de bord de page, pastille « Nouveau » / « Modifié · ind. X » / « Option X », lignes du sommaire marquées à gauche, couverture « Évolutions : n nouveau(x), m modifié(s) » ; l'encart de localisation des options reprend le brun ; marques d'une diffusion prises avant qu'elle ne déplace les codes (`coming_changes`) ; interface : colonne « Ind. » avec la même pastille (`IndiceCell`). Défauts retenus : rien n'est marqué à la 1ère diffusion ; « Nouveau » et « Modifié » comme termes. Tests : diffusion (indice, marques en direct, couverture), page article (pastille).
+Puis, à la demande : dans le sommaire des fiches, plus de mots « Nouveau » / « Modifié » sur les lignes, seul le filet de couleur à gauche reste ; légende discrète sous le tableau (« Nouveau », « Modifié (produit remplacé) », « Option », seulement les marques présentes ; `option_count` dans le contexte).
+Puis : plus de « Option A, B… » sur les lignes du sommaire (le code porte déjà la lettre, le filet gris marque l'option) ; légende passée dans le pied du tableau (`tfoot`), répétée en bas de chaque page du sommaire (vérifié sur un sommaire de plusieurs pages). Le listing garde sa mention d'option.
+Puis : pastilles des fiches réduites à « Nouveau » / « Modifié · ind. X » (textes « Code ajouté », « Produit remplacé » retirés, redondants) ; couleurs ternies pour l'ambiance des fiches : bleu ardoise #46667f, vert sauge #6b8a72 (fiches et colonne « Ind. » de l'interface).
+
+**Retouche 2026-10-16 — logo et nom de l'agence sur les fiches.** Demande de l'utilisatrice : logo « AD » importable depuis les réglages, « Réalisé par » en bas à gauche à la place de « FF&E · projet » avec le nom des réglages (plus de nom en dur), en-tête aligné. Fait : migration additive `0006_agency_logo` (`setting.agency_logo_file_id`, FK `file` RESTRICT) ; `PATCH /settings` `agencyLogoFileId` (image seulement, `services/file.check_logo` partagé avec le logo de procurement, ancien logo supprimé s'il n'est plus référencé, `unlink_if_orphan` connaît le logo de l'agence) ; en-tête des fiches en tableau à trois colonnes fixes (logo de l'agence · projet centré · société de procurement et son logo), images bornées 120 × 38 px, centrées verticalement ; pied de page gauche « Réalisé par <nom de l'agence> » (fiches et listing ; vide si aucun nom) ; monogramme `ad-logo.svg` supprimé ; front : `components/forms/LogoField` partagé (projet, Réglages « Logo de l'agence »). Tests : `test_the_agency_logo_and_name_sign_the_sheets`, page Réglages (dépôt du logo), révisions épinglées → 0006.
+
+**Retouche 2026-10-16 — options avancées de « Fiches PDF ».** Section repliable « Options avancées » dans la fenêtre : « Masquer le nom » (pied de page « Réalisé par … »), « Masquer Racoon Studio » (marque du pied de page), « Masquer le logo » (logo de l'agence en haut à gauche) ; `SheetsIssue` `hideAgencyName`, `hideStudio`, `hideAgencyLogo` (défaut `false`), appliqués à tous les papiers de l'émission, rien n'est mémorisé. Défaut retenu : « le logo » = celui de l'agence (le logo de procurement reste réglé sur le projet). Texte de la case « Diffusion officielle » corrigé (codes ajoutés sans indice, marqués « Nouveau »). Tests : `test_the_agency_logo_and_name_sign_the_sheets` (rendu sans nom, sans logo, sans marque ; route), dialogue (corps envoyé).
+
+**Retouche 2026-10-16 — profils de listing (ADR-0023).** Demande de l'utilisatrice : liens du listing écrits « Lien » ; colonnes choisies selon le destinataire avec des profils prédéfinis (« Client », « Installation »…, définis par Claude), créables et modifiables. Fait : catalogue fixe de 18 colonnes (`ffe/listing.py`, libellés `fr.LISTING_COLUMN_LABELS`), table `listing_profile` (migration additive `0007_listing_profile`, cinq profils de départ : Complet, Client, Installation, Achats, Budget), service et routes `/listing-profiles` (+ `/columns`), `list.pdf?profile=<id>` (colonnes du profil dans l'ordre du catalogue, nom de fichier `-listing-<profil>-`), lien imprimé « Lien » cliquable ; en-tête du listing aligné sur celui des fiches (trois colonnes fixes : logo de l'agence, projet, profil et date) ; front : fenêtre « Listing PDF » (profil, papier Couleur / Blanc, derniers choix retenus par le navigateur, lien vers les profils) à la place du lien direct et de la case « Listing imprimable », carte « Profils de listing » dans Réglages (nouveau, modifier nom et colonnes, supprimer). Défauts retenus : ordre des colonnes fixé par le catalogue ; « Client » sans prix ni fournisseur ; suppression physique d'un profil. Tests : `test_api_listing_profile.py`, listing avec profil et lien court (`test_api_pdf.py`), fenêtre « Listing PDF », carte des profils (création, colonnes, suppression, nom pris).
+Puis : dans la fenêtre « Listing PDF », les colonnes du profil s'affichent en pastilles sous le titre « Colonnes imprimées (n) » au lieu d'une ligne de texte (`components/ui/Chips`).
+
+**Retouche 2026-10-16 — listing : options sur demande, colonnes groupées.** Options absentes du listing sauf case « Inclure les options » dans la fenêtre (`list.pdf?options=true`). Le profil « Complet » débordait : les détails partagent la cellule de leur groupe (`ffe/listing.GROUPS`, `printed_groups`) — commentaires et « Lien » sous la désignation, contact et délai sous le fournisseur, finitions sous les dimensions, usage sous la famille ; 12 colonnes au plus, tenues dans la largeur ; une ligne n'est plus coupée entre deux pages (`break-inside: avoid`). Profils inchangés (mêmes clés). Tests : en-têtes groupés, détail seul en tête de cellule, options absentes par défaut, URL de la fenêtre.
+
+**Retouche 2026-10-16 — planches d'installation (ADR-0024).** Demande de l'utilisatrice : un onglet « Installation » dans le projet. On y dépose le plan d'une pièce, puis on génère une feuille A3, plan au centre, articles autour (photo et code). Une pièce se découpe en parties, chacune avec son plan ou un plan commun. Les articles viennent de la pièce, en nombre limité par page, sur plusieurs pages au besoin, et s'ordonnent dans une liste haut/bas avec aperçu de la page. Questionnaire (défauts recommandés retenus) : PDF accepté, rendu en image de sa 1re page (pypdfium2) ; couronne horaire, 8, 12 ou 16 articles par page ; un article peut être sur plusieurs planches, c'est signalé ; PDF téléchargé et non conservé. Message ajouté par l'utilisatrice : l'association article ↔ position sur le plan se fera à la main pour l'instant ; repères numérotés posés d'un clic proposés pour un second lot (parqué, ADR-0024). Fait :
+- migration additive `0008_installation` : tables `installation_plan`, `installation_sheet`, `installation_sheet_item` ;
+- `ffe/installation.py` (`ring_slots`, `grid_size`), services `installation_plan` (rendu PDF), `installation_sheet` (ordre, candidats, « aussi sur », changement de pièce), `installation_pdf` ;
+- gabarit `installation.html` en tables à cases fixes, cartes de largeur uniforme, plan contenu ; en-tête des fiches déplacé dans `_head.html` ; `@page` paramétrée (`page_size`) ; `prescription.main_photo` et `document_header` partagés ;
+- routes `/projects/{id}/installation-plans`, `/projects/{id}/installation-sheets`, `/installation-plans/{id}`, `/installation-sheets/{id}` (+ `/items`, `/pdf`), `/projects/{id}/installation.pdf?locationId=` ;
+- front : 3e onglet « Installation » (`?vue=installation`, `InstallationSection` : plans, planches par pièce, nouvelle planche, PDF par planche, par pièce, global), page `/projects/:id/installation/:sheetId` (`InstallationSheetPage` : réglages, liste ↑ ↓ ✕, articles de la pièce non placés en tête, aperçu A3 page par page, brouillon enregistré d'un bloc avec alerte de sortie).
+
+Tests : `test_api_installation.py` (10 : couronne, plan image et PDF, PDF illisible, ordre et candidats, refus, 422/404, PATCH partiel et plan utilisé, pages A3, annulation et suppression), révisions épinglées → 0008, export JSON (trois tables) ; `InstallationSheetPage.test.tsx` (réordonner et enregistrer, onglet). Rendu A3 vérifié à l'œil sur les trois gabarits. Porte complète et commit : à la demande.
+Puis, à la demande (UX différente du reste, retour et modification peu clairs) : page de planche alignée sur la page article. Elle a maintenant le fil d'Ariane Projets / projet / Installation et le bouton « Retour au projet », qui ramène à l'onglet. Les réglages sont de vrais champs (`TextInput`, `Select`), avec leurs erreurs sous le champ. Les articles sont listés en tableau, comme les options : n°, photo, code cliquable vers l'article, « à enregistrer » sur un ajout, « Retirer ». La barre basse « Modifications non enregistrées » propose « Annuler les modifications » et « Enregistrer ». « Supprimer la planche » passe en bas de page, et l'aperçu reste visible au défilement. « PDF A3 » est grisé tant qu'il reste des modifications. Une relecture des données n'écrase plus un brouillon en cours. Dans l'onglet, la ligne entière d'une planche ouvre la planche (« Modifier › »). Test ajouté : nom modifié, annulation, PATCH envoyé, retour à l'onglet.
+Puis, à la demande (plan trop petit, position des articles et orientation du plan à régler) — questionnaire : disposition et cases vides ; rotation du plan seulement (ni recadrage automatique, ni page portrait). Fait, dans la migration `0008_installation`, pas encore publiée, donc modifiée :
+- `installation_sheet.arrangement` : `ring`, `sides`, `ends` ou `right` ;
+- `installation_sheet.plan_rotation` : 0, 90, 180 ou 270 ;
+- `installation_sheet_item.sort_order` devient `position`, la case occupée ; une case sans article reste vide.
+
+Grille générique `ffe/installation.layout` : largeurs et hauteurs en px, bloc du plan, cases dans l'ordre de lecture. « À droite du plan » laisse au plan 900 à 1 100 px de large sur 930 de haut. L'API envoie les douze grilles (4 dispositions × 3 gabarits), et l'aperçu les reprend en proportions. Le plan tourné est rendu en JPEG dans le PDF, et tourné en CSS dans l'aperçu (boîte mesurée).
+
+Page de planche : champs « Orientation du plan » et « Position des articles », bouton « + Case vide », case vide déplaçable et retirable comme un article, sens de lecture rappelé selon la disposition. Le formulaire « Nouvelle planche » propose aussi la disposition. Tests : grilles des quatre dispositions (la page est remplie, aucune case sous le plan), cases vides (positions, fin retirée, 2e page), rendu PDF des quatre dispositions avec plan tourné, 422 sur `arrangement` et `planRotation` ; front : case vide, disposition et orientation envoyées. Rendu vérifié à l'œil sur les quatre dispositions.
+Puis, à la demande, des repères sur le plan, et les couleurs en même temps. Numéro d'abord : la pastille posée sur le plan porte le numéro de la case de l'article sur la page, le même que sur sa carte ; la couleur par type est en option. Fait, dans `0008_installation`, toujours non publiée :
+- table `installation_sheet_marker` : millièmes du plan avant rotation, plusieurs repères par article, CASCADE ;
+- `installation_sheet.color_by_type` ;
+- `PUT …/items` prend `cells: [{placementId, markers} | null]` ;
+- palette `TYPE_COLORS`, huit teintes attribuées dans l'ordre des types du projet ;
+- `turn`, la rotation d'un point.
+
+PDF : plan placé en px exacts dans sa case, pastilles par-dessus, numéro en pastille sur chaque carte, filet de couleur et légende des types de la page quand la planche est en couleur.
+
+Page de planche :
+- dans la liste, le numéro de case en pastille, « n repère(s) » sous l'article et un bouton « Repérer » ;
+- dans l'aperçu, la consigne, le plan cliquable quand un article est choisi, une pastille qui se retire d'un clic, la légende ;
+- dans les réglages, la case « Couleurs par type ».
+
+Tests :
+- API : rotation d'un point, repères gardés avec leur article, remplacés, 422 hors bornes, couleurs dans l'ordre des types, PDF ;
+- front : « Repérer », consigne, compte des repères, format `cells`.
+
+Rendu vérifié à l'œil : plan droit, plan tourné de 90°, en couleur.
+Puis : repères plus discrets (constat de l'utilisateur, numéro trop gros sur le plan) : pastille de 14 px sur l'A3 au lieu de 22, soit environ 4 mm, chiffre de 8 px, liseré blanc fin, opacité 0,88 ; aperçu à 12 px. Aucun changement de base.
+Puis, à la demande, une interface à part pour les repères : fenêtre plein écran « Mettre les repères » (`MarkersEditor.tsx`), ouverte par le bouton sous l'aperçu ou par « Repérer » sur un article, qui arrive alors choisi.
+- Articles de la page à gauche (numéro, photo, nombre de repères, « Retirer ses repères ») ; changement de page.
+- Plan aussi grand que l'écran : zoom de 100 à 1 200 % (molette autour du curseur, boutons −/+, « Ajuster »), déplacement en glissant.
+- Pastilles de taille fixe à l'écran, déplacées en glissant, sélectionnées d'un clic, supprimées par « Supprimer le repère » ou la touche Suppr ; « Terminé » ferme et garde le brouillon (enregistré par « Enregistrer »).
+- L'aperçu de la planche ne fait plus que montrer les pastilles. Géométrie de rotation partagée : `installationPlan.ts`.
+
+Recadrage automatique des marges blanches à l'ajout d'un plan, choisi par l'utilisateur : `services/installation_plan.trim_margins`. Tests : marges coupées, image pleine gardée telle quelle, PDF recadré ; front : fenêtre (article choisi, sélection et suppression d'un repère, Terminé).
+
+**Audit du 2026-10-16 et corrections (skill `audit-projet`, puis « tout, dans l'ordre le plus simple »).** Porte verte avant l'audit. Corrigé, dans cet ordre :
+1. **Données**
+   - Un export JSON ne se réimportait plus avec un logo d'agence : le logo est maintenant posé en seconde passe, et le `--replace` le détache d'abord.
+   - Annuler une diffusion après avoir retenu une option laissait des codes « diffusés » : la restauration se fait désormais par identifiant d'implantation.
+   - Les deux cas ont été rejoués avant correction et ont chacun un test.
+2. **Pertes de saisie**
+   - Le statut d'un article était comparé à la mauvaise version : il l'est maintenant au brouillon de départ.
+   - Planche : un enregistrement à moitié réussi garde les réglages enregistrés et le dit ; « Annuler les modifications » repart de la dernière lecture ; la pièce proposée par défaut est posée une fois les localisations chargées.
+   - « Fiches PDF » repart des valeurs par défaut à chaque ouverture (plus de « Diffusion officielle » restée cochée) ; les téléchargements sont espacés ; les options avancées ne se replient plus.
+3. **Plans**
+   - Au dépôt, une image est redressée selon son orientation EXIF et posée sur blanc si elle est transparente, puis recadrée.
+   - Une image géante (`DecompressionBombError`) est refusée en 422.
+   - Une requête prend au plus 800 cases ; `installation.pdf?locationId=` d'un autre projet répond 404 ; un article annulé reçoit un message juste.
+4. **Finitions installation**
+   - Fenêtre des repères : sélection remise à zéro au changement de page, glisser interrompu annulé, ouverture sur la page de l'aperçu, focus sur « Terminé », repères au clavier.
+   - Le détail d'une planche est rangé sous `['projects']` et oublié à sa suppression.
+   - États de chargement et d'erreur dans l'onglet ; nom d'un plan remis après un échec de renommage.
+   - Libellés alignés sur la page de planche (« Nom », « Position des articles », « Articles par page », « Repères », « absents des planches », « Déjà sur »).
+   - Les 16 boutons placés dans des liens deviennent des liens stylés (`buttonClass`) ; profils de listing : colonnes dans l'ordre du catalogue, chargement, ancre `#profils` atteinte.
+5. **Journal**
+   - Événements `sheet` (champs de fiche nommés dans la note) et `file` (fichier ajouté, modifié, retiré).
+   - Une localisation encore utilisée est refusée avec un message nommé.
+   - Textes déplacés dans `fr.py` ; `money.sum_cents` dans le budget.
+   - Tests d'intégrité des contraintes d'installation et du profil de listing.
+   - Migration additive `0009_fk_indexes` : sept index sur des clés étrangères.
+6. **Nettoyage**
+   - Retirés : `ROTATIONS`, `typeId`, `foldKey`, `agency.address`, la réexportation de `next_letter`, `sortOrder` d'une planche.
+   - Mis en commun : `api/responses.py` (réponse PDF) et `PDF_MIME` dans `exports/pdf.py` ; `schemas/base.strip_text` (11 copies) ; `usePlanFit` et `InstallationPhoto` ; `UnsavedChanges` (garde des brouillons, page article et planche) ; `forms/Checkbox` (7 cases).
+   - Front : `?print=true` branché (« PDF à imprimer ») ; jetons de couleur `mark-new` et `mark-revised` ; commentaires passés en anglais.
+   - Tests rangés par module : `test_installation.py`, `test_api_installation_plan.py`, `test_api_installation_sheet.py`, `installation_helpers.py` ; `InstallationSection.test.tsx`, `tests/helpers/installationApi.ts`, `installationPlan.test.ts`. Requêtes séparées en `installationPlan.ts` et `installationSheet.ts`.
+7. **Docs maîtres** alignées : DATA_MODEL (25 tables, diagramme, conventions), API, ARCHITECTURE, ROADMAP (état, idées parquées), GLOSSARY, ADR-0024 (version de pypdfium2, quatre tables, Repli), CLAUDE.md.
+
+Laissé tel quel :
+- les octets d'un fichier écrit avant un rollback restent sur disque : c'est le cas de tout dépôt non rattaché, signalé par `ffe db check` ;
+- le petit sélecteur de catégorie des fichiers garde sa taille compacte ;
+- les clés des cases vides restent par position (focus perdu au déplacement, sans effet sur les données).
+
+**Contre-vérification des corrections (2026-10-16).** Vérification complète `./check.sh` et les deux parcours de bout en bout (`npm run e2e`) passent. Deux relectures de régression (API et front), sur l'écart avec `641c9ba`.
+
+Un vrai défaut trouvé : l'import JSON d'un export fait à une révision antérieure (la base v1 du Mac) était refusé, car les colonnes ajoutées depuis manquaient à la validation des lignes. Désormais, une colonne autorisée à NULL et absente de l'export compte comme NULL. Test `test_an_export_of_an_older_revision_lacking_the_new_columns_imports`.
+
+Retouches mineures :
+- « Fiches PDF » sur un projet clos : la diffusion n'est plus proposée.
+- `Checkbox` : le texte d'aide décrit la case (`aria-describedby`) au lieu d'allonger son nom.
+- « Listing PDF » ne s'affiche que lorsqu'il est ouvert.
+- Ancre `#profils` posée sur la carte entière.
+- Nom d'un plan relu après un rafraîchissement.
+- Titre du PDF d'installation avec le code du projet.
+- API.md : cas d'une image convertie en PNG.
+- Deux commentaires en double retirés.
+
+Relu sans régression :
+- les 16 liens réécrits ;
+- `strip_text` ;
+- la garde des brouillons ;
+- `usePlanFit` ;
+- l'annulation de diffusion ;
+- les journaux `sheet` et `file` ;
+- la normalisation des plans ;
+- la migration `0009` ;
+- les réponses PDF.

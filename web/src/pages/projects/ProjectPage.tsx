@@ -1,5 +1,8 @@
-// The project page (ADR-0013): header with status, budget strip, locations, articles, issued PDFs.
-import { Link, useParams } from 'react-router'
+// The project page (ADR-0013): header with status, budget strip, articles and locations; the
+// « Historique » tab holds the issued PDFs and the diffusions (ADR-0022).
+import { useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
+import { Segmented } from '../../components/ui/Segmented'
 import { isApiError } from '../../api/errors'
 import { useClient } from '../../api/queries/client'
 import { fileContentUrl } from '../../api/queries/file'
@@ -8,24 +11,37 @@ import {
   PROJECT_STATUS_LABELS,
   useChangeProjectStatus,
   useLocations,
-  useNextProjectIndice,
   useProject,
-  useRevertProjectIndice,
+  useRevertDiffusion,
   type ProjectStatus,
 } from '../../api/queries/project'
-import { EXPORT_KIND_LABELS, listExportUrl, sheetsExportUrl, useProjectExports } from '../../api/queries/projectFile'
-import { Button, linkButtonClass } from '../../components/ui/Button'
+import { EXPORT_KIND_LABELS, useProjectExports } from '../../api/queries/projectFile'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { Card, Dot, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
 import { useSubmitErrors } from '../common/useSubmitErrors'
 import { BudgetStrip } from './BudgetStrip'
+import { InstallationSection } from './InstallationSection'
 import { ItemsSection } from './ItemsSection'
+import { ListingDialog } from './ListingDialog'
 import { LocationsSection } from './LocationsSection'
 import { StatusBadge } from './ProjectsPage'
+import { SheetsDialog } from './SheetsDialog'
+
+type View = 'project' | 'installation' | 'history'
+const VIEWS: { value: View; label: string }[] = [
+  { value: 'project', label: 'Articles et localisations' },
+  { value: 'installation', label: 'Installation' },
+  { value: 'history', label: 'Historique' },
+]
+// The tab in the address (`?vue=…`), so a link or a reload comes back to it.
+const VIEW_PARAMS: Record<View, string | null> = { project: null, installation: 'installation', history: 'historique' }
 
 export function ProjectPage() {
+  const [search, setSearch] = useSearchParams()
+  const view: View = (Object.keys(VIEW_PARAMS) as View[]).find((v) => VIEW_PARAMS[v] !== null && VIEW_PARAMS[v] === search.get('vue')) ?? 'project'
   const params = useParams<{ id: string }>()
   const id = Number(params.id)
   const project = useProject(id)
@@ -33,8 +49,9 @@ export function ProjectPage() {
   const locations = useLocations(id, true)
   const exports = useProjectExports(id)
   const changeStatus = useChangeProjectStatus()
-  const nextIndice = useNextProjectIndice()
-  const revertIndice = useRevertProjectIndice()
+  const revertDiffusion = useRevertDiffusion()
+  const [sheetsOpen, setSheetsOpen] = useState(false)
+  const [listingOpen, setListingOpen] = useState(false)
   const errors = useSubmitErrors('projet')
 
   function askStatus(status: ProjectStatus) {
@@ -57,49 +74,24 @@ export function ProjectPage() {
     })
   }
 
-  function askIndice(current: string | null) {
-    const next = nextLetter(current)
+  function askRevertDiffusion(number: number) {
     errors.setDialog({
-      title: current ? `Passer à l'indice ${next} ?` : 'Première diffusion : indice A ?',
-      message: current
-        ? `Les fiches modifiées depuis l'indice ${current} prendront la lettre ${next} ; les PDF émis ensuite porteront l'indice ${next}. Les PDF émis entre deux indices sont des essais.`
-        : 'Toutes les fiches du projet reçoivent l’indice A. Les fiches PDF émises ensuite le portent ; celles émises jusqu’ici restent des essais.',
+      title: `Annuler la diffusion ${number} ?`,
+      message:
+        number === 1
+          ? 'Le projet redevient non diffusé : tout est de nouveau modifiable librement. Les PDF émis restent dans l’historique, marqués « diffusion annulée ».'
+          : `Les indices et les règles reviennent à la diffusion ${number - 1}. Les PDF émis restent dans l’historique, marqués « diffusion annulée ».`,
       actions: [
         {
-          label: current ? `Passer à l'indice ${next}` : 'Déclarer l’indice A',
-          variant: 'primary',
-          onClick: () =>
-            void nextIndice
-              .mutateAsync(id)
-              .then(() => {
-                errors.setDialog(null)
-                errors.toast.show({ kind: 'success', message: `Indice ${next} déclaré ; émettre les fiches PDF pour la diffusion.` })
-              })
-              .catch((error: unknown) => errors.toast.show({ kind: 'error', message: isApiError(error) ? error.message : String(error), persistent: true })),
-        },
-        { label: 'Annuler', onClick: () => errors.setDialog(null) },
-      ],
-    })
-  }
-
-  function askRevert(current: string) {
-    const previous = previousLetter(current)
-    errors.setDialog({
-      title: `Retirer l'indice ${current} ?`,
-      message: previous
-        ? `Le projet revient à l'indice ${previous} ; les fiches marquées ${current} reprennent leur lettre précédente. Les PDF déjà émis restent dans la liste.`
-        : `Le projet revient sans indice ; les fiches marquées ${current} reprennent leur lettre précédente.`,
-      actions: [
-        {
-          label: `Retirer l'indice ${current}`,
+          label: `Annuler la diffusion ${number}`,
           variant: 'danger',
           onClick: () =>
-            void revertIndice
+            void revertDiffusion
               .mutateAsync(id)
               .then(() => errors.setDialog(null))
               .catch((error: unknown) => errors.toast.show({ kind: 'error', message: isApiError(error) ? error.message : String(error), persistent: true })),
         },
-        { label: 'Annuler', onClick: () => errors.setDialog(null) },
+        { label: 'Garder', onClick: () => errors.setDialog(null) },
       ],
     })
   }
@@ -116,10 +108,7 @@ export function ProjectPage() {
   }
   const p = project.data
   const readOnly = CLOSED_STATUSES.includes(p.status)
-  // The latest sheets PDF issued since the current indice was declared: the one to send.
-  const referenceId = p.indice
-    ? (exports.data ?? []).find((e) => e.kind === 'sheets_pdf' && e.indice === p.indice && e.issuedAt >= (p.indiceChangedAt ?? ''))?.id
-    : undefined
+  const last = p.lastDiffusion
   return (
     <section>
       <PageHeader
@@ -156,7 +145,7 @@ export function ProjectPage() {
               </select>
             </label>
             <Dot />
-            <Pill status={p.indice ? 'indice' : 'none'}>{p.indice ? `Indice ${p.indice}` : 'Sans indice'}</Pill>
+            <Pill status={last ? 'indice' : 'none'}>{last ? `Diffusion ${last.number}` : 'Non diffusé'}</Pill>
             {p.dueOn && (
               <>
                 <Dot />
@@ -167,24 +156,10 @@ export function ProjectPage() {
         }
         actions={
           <>
-            {!readOnly && (
-              <Button onClick={() => askIndice(p.indice)} disabled={nextIndice.isPending}>
-                Nouvel indice
-              </Button>
-            )}
-            {!readOnly && p.indice && (
-              <Button variant="ghost" onClick={() => askRevert(p.indice!)} disabled={revertIndice.isPending}>
-                Retirer l'indice {p.indice}
-              </Button>
-            )}
-            <a href={sheetsExportUrl(p.id)} download className={linkButtonClass}>
-              Fiches PDF
-            </a>
-            <a href={listExportUrl(p.id)} download className={linkButtonClass}>
-              Listing PDF
-            </a>
-            <Link to={`/projects/${p.id}/edit`}>
-              <Button variant="primary">Modifier</Button>
+            <Button onClick={() => setSheetsOpen(true)}>Fiches PDF</Button>
+            <Button onClick={() => setListingOpen(true)}>Listing PDF</Button>
+            <Link to={`/projects/${p.id}/edit`} className={buttonClass('primary')}>
+              Modifier
             </Link>
           </>
         }
@@ -195,85 +170,86 @@ export function ProjectPage() {
           Projet {PROJECT_STATUS_LABELS[p.status].toLowerCase()} : lecture seule, changer le statut pour modifier.
         </p>
       )}
-      <div className="space-y-6">
-        <ItemsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
-        <div className="grid grid-cols-[1.4fr_1fr] items-start gap-6">
-          <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
-          <Card title="Documents émis" label="Documents émis" padding="table">
-            {exports.data && exports.data.length > 0 ? (
-              <ul className="p-2 text-sm" aria-label="Documents émis">
-                {exports.data.map((e) => {
-                  const reference = e.id === referenceId
-                  return (
-                    <li
-                      key={e.id}
-                      className={`flex items-center justify-between gap-3 px-3 py-2.5 ${reference ? 'rounded-[7px] bg-accent-soft text-accent-ink' : ''}`}
-                    >
-                      <div className="min-w-0">
-                        <a
-                          href={fileContentUrl(e.fileId)}
-                          download={e.originalName}
-                          className={`block truncate font-medium ${reference ? 'text-accent-ink' : 'text-ink'}`}
-                        >
-                          {e.originalName}
-                        </a>
-                        <div className={`text-[12.5px] ${reference ? 'text-accent-ink/80' : 'text-ink-3'}`}>
-                          {EXPORT_KIND_LABELS[e.kind]}
-                          {e.indice ? ` · indice ${e.indice}` : e.kind === 'sheets_pdf' ? ' · sans indice' : ''} · {e.issuedAt.slice(0, 10)}
-                        </div>
-                      </div>
-                      {reference && (
-                        <span
-                          className="rounded-[4px] bg-accent px-1.5 py-0.5 text-[11.5px] font-medium whitespace-nowrap text-white"
-                          title={`Fiches de référence, indice ${p.indice}`}
-                        >
-                          {`Fiches de référence, indice ${p.indice}`}
-                        </span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <p className="px-5 py-5 text-sm text-ink-3">Aucun document émis. « Fiches PDF » et « Listing PDF » émettent et conservent ici chaque version.</p>
-            )}
-          </Card>
-        </div>
+      {/* Three tabs: the project (articles, locations), the installation sheets (ADR-0024) and the history (the issued documents). */}
+      <div className="mb-5">
+        <Segmented label="Vue du projet" value={view} onChange={(value) => setSearch(VIEW_PARAMS[value] ? { vue: VIEW_PARAMS[value] } : {})} options={VIEWS} />
       </div>
+      {view === 'project' ? (
+        <div className="space-y-6">
+          <ItemsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
+          <LocationsSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
+        </div>
+      ) : view === 'installation' ? (
+        <InstallationSection projectId={p.id} locations={locations.data ?? []} readOnly={readOnly} />
+      ) : (
+        <Card
+          title="Documents émis"
+          label="Documents émis"
+          padding="table"
+          actions={
+            !readOnly &&
+            last && (
+              <Button size="sm" variant="ghost" onClick={() => askRevertDiffusion(last.number)} disabled={revertDiffusion.isPending}>
+                Annuler la diffusion {last.number}
+              </Button>
+            )
+          }
+        >
+          {exports.isPending ? (
+            <p className="px-5 py-5 text-sm text-ink-3">Chargement…</p>
+          ) : exports.isError ? (
+            <p className="px-5 py-5 text-sm text-danger">{exports.error.message}</p>
+          ) : exports.data.length > 0 ? (
+            <ul className="p-2 text-sm" aria-label="Documents émis">
+              {exports.data.map((e) => {
+                const official = e.diffusionNumber != null && !e.diffusionRevoked
+                return (
+                  <li
+                    key={e.id}
+                    className={`flex items-center justify-between gap-3 px-3 py-2.5 ${official ? 'rounded-[7px] bg-accent-soft text-accent-ink' : ''}`}
+                  >
+                    <div className="min-w-0">
+                      <a
+                        href={fileContentUrl(e.fileId)}
+                        download={e.originalName}
+                        className={`block truncate font-medium ${official ? 'text-accent-ink' : 'text-ink'}`}
+                      >
+                        {e.originalName}
+                      </a>
+                      <div className={`text-[12.5px] ${official ? 'text-accent-ink/80' : 'text-ink-3'}`}>
+                        {EXPORT_KIND_LABELS[e.kind]} · {e.issuedAt.slice(0, 10)}
+                      </div>
+                    </div>
+                    {e.kind === 'sheets_pdf' && (
+                      <span
+                        className={`rounded-[4px] px-1.5 py-0.5 text-[11.5px] font-medium whitespace-nowrap ${
+                          official ? 'bg-accent text-white' : e.diffusionRevoked ? 'bg-track text-ink-2 line-through' : 'bg-track text-ink-2'
+                        }`}
+                      >
+                        {e.diffusionNumber == null
+                          ? 'Document de travail'
+                          : e.diffusionRevoked
+                            ? `Diffusion ${e.diffusionNumber} annulée`
+                            : `Diffusion ${e.diffusionNumber}`}
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="px-5 py-5 text-sm text-ink-3">
+              Aucun document émis. « Fiches PDF » émet un document de travail ou une diffusion ; chaque version est conservée ici.
+            </p>
+          )}
+        </Card>
+      )}
+      {/* Mounted while open only: each opening starts from the defaults (never « Diffusion officielle » left ticked). */}
+      {sheetsOpen && <SheetsDialog project={p} readOnly={readOnly} open onClose={() => setSheetsOpen(false)} />}
+      {listingOpen && <ListingDialog projectId={p.id} open onClose={() => setListingOpen(false)} />}
       <ConfirmDialog open={errors.dialog !== null} title={errors.dialog?.title ?? ''} actions={errors.dialog?.actions ?? []}>
         {errors.dialog?.message}
       </ConfirmDialog>
     </section>
   )
-}
-
-/** A, B … Z, AA, AB … (same rule as the server). */
-export function nextLetter(current: string | null): string {
-  if (!current) return 'A'
-  const digits = [...current].map((ch) => ch.charCodeAt(0) - 65)
-  for (let i = digits.length - 1; i >= 0; i--) {
-    if (digits[i]! < 25) {
-      digits[i]! += 1
-      return digits.map((d) => String.fromCharCode(65 + d)).join('')
-    }
-    digits[i] = 0
-  }
-  return 'A' + digits.map((d) => String.fromCharCode(65 + d)).join('')
-}
-
-/** The letter before `current` (B → A, AA → Z, A → null): the inverse of nextLetter. */
-export function previousLetter(current: string): string | null {
-  if (current === 'A') return null
-  const digits = [...current].map((ch) => ch.charCodeAt(0) - 65)
-  for (let i = digits.length - 1; i >= 0; i--) {
-    if (digits[i]! > 0) {
-      digits[i]! -= 1
-      return digits.map((d) => String.fromCharCode(65 + d)).join('')
-    }
-    digits[i] = 25
-  }
-  return digits
-    .slice(1)
-    .map((d) => String.fromCharCode(65 + d))
-    .join('')
 }

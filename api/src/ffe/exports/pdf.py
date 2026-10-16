@@ -10,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image, ImageOps, UnidentifiedImageError
 from weasyprint import HTML  # pyright: ignore[reportMissingTypeStubs]
 
+PDF_MIME = "application/pdf"
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 # Fonts (Newsreader, IBM Plex Sans, IBM Plex Mono — SIL Open Font License, from the Google
 # Fonts repository) and the logo, reached by absolute file URL: no network at render time.
@@ -82,16 +83,27 @@ def _is_plain(pixels: list[tuple[int, int, int]]) -> bool:
     return sum(abs(p[c] - mean[c]) for p in pixels for c in range(3)) / (3 * len(pixels)) <= 12
 
 
+def upright(image: Image.Image) -> Image.Image:
+    """An image as seen (EXIF rotation applied), on white where it is transparent, in RGB."""
+    image = ImageOps.exif_transpose(image)
+    if image.mode in ("RGBA", "LA", "PA") or (image.mode == "P" and "transparency" in image.info):
+        rgba = image.convert("RGBA")
+        flat = Image.new("RGB", rgba.size, WHITE)
+        flat.paste(rgba, mask=rgba.getchannel("A"))
+        return flat
+    return image.convert("RGB")
+
+
 def _upright(path: Path) -> Image.Image:
     with Image.open(path) as image:
-        return ImageOps.exif_transpose(image).convert("RGB")
+        return upright(image)
 
 
 def image_traits(path: Path) -> ImageTraits:
     """Proportions and edge kinds of an image file; unreadable = a square with busy edges."""
     try:
         image = _upright(path)
-    except OSError, UnidentifiedImageError, ValueError:
+    except OSError, UnidentifiedImageError, ValueError, Image.DecompressionBombError:
         return ImageTraits(1.0, False, False)
     small = image.resize((32, 32))  # pyright: ignore[reportUnknownMemberType]
 
@@ -134,7 +146,7 @@ def padded_image(
     stretched outwards (`color` None) or a flat colour; a JPEG data URI, None if unreadable."""
     try:
         image = _upright(path)
-    except OSError, UnidentifiedImageError, ValueError:
+    except OSError, UnidentifiedImageError, ValueError, Image.DecompressionBombError:
         return None
     width, height = size[0] * PRINT_SCALE, size[1] * PRINT_SCALE
     fitted = ImageOps.contain(image, (width, height), Image.Resampling.LANCZOS)

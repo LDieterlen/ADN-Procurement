@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Text
 
 from ffe.models.base import STRICT, Base, TimestampedMixin
+from ffe.models.project import Project
 from ffe.models.project_item_file import ProjectItemFile
 from ffe.models.project_item_placement import ProjectItemPlacement
 
@@ -58,6 +59,7 @@ class ProjectItem(TimestampedMixin, Base):
         Index("ix_project_item_status", "project_id", "status"),
         Index("ix_project_item_supplier_id", "supplier_id"),
         Index("ix_project_item_category_id", "category_id"),
+        Index("ix_project_item_first_diffusion_id", "first_diffusion_id"),
         STRICT,
     )
 
@@ -97,17 +99,23 @@ class ProjectItem(TimestampedMixin, Base):
     # --- state ---
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="to_quote")
     # Letter of the last declared indice in which the article changed (`project_indice`, 2026-10-13).
-    indice: Mapped[str | None] = mapped_column(Text)
+    indice: Mapped[str | None] = mapped_column(Text)  # unused since ADR-0022 (indice per code)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     # --- option (ADR-0021, migration 0003) ---
     # ON DELETE RESTRICT is in migration 0003; not declared here because SQLite does not reflect the
     # options of a column-level foreign key (added by ADD COLUMN), and `alembic check` would differ.
     option_of_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("project_item.id"))
     option_letter: Mapped[str | None] = mapped_column(Text)
+    # The first diffusion that presented the article (ADR-0022, migration 0005); NULL = never shown
+    # officially, so it can still be deleted. ON DELETE RESTRICT is in the migration.
+    first_diffusion_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("project_diffusion.id")
+    )
 
     option_of: Mapped[ProjectItem | None] = relationship(
         "ProjectItem", remote_side=[id], foreign_keys=[option_of_id], lazy="selectin"
     )
+    project: Mapped[Project] = relationship(Project, lazy="selectin", viewonly=True)
     placements: Mapped[list[ProjectItemPlacement]] = relationship(
         ProjectItemPlacement,
         order_by=(ProjectItemPlacement.sort_order, ProjectItemPlacement.id),
@@ -122,3 +130,26 @@ class ProjectItem(TimestampedMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+
+    def live_indice(self, placement: ProjectItemPlacement) -> str | None:
+        """The indice a code shows now: the one the next diffusion gives it (ADR-0022), so a change
+        is seen at once (pages, working documents). A cancelled article or an option is not
+        diffused: its codes keep their last indice."""
+        if not self._diffusable:
+            return placement.indice
+        return placement.coming_indice(self.id)
+
+    def live_change(self, placement: ProjectItemPlacement) -> str | None:
+        """What the next diffusion brings to a code (« new », « revised », None), seen at once."""
+        if not self._diffusable:
+            return None
+        return placement.coming_change(self.id, self.project.diffusion_count + 1)
+
+    @property
+    def _diffusable(self) -> bool:
+        return self.kind == "product" and self.status != "cancelled" and self.option_of_id is None
+
+    @property
+    def diffused(self) -> bool:
+        """Presented in a diffusion: cancelled, never deleted (ADR-0022)."""
+        return self.first_diffusion_id is not None

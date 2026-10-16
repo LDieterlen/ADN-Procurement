@@ -5,16 +5,12 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 Code = Annotated[str, Field(min_length=1, max_length=20)]
 Name = Annotated[str, Field(min_length=1, max_length=200)]
 Short = Annotated[str | None, Field(max_length=200)]
 Multiplier = Annotated[int, Field(ge=1, le=100000)]
-
-
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
 
 
 def _clean(value: Any) -> Any:
@@ -36,7 +32,7 @@ class LocationCreate(BaseSchema):
     @field_validator("code", "name", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator("zone", "level", mode="before")
     @classmethod
@@ -57,7 +53,7 @@ class LocationUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator("zone", "level", mode="before")
     @classmethod

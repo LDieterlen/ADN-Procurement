@@ -22,7 +22,7 @@ import { ITEM_STATUS_LABELS, type ItemStatus } from '../../api/queries/projectIt
 import { useSuppliers } from '../../api/queries/supplier'
 import { bpToText } from '../../components/forms/BpField'
 import { centsToText, textToCents } from '../../components/forms/MoneyField'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { pillStyle } from '../../components/ui/Pill'
 import { Segmented } from '../../components/ui/Segmented'
@@ -126,8 +126,8 @@ export function BudgetPage() {
         }
         subtitle="Prévisionnel, prescrit, devisé et validé, en euros HT, calculés par le serveur"
         actions={
-          <Link to={`/projects/${p.id}`}>
-            <Button variant="ghost">Retour au projet</Button>
+          <Link to={`/projects/${p.id}`} className={buttonClass('ghost')}>
+            Retour au projet
           </Link>
         }
       />

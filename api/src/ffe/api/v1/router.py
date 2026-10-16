@@ -11,6 +11,9 @@ from ffe.api.v1 import (
     export,
     file,
     health,
+    installation_plan,
+    installation_sheet,
+    listing_profile,
     location,
     professional,
     project,
@@ -35,4 +38,7 @@ router.include_router(budget.router)
 router.include_router(export.router)
 router.include_router(capture.router)
 router.include_router(setting.router)
+router.include_router(listing_profile.router)
+router.include_router(installation_plan.router)
+router.include_router(installation_sheet.router)
 router.include_router(system.router)

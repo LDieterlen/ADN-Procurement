@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useArchiveClient, useClient, useCreateClient, useUnarchiveClient, useUpdateClient } from '../../api/queries/client'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { ConfirmDialog, type DialogAction } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
@@ -131,8 +131,8 @@ export function ClientEditPage() {
           {archived && <span className="ml-3 rounded bg-track px-2 py-0.5 align-middle text-xs">Archivé</span>}
         </h1>
         <div className="flex gap-2">
-          <Link to="/clients">
-            <Button variant="ghost">Retour</Button>
+          <Link to="/clients" className={buttonClass('ghost')}>
+            Retour
           </Link>
           {client && !archived && (
             <Button variant="danger" onClick={confirmArchive}>

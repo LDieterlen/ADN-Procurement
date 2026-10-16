@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema, IsoDate
+from ffe.schemas.base import BaseSchema, IsoDate, strip_text
 
 ProjectStatus = Literal["prospect", "active", "delivered", "closed", "cancelled"]
 
@@ -15,10 +15,6 @@ Short = Annotated[str | None, Field(max_length=500)]
 Long = Annotated[str | None, Field(max_length=4000)]
 
 
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
-
-
 class ProjectCreate(BaseSchema):
     name: Name
     client_id: int
@@ -26,13 +22,15 @@ class ProjectCreate(BaseSchema):
     site_address: Short = None
     due_on: IsoDate = None
     notes: Long = None
+    procurement_name: Short = None  # the procurement company, top right of the sheets
+    procurement_logo_file_id: int | None = None  # its logo, an image uploaded by POST /files
     # The global envelope, created with the project (ADR-0012).
     global_budget_cents: Annotated[int | None, Field(ge=0)] = None
 
     @field_validator("name", "code", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ProjectUpdate(BaseSchema):
@@ -42,17 +40,25 @@ class ProjectUpdate(BaseSchema):
     site_address: Short = None
     due_on: IsoDate = None
     notes: Long = None
+    procurement_name: Short = None
+    procurement_logo_file_id: int | None = None
 
     @field_validator("name", "client_id", "code", mode="before")
     @classmethod
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
 
 class ProjectStatusChange(BaseSchema):
     status: ProjectStatus
+
+
+class DiffusionRead(BaseSchema):
+    id: int
+    number: int
+    issued_at: str
 
 
 class ProjectRead(BaseSchema):
@@ -64,8 +70,10 @@ class ProjectRead(BaseSchema):
     site_address: str | None
     due_on: str | None
     notes: str | None
-    indice: str | None
-    indice_changed_at: str | None
+    diffusion_count: int = 0  # official diffusions (ADR-0022); 0 = everything still free
+    last_diffusion: DiffusionRead | None = None
+    procurement_name: str | None
+    procurement_logo_file_id: int | None
     created_at: str
     updated_at: str
 

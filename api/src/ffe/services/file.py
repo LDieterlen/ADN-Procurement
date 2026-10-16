@@ -10,7 +10,15 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.errors import ErrorDetail, NotFoundError, PayloadTooLargeError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import CaptureImage, File, ProjectFile, ProjectItemFile
+from ffe.models import (
+    CaptureImage,
+    File,
+    InstallationPlan,
+    Project,
+    ProjectFile,
+    ProjectItemFile,
+    Setting,
+)
 from ffe.services.base import stamp
 
 RESOURCE = "file"
@@ -117,6 +125,24 @@ def unlink_if_orphan(session: Session, files_dir: Path, file_id: int) -> bool:
             select(func.count()).select_from(CaptureImage).where(CaptureImage.file_id == file_id)
         ):
             return False
+        if session.scalar(  # a project's procurement logo
+            select(func.count())
+            .select_from(Project)
+            .where(Project.procurement_logo_file_id == file_id)
+        ):
+            return False
+        if session.scalar(  # the agency's logo (settings)
+            select(func.count()).select_from(Setting).where(Setting.agency_logo_file_id == file_id)
+        ):
+            return False
+        if session.scalar(  # a floor plan, drawn or uploaded as a PDF (ADR-0024)
+            select(func.count())
+            .select_from(InstallationPlan)
+            .where(
+                (InstallationPlan.file_id == file_id) | (InstallationPlan.source_file_id == file_id)
+            )
+        ):
+            return False
         content_path(files_dir, file).unlink(missing_ok=True)
         session.delete(file)
     return True
@@ -197,3 +223,12 @@ def _store_bytes(
     session.add(file)
     session.flush()
     return file
+
+
+def check_logo(session: Session, file_id: int | None, field: str) -> None:
+    """A logo is an uploaded image (JPEG, PNG, WebP), never a PDF."""
+    if file_id is None:
+        return
+    file = session.get(File, file_id)
+    if file is None or not file.mime_type.startswith("image/"):
+        raise ValidationAppError([ErrorDetail(field, fr.LOGO_NOT_IMAGE)])

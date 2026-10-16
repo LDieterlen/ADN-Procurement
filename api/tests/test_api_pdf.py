@@ -35,7 +35,7 @@ from ffe.exports.pdf import (
     padded_image,
     render_html,
 )
-from ffe.exports.prescription import article_rows, list_context, sheets_context
+from ffe.exports.prescription import article_rows, coming_changes, list_context, sheets_context
 
 GBP = 1_170_000
 
@@ -136,9 +136,9 @@ def test_sheets_context_has_one_row_per_placement_without_fees_nor_prices(
     world: dict[str, Any], session: Session, settings: Settings, clock: Clock
 ) -> None:
     context = sheets_context(
-        session, world["project"].id, clock().date(), "A", files_dir=settings.files_dir
+        session, world["project"].id, clock().date(), files_dir=settings.files_dir
     )
-    assert context["agency"]["name"] == "Atelier X" and context["indice"] == "A"
+    assert context["agency"]["name"] == "Atelier X" and context["diffusion"] is None
     assert [loc["name"] for loc in context["locations"]] == ["Lobby", "Chambre typo A"]
     lobby, room = context["locations"]
     assert [a["item_code"] for a in lobby["articles"]] == ["LOB-LUD-01", "LOB-LUD-02"]
@@ -234,66 +234,150 @@ def test_band_keeps_the_fixed_grid_cuts_scenes_and_extends_studio_backdrops(
     assert padded_image(tmp_path / "missing.png", (100, 100), None) is None
 
 
-def test_indice_is_declared_on_the_project_never_by_an_export(
+def _sheets(client: TestClient, pid: int, **body: Any) -> list[dict[str, Any]]:
+    response = client.post(f"/api/v1/projects/{pid}/exports/sheets", json=body)
+    assert response.status_code == 200, response.text
+    return list(response.json())
+
+
+def _changes(client: TestClient, pid: int) -> dict[str, str]:
+    """code → what the next diffusion brings to it (« new », « revised »), codes marked only."""
+    return {
+        p["code"]: p["change"]
+        for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
+        for p in i["placements"]
+        if p["change"]
+    }
+
+
+def _codes(client: TestClient, pid: int) -> dict[str, tuple[str | None, bool]]:
+    """code → (live indice, diffused) of every placement of the project."""
+    return {
+        p["code"]: (p["indice"], p["diffused"])
+        for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
+        for p in i["placements"]
+    }
+
+
+def test_diffusions_move_the_indice_only_when_the_product_changes(
+    client: TestClient, world: dict[str, Any], session: Session
+) -> None:
+    """ADR-0022 (2026-10-16): chosen when the sheets are issued; a code starts without indice; a
+    code whose product changed (an option retained) takes the next letter and is marked
+    « revised »; a code shown for the first time after the first diffusion is marked « new »; a
+    name or a price is not a new product; the last diffusion can be taken back."""
+    pid = world["project"].id
+    item, other = world["item"], world["other"]
+    work = _sheets(client, pid)  # a working document changes nothing
+    assert work[0]["diffusionNumber"] is None
+    assert work[0]["originalName"].endswith("-fiches-2026-10-09.pdf")
+    assert all(not diffused for _, diffused in _codes(client, pid).values())
+    first = _sheets(client, pid, diffuse=True, papers=["color", "white"])
+    assert [f["diffusionNumber"] for f in first] == [1, 1]
+    assert [f["originalName"] for f in first] == [
+        "2026-001-fiches-diffusion1-2026-10-09.pdf",
+        "2026-001-fiches-diffusion1-impression-2026-10-09.pdf",
+    ]
+    assert set(_codes(client, pid).values()) == {(None, True)}  # first diffusion: no indice
+    assert client.get(f"/api/v1/projects/{pid}").json()["diffusionCount"] == 1
+    # Characteristics change: not a new product.
+    client.patch(
+        f"/api/v1/project-items/{other['id']}",
+        json={"name": "Autre nom", "unitCostCents": 99_000},
+    )
+    _sheets(client, pid, diffuse=True)
+    assert set(_codes(client, pid).values()) == {(None, True)}
+    # The product changes: an option retained keeps the code, the indice moves.
+    option = client.post(
+        f"/api/v1/projects/{pid}/project-items",
+        json={"name": "Variante", "categoryId": item["categoryId"], "optionOfId": item["id"]},
+    ).json()
+    assert client.post(f"/api/v1/project-items/{option['id']}/retain").status_code == 200
+    added = client.post(
+        f"/api/v1/projects/{pid}/project-items",
+        json={
+            "name": "Ajout",
+            "categoryId": item["categoryId"],
+            "placements": [{"locationId": world["cha"].id}],
+        },
+    ).json()
+    # Seen at once, before the diffusion (pages, working documents), but not official yet.
+    codes = _codes(client, pid)
+    assert all(codes[p["code"]] == ("A", True) for p in item["placements"])
+    new_code = added["placements"][0]["code"]
+    assert codes[new_code] == (None, False)  # a new article starts without indice
+    changed = {p["code"]: "revised" for p in item["placements"]} | {new_code: "new"}
+    assert _changes(client, pid) == changed
+    rows = {r["item_code"]: (r["indice"], r["change"]) for r in article_rows(session, pid)}
+    assert rows[new_code] == ("-", "new")  # working document
+    assert all(rows[p["code"]] == ("A", "revised") for p in item["placements"])
+    # The sheets of the diffusion carry the marks taken before it moved the codes.
+    context = sheets_context(
+        session,
+        pid,
+        date(2026, 10, 9),
+        3,
+        files_dir=Path("/nonexistent"),
+        changes=coming_changes(session, pid),
+    )
+    assert (context["new_count"], context["revised_count"]) == (1, len(item["placements"]))
+    third = _sheets(client, pid, diffuse=True)
+    assert third[0]["diffusionNumber"] == 3
+    codes = _codes(client, pid)
+    for placement in item["placements"]:
+        assert codes[placement["code"]] == ("A", True)  # now shows the retained option
+    for placement in other["placements"]:
+        assert codes[placement["code"]] == (None, True)
+    assert codes[new_code] == (None, True)  # a new code: no indice, now diffused
+    assert _changes(client, pid) == {}
+    # Taken back: indices and « never shown » as before the third diffusion.
+    reverted = client.delete(f"/api/v1/projects/{pid}/diffusions/last")
+    assert reverted.status_code == 200 and reverted.json()["diffusionCount"] == 2
+    codes = _codes(client, pid)
+    assert all(codes[p["code"]] == ("A", True) for p in item["placements"])  # live again
+    assert codes[new_code] == (None, False)
+    assert _changes(client, pid) == changed
+    exports = client.get(f"/api/v1/projects/{pid}/exports").json()
+    assert exports[0]["diffusionNumber"] == 3 and exports[0]["diffusionRevoked"] is True
+    # Diffused again: the retained option's codes move to A, once.
+    _sheets(client, pid, diffuse=True)
+    assert all(_codes(client, pid)[p["code"]] == ("A", True) for p in item["placements"])
+    for _ in range(3):
+        client.delete(f"/api/v1/projects/{pid}/diffusions/last")
+    assert client.delete(f"/api/v1/projects/{pid}/diffusions/last").status_code == 409
+
+
+def test_after_the_first_diffusion_a_diffused_article_is_cancelled_never_deleted(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     pid = world["project"].id
-    trial = client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")  # a trial PDF
-    assert trial.status_code == 200 and trial.content.startswith(b"%PDF")
-    assert "-fiches-2026-10-09.pdf" in trial.headers["content-disposition"]
-    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
-        None
-    }
-    declared = client.post(f"/api/v1/projects/{pid}/indice")
-    assert declared.status_code == 200, declared.text
-    assert declared.json()["indice"] == "A" and declared.json()["indiceChangedAt"]
-    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
-        "A"
-    }
-    first = client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
-    assert "-fiches-A-2026-10-09.pdf" in first.headers["content-disposition"]
-    client.patch(f"/api/v1/project-items/{world['other']['id']}", json={"finish": "chêne"})
-    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")  # still A: nothing stamped
-    by_id = {
-        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
-    }
-    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "A"
-    assert client.post(f"/api/v1/projects/{pid}/indice").json()["indice"] == "B"
-    by_id = {
-        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
-    }
-    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "B"
-    client.get(f"/api/v1/projects/{pid}/exports/sheets.pdf")
-    exports = client.get(f"/api/v1/projects/{pid}/exports").json()
-    assert [e["indice"] for e in exports] == ["B", "A", "A", None]
-    assert exports[0]["originalName"].endswith("-fiches-B-2026-10-09.pdf")
-    # A wrong click: the last declaration is taken back, letters restored, journaled.
-    reverted = client.delete(f"/api/v1/projects/{pid}/indice")
-    assert reverted.status_code == 200 and reverted.json()["indice"] == "A"
-    by_id = {
-        i["id"]: i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()
-    }
-    assert by_id[world["item"]["id"]] == "A" and by_id[world["other"]["id"]] == "A"
-    events = client.get(f"/api/v1/project-items/{world['other']['id']}/events").json()
-    assert [(e["kind"], e["oldValue"], e["newValue"]) for e in events if e["kind"] == "indice"][
-        -2:
-    ] == [("indice", "A", "B"), ("indice", "B", "A")]
-    assert client.post(f"/api/v1/projects/{pid}/indice").json()["indice"] == "B"  # declared anew
-    assert client.delete(f"/api/v1/projects/{pid}/indice").json()["indice"] == "A"
-    none = client.delete(f"/api/v1/projects/{pid}/indice").json()
-    assert none["indice"] is None and none["indiceChangedAt"] is None
-    assert {i["indice"] for i in client.get(f"/api/v1/projects/{pid}/project-items").json()} == {
-        None
-    }
-    assert (
-        client.delete(f"/api/v1/projects/{pid}/indice").status_code == 409
-    )  # nothing to take back
-    client.post(f"/api/v1/projects/{pid}/status", json={"status": "closed"})
-    assert client.post(f"/api/v1/projects/{pid}/indice").status_code == 409  # read-only project
+    _sheets(client, pid, diffuse=True)
+    item = world["item"]
+    assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 409
+    placement = item["placements"][0]["id"]
+    moved = client.patch(f"/api/v1/placements/{placement}", json={"locationId": None})
+    assert moved.status_code == 409  # a diffused code never moves
+    fresh = client.post(
+        f"/api/v1/projects/{pid}/project-items",
+        json={"name": "Nouveau", "categoryId": item["categoryId"]},
+    ).json()
+    assert client.delete(f"/api/v1/project-items/{fresh['id']}").status_code == 204
+
+
+def test_options_are_off_the_sheets_unless_asked(
+    client: TestClient, world: dict[str, Any], session: Session
+) -> None:
+    item = world["item"]
+    client.post(
+        f"/api/v1/projects/{world['project'].id}/project-items",
+        json={"name": "Variante", "categoryId": item["categoryId"], "optionOfId": item["id"]},
+    )
+    assert not [r for r in article_rows(session, world["project"].id) if r["option"]]
+    assert [r for r in article_rows(session, world["project"].id, True) if r["option"]]
 
 
 def test_next_letter_goes_excel_style() -> None:
-    from ffe.services.project import next_letter
+    from ffe.models.project_item_placement import next_letter
 
     assert [next_letter(x) for x in (None, "A", "Y", "Z", "AZ", "ZZ")] == [
         "A",
@@ -320,12 +404,11 @@ def test_listing_pdf_shows_amounts_statuses_and_indices(
     assert response.status_code == 200 and response.content.startswith(b"%PDF")
     assert "-listing-2026-10-09.pdf" in response.headers["content-disposition"]
     assert client.get(f"/api/v1/projects/{pid}/exports").json()[0]["kind"] == "list_pdf"
-    assert client.get(f"/api/v1/projects/{pid}/project-items").json()[0]["indice"] is None
 
 
 def test_empty_project_still_renders(client: TestClient, session: Session, clock: Clock) -> None:
     project = make_project(session, clock)
-    assert client.get(f"/api/v1/projects/{project.id}/exports/sheets.pdf").status_code == 200
+    assert _sheets(client, project.id)[0]["originalName"].endswith(".pdf")
     assert client.get(f"/api/v1/projects/{project.id}/exports/list.pdf").status_code == 200
     assert client.get("/api/v1/projects/999/exports/list.pdf").status_code == 404
 
@@ -353,7 +436,7 @@ def test_an_option_follows_its_base_in_the_rows_with_its_letter_and_bracketed_am
         },
     )
     assert created.status_code == 201, created.text
-    rows = article_rows(session, world["project"].id)
+    rows = article_rows(session, world["project"].id, include_options=True)
     codes = [r["item_code"] for r in rows]
     for placement in base_item["placements"]:
         assert codes.index(f"{placement['code']}-A") == codes.index(placement["code"]) + 1
@@ -361,9 +444,87 @@ def test_an_option_follows_its_base_in_the_rows_with_its_letter_and_bracketed_am
     assert option_rows and all(r["total_ht_text"].startswith("(") for r in option_rows)
     # The option's sheet is told apart: its own page style and a badge naming the base code.
     context = sheets_context(
-        session, world["project"].id, date(2026, 10, 15), files_dir=settings.files_dir
+        session,
+        world["project"].id,
+        date(2026, 10, 15),
+        files_dir=settings.files_dir,
+        include_options=True,
     )
     html = render_html("sheets.html", context)
     first = base_item["placements"][0]["code"]
+    # The page footer is a CSS string: who made the document, « & » printed as is.
+    assert 'content: "Réalisé par ' in html or 'content: ""' in html
     assert f"Option A</span>Alternative à {first}" in html
-    assert html.count('class="page sheet option"') == len(option_rows)
+    assert html.count('class="page sheet mark mark-option"') == len(option_rows)
+    # The listing leaves the options out unless asked (2026-10-16).
+    listing = list_context(session, world["project"].id, date(2026, 10, 15))
+    assert not [a for loc in listing["locations"] for a in loc["articles"] if a["option"]]
+    with_options = list_context(
+        session, world["project"].id, date(2026, 10, 15), include_options=True
+    )
+    assert [a for loc in with_options["locations"] for a in loc["articles"] if a["option"]]
+
+
+def test_the_printable_version_is_on_white_paper(
+    client: TestClient, world: dict[str, Any], session: Session, settings: Settings
+) -> None:
+    """2026-10-15: `?print=true` gives white paper and « -impression » in the name."""
+    pid = world["project"].id
+    printed = _sheets(client, pid, papers=["white"])
+    assert "-impression-" in printed[0]["originalName"]
+    listing = client.get(f"/api/v1/projects/{pid}/exports/list.pdf", params={"print": "true"})
+    assert "-listing-impression-" in listing.headers["content-disposition"]
+    white = render_html(
+        "sheets.html",
+        sheets_context(
+            session, pid, date(2026, 10, 15), files_dir=settings.files_dir, printable=True
+        ),
+    )
+    tinted = render_html(
+        "sheets.html",
+        sheets_context(session, pid, date(2026, 10, 15), files_dir=settings.files_dir),
+    )
+    assert "html { background: #ffffff; }" in white
+    assert "html { background: #fbfaf7; }" in tinted
+
+
+def test_a_listing_profile_chooses_the_columns_and_links_are_short(
+    client: TestClient, world: dict[str, Any], session: Session, clock: Clock
+) -> None:
+    """ADR-0023: only the columns of the profile, in the catalogue order; a link prints « Lien »."""
+    pid = world["project"].id
+    full = render_html("list.html", list_context(session, pid, clock().date()))
+    assert '<a href="https://example.com/beat">Lien</a>' in full
+    assert ">https://example.com/beat<" not in full
+    profiles = {p["name"]: p["id"] for p in client.get("/api/v1/listing-profiles").json()}
+    context = list_context(session, pid, clock().date(), columns=["quantity", "name", "code"])
+    assert [c["label"] for c in context["columns"]] == ["Code FF&E", "Désignation", "Qté"]
+    # Details share the cell of their group (2026-10-16): a full listing fits a landscape page.
+    full_columns = [c["label"] for c in list_context(session, pid, clock().date())["columns"]]
+    assert "Lien" not in full_columns and "Contact" not in full_columns and len(full_columns) == 12
+    alone = list_context(session, pid, clock().date(), columns=["link", "code"])["columns"]
+    assert [c["label"] for c in alone] == ["Code FF&E", "Lien"]  # a detail alone heads its cell
+    html = render_html("list.html", context)
+    assert "Tom Dixon" not in html and "Lien" not in html and "Beat Light Fat" in html
+    response = client.get(
+        f"/api/v1/projects/{pid}/exports/list.pdf", params={"profile": profiles["Client"]}
+    )
+    assert response.status_code == 200
+    assert "-listing-client-" in response.headers["content-disposition"]
+    missing = client.get(f"/api/v1/projects/{pid}/exports/list.pdf", params={"profile": 999})
+    assert missing.status_code == 404
+
+
+def test_taking_back_a_diffusion_frees_the_codes_of_a_retained_option(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    """The codes moved to an option retained after the diffusion (ADR-0021) come back too."""
+    pid, item = world["project"].id, world["item"]
+    _sheets(client, pid, diffuse=True)
+    option = client.post(
+        f"/api/v1/projects/{pid}/project-items",
+        json={"name": "Variante", "categoryId": item["categoryId"], "optionOfId": item["id"]},
+    ).json()
+    assert client.post(f"/api/v1/project-items/{option['id']}/retain").status_code == 200
+    assert client.delete(f"/api/v1/projects/{pid}/diffusions/last").status_code in (200, 204)
+    assert all(code == (None, False) for code in _codes(client, pid).values())

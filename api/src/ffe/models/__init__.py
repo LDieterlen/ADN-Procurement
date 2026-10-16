@@ -7,10 +7,18 @@ from ffe.models.category import Category
 from ffe.models.choice import Choice
 from ffe.models.client import Client
 from ffe.models.file import File
+from ffe.models.installation_plan import InstallationPlan
+from ffe.models.installation_sheet import (
+    InstallationSheet,
+    InstallationSheetItem,
+    InstallationSheetMarker,
+)
 from ffe.models.item_code_sequence import ItemCodeSequence
+from ffe.models.listing_profile import ListingProfile
 from ffe.models.location import Location
 from ffe.models.professional import Professional
 from ffe.models.project import Project
+from ffe.models.project_diffusion import ProjectDiffusion
 from ffe.models.project_file import ProjectFile
 from ffe.models.project_indice import ProjectIndice
 from ffe.models.project_item import ProjectItem
@@ -29,11 +37,17 @@ __all__ = [
     "Choice",
     "Client",
     "File",
+    "InstallationPlan",
+    "InstallationSheet",
+    "InstallationSheetItem",
+    "InstallationSheetMarker",
     "ItemCodeSequence",
+    "ListingProfile",
     "Location",
     "Professional",
     "Project",
     "ProjectFile",
+    "ProjectDiffusion",
     "ProjectIndice",
     "ProjectItem",
     "ProjectItemEvent",

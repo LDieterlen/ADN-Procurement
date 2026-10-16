@@ -218,7 +218,7 @@ def summary(
         shares = _shares(item, locations, amounts.net_unit_eur_cents, filters)
         if not shares:  # outside the location / zone filter: not counted at all
             continue
-        kept = sum(share for _, share in shares)
+        kept = money.sum_cents(share for _, share in shares)
         by_status[item.status][0] += 1
         if not counted:
             continue

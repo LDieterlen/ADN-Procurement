@@ -1,8 +1,8 @@
 # Modèle de données v1 (recentré, ADR-0013 ; v1 déclarée, ADR-0020)
 
-> **Modèle recentré le 2026-10-12 (ADR-0013)** à partir de la liste de données de l'utilisateur (fiche de spec, listing FF&E, budget). Il remplace le modèle validé à l'étape 2 et enrichi jusqu'à l'étape 11 ; les modules devis, bons de commande, réceptions, factures et import de tarifs sont retirés du code (tag git `v0-complet`). La v1 est déclarée le 2026-10-14 (ADR-0020) : `0001_initial.py` est figée et tout changement de schéma passe par une migration additive (`0002_item_file_finish`, `0003_item_option`) ; ce document fait foi pour les tables, les statuts, les formules et les accroches futures.
+> **Modèle recentré le 2026-10-12 (ADR-0013)** à partir de la liste de données de l'utilisateur (fiche de spec, listing FF&E, budget). Il remplace le modèle validé à l'étape 2 et enrichi jusqu'à l'étape 11 ; les modules devis, bons de commande, réceptions, factures et import de tarifs sont retirés du code (tag git `v0-complet`). La v1 est déclarée le 2026-10-14 (ADR-0020) : `0001_initial.py` est figée et tout changement de schéma passe par une migration additive (`0002_item_file_finish`, `0003_item_option`, `0004_project_procurement`, `0005_diffusion`, `0006_agency_logo`, `0007_listing_profile`, `0008_installation`, `0009_fk_indexes`) ; ce document fait foi pour les tables, les statuts, les formules et les accroches futures.
 
-Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centaines d'articles par projet). Accès par SQLAlchemy 2.0.x (`Mapped[]`), migrations Alembic `0001_initial.py` (figée), `0002_item_file_finish.py`, `0003_item_option.py`, validation Pydantic v2 côté API. Aucune marge de revente ; plusieurs devises ; totaux et budgets en EUR HT.
+Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centaines d'articles par projet). Accès par SQLAlchemy 2.0.x (`Mapped[]`), migrations Alembic `0001_initial.py` (figée), `0002_item_file_finish.py`, `0003_item_option.py`, `0004_project_procurement.py`, `0005_diffusion.py`, `0006_agency_logo.py`, `0007_listing_profile.py`, `0008_installation.py`, `0009_fk_indexes.py`, validation Pydantic v2 côté API. Aucune marge de revente ; plusieurs devises ; totaux et budgets en EUR HT.
 
 ---
 
@@ -12,8 +12,8 @@ Cible : SQLite ≥ 3.37 (tables STRICT), un utilisateur, volumes faibles (centai
 
 | Terme | Définition | Tables |
 |---|---|---|
-| Référentiel | Données partagées entre projets, archivées plutôt que supprimées | `setting`, `client`, `category` (types de produit), `choice` (listes éditables), `professional` (annuaire), `supplier`, `file`, `capture` et `capture_image` (boîte de réception de l'extension) |
-| Instance projet | Ce qu'un projet fige : la fiche de l'article, son prix, sa devise, son taux, son fournisseur, son statut | `project`, `location`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `project_indice`, `project_file`, `item_code_sequence` (inerte depuis ADR-0021) |
+| Référentiel | Données partagées entre projets, archivées plutôt que supprimées | `setting`, `client`, `category` (types de produit), `choice` (listes éditables), `professional` (annuaire), `supplier`, `file`, `capture` et `capture_image` (boîte de réception de l'extension), `listing_profile` (colonnes du listing) |
+| Instance projet | Ce qu'un projet fige : la fiche de l'article, son prix, sa devise, son taux, son fournisseur, son statut | `project`, `location`, `project_item`, `project_item_placement`, `project_item_event`, `project_item_file`, `budget_line`, `project_diffusion`, `project_file`, `installation_plan`, `installation_sheet`, `installation_sheet_item`, `installation_sheet_marker` (planches d'installation, ADR-0024), `project_indice` (inerte depuis ADR-0022), `item_code_sequence` (inerte depuis ADR-0021) |
 | Article (`project_item`) | **Une fiche de prescription** dans un projet : « Beat Light Fat, Flos, réf. BLS01, laiton, Ø 36 × H 30 cm, 1 062,50 GBP HT net ». Porte le prix figé et le statut unique ; ses codes FF&E (`CHA-LUD-01`) sont ceux de ses implantations, un par localisation (ADR-0018) |
 | Implantation (`project_item_placement`) | **Un emplacement d'un article** : localisation + quantité par unité. La même lampe dans le lobby (×2) et en chambre typo A (×1, localisation ×12) = un article, deux implantations, quantité totale 14 (exemple suivi en §4.9, §4.10 et §6) |
 | Localisation (`location`) | Lieu de destination dans un projet (lobby, bar, chambre typo A, suite…) avec sa **zone** (Zones communes, Hébergement, Back of house…), son **niveau** (R0, R+1…) et son **nombre** (multiplicateur, défaut 1) |
@@ -43,10 +43,23 @@ erDiagram
     project_item ||--o{ project_item_file : "photo, dessin"
     file ||--o{ project_item_file : "fichier"
     file ||--o{ project_file : "fichier"
-    project ||--o{ project_indice : "indices declares"
+    project ||--o{ project_diffusion : "diffusions"
+    project_diffusion ||--o{ project_file : "fiches diffusees"
+    project_diffusion ||--o{ project_item : "premiere diffusion"
+    project ||--o{ project_indice : "inerte (ADR-0022)"
     project_item ||--o{ project_item : "options (option_of_id)"
     capture ||--o{ capture_image : "photos"
     file ||--o{ capture_image : "fichier"
+    file ||--o{ setting : "logo de l'agence"
+    file ||--o{ project : "logo de procurement"
+    project ||--o{ installation_plan : "plans"
+    file ||--o{ installation_plan : "image, PDF d'origine"
+    project ||--o{ installation_sheet : "planches"
+    location ||--o{ installation_sheet : "piece"
+    installation_plan ||--o{ installation_sheet : "plan dessine"
+    installation_sheet ||--o{ installation_sheet_item : "cases"
+    project_item_placement ||--o{ installation_sheet_item : "article pose"
+    installation_sheet_item ||--o{ installation_sheet_marker : "reperes"
 ```
 
 `choice` (listes famille · usage · prestation) n'a pas de clé étrangère : `project_item.family` / `usage`, `budget_line.family` et `professional.kind` en portent le code, vérifié par le service. `item_code_sequence` (reliée à `project` en CASCADE) n'est plus utilisée (ADR-0021).
@@ -70,19 +83,19 @@ erDiagram
 | Booléens | `INTEGER NOT NULL DEFAULT 0 CHECK (x IN (0, 1))` | Pas de BOOLEAN en SQLite |
 | Statuts et énumérations | `TEXT` + `CHECK (x IN (...))`, miroir d'un `Literal[...]` Pydantic ; pas de CHECK sur `project_item_event.kind` | Un seul endroit à changer ; le journal reste ouvert |
 | UNIQUE métier | Jamais de colonne nullable dans un UNIQUE sans `COALESCE` ; index d'expression ou partiels écrits à la main dans la migration | Deux NULL sont distincts pour SQLite |
-| FK | `foreign_keys = ON` ; `ON DELETE RESTRICT` partout sauf enfants stricts en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `project_indice`, `capture_image`, `item_code_sequence` (inerte) ; toute FK a un index | Un référentiel utilisé ne disparaît jamais |
-| FK composites | `UNIQUE (id, project_id)` sur `project_item` et `location` ; implantations et budgets référencent `(x_id, project_id)` | Aucune référence croisée entre projets |
+| FK | `foreign_keys = ON` ; `ON DELETE RESTRICT` partout sauf enfants stricts en `CASCADE` : `project_item_placement`, `project_item_event`, `project_item_file`, `project_diffusion`, `project_indice` (inerte), `capture_image`, `item_code_sequence` (inerte), `installation_sheet_item` (par sa planche et par son implantation), `installation_sheet_marker` ; toute FK a un index (complétés par `0009_fk_indexes`) | Un référentiel utilisé ne disparaît jamais |
+| FK composites | `UNIQUE (id, project_id)` sur `project_item`, `location` et `installation_plan` ; implantations, budgets et planches référencent `(x_id, project_id)` | Aucune référence croisée entre projets |
 | Archivage | `archived_at` sur `client`, `supplier`, `professional`, `category`, `choice`, `location` ; `project` utilise `status` ; `project_item` le statut `cancelled` | On ne perd jamais une fiche vue par un client |
-| Suppression physique bornée | `project_item` : tout article avant le premier indice du projet, ensuite `to_quote` sans autre événement que `created`, jamais une base qui a des options (ADR-0021) ; `location` sans implantation ni budget ; `project_item_placement` (jamais la dernière) ; `budget_line` (par le `PUT` en bloc) ; jointures fichier | Règle d'app testée + RESTRICT en filet |
-| Fichiers | `file` dédoublonné par `sha256`, stocké `FFE_DATA_DIR/files/<sha256>.<ext>` ; `unlink` seulement si plus aucune jointure (`project_item_file`, `project_file`) | Une seule logique |
+| Suppression physique bornée | `project_item` : article jamais diffusé (`first_diffusion_id` NULL, donc tout article avant la première diffusion), jamais une base qui a des options (ADR-0021/0022) ; un article diffusé s'annule ; `location` sans implantation ni budget ; `project_item_placement` (jamais la dernière) ; `budget_line` (par le `PUT` en bloc) ; `listing_profile` ; `installation_plan` qu'aucune planche n'utilise ; `installation_sheet` (ses cases et repères avec elle) ; jointures fichier | Règle d'app testée + RESTRICT en filet |
+| Fichiers | `file` dédoublonné par `sha256`, stocké `FFE_DATA_DIR/files/<sha256>.<ext>` ; `unlink` seulement si plus rien ne le désigne (`project_item_file`, `project_file`, `capture_image`, logos de `setting` et de `project`, `installation_plan.file_id` et `source_file_id`) | Une seule logique |
 | Nommage des contraintes | `naming_convention` SQLAlchemy (`pk_`, `fk_`, `uq_`, `ck_<table>_<nom>`, `ix_`) ; chaque CHECK nommé | Alembic batch exige des noms |
-| Migrations | v1 déclarée (ADR-0020) : `0001_initial.py` figée, puis `0002`, `0003` ; additives, relues, jamais éditées | Règles maîtresses : ARCHITECTURE §5 |
+| Migrations | v1 déclarée (ADR-0020) : `0001_initial.py` figée, puis `0002` à `0009` ; additives, relues, jamais éditées | Règles maîtresses : ARCHITECTURE §5 |
 
 ---
 
 ## 4. Tables
 
-Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `updated_at` TEXT NOT NULL (sauf `project_item_event`, `item_code_sequence`, `project_file`, `project_indice`, `capture`, `capture_image` ; `file` sans `updated_at`). `notes TEXT NULL` = texte libre interne. `TS` = horodatage, `DATE` = `YYYY-MM-DD`.
+Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `updated_at` TEXT NOT NULL (sauf `project_item_event`, `item_code_sequence`, `project_file`, `project_diffusion`, `project_indice`, `capture`, `capture_image`, `installation_sheet_item`, `installation_sheet_marker` ; `file` sans `updated_at`). `notes TEXT NULL` = texte libre interne. `TS` = horodatage, `DATE` = `YYYY-MM-DD`.
 
 ### 4.1 `setting` — ligne unique
 
@@ -92,7 +105,8 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 | base_currency | TEXT | non | `'EUR'` | `= 'EUR'` | |
 | seed_category_version | INTEGER | non | 0 | | version du seed des types (`ffe db seed`) |
 | project_code_prefix | TEXT | non | `''` | | `'P'` → `P2026-001` |
-| agency_name, agency_address, agency_email, agency_phone | TEXT | name non, autres oui | `''` | | en-tête des PDF |
+| agency_name, agency_address, agency_email, agency_phone | TEXT | name non, autres oui | `''` | | `agency_name` : « Réalisé par … » en bas à gauche des fiches et du listing (2026-10-16) ; couverture des fiches |
+| agency_logo_file_id | INTEGER | oui | | FK `file` RESTRICT (migration 0006) | logo de l'agence, image déposée dans Réglages, en haut à gauche des fiches ; remplacé → l'ancien fichier quitte le disque s'il n'est plus référencé |
 | extension_token | TEXT | oui | | | jeton de l'extension Chrome (ADR-0017), généré sur Réglages ; NULL = extension désactivée |
 
 ### 4.2 `client`
@@ -110,7 +124,9 @@ Colonnes communes, non répétées : `id INTEGER PRIMARY KEY`, `created_at`, `up
 | site_address | TEXT | oui | | | |
 | due_on | DATE | oui | | format date | échéance |
 | notes | TEXT | oui | | | |
-| indice, indice_changed_at | TEXT | oui | | | lettre de diffusion déclarée par l'utilisateur (`POST /projects/{id}/indice`, A, B… Z, AA…) et date de la déclaration ; les articles modifiés depuis la déclaration précédente prennent la lettre ; **jamais posée par un export** (2026-10-13) |
+| procurement_name | TEXT | oui | | | société de procurement pour qui le projet est mené, imprimée en haut à droite des fiches (migration 0004, 2026-10-15) |
+| procurement_logo_file_id | INTEGER | oui | | FK `file` RESTRICT (posée par la migration 0004) | son logo : une image déposée (`POST /files`), jamais un PDF (422) ; un logo remplacé est effacé s'il n'est plus utilisé |
+| indice, indice_changed_at | TEXT | oui | | | ancien indice déclaré sur le projet (2026-10-13) : **plus lu ni écrit depuis ADR-0022** (indice par code, §7), gardé (v1 additive) |
 
 ### 4.4 `location` — localisation (ADR-0013)
 
@@ -193,7 +209,8 @@ Le catalogue `product` / `product_file` a été retiré le 2026-10-13 (ADR-0016)
 | discount_bp | INTEGER | non | 0 | `BETWEEN 0 AND 10000` | saisie par article (plus de remise par défaut sur le fournisseur depuis le 2026-10-13) |
 | quote_ref, quote_indice, quote_url | TEXT | oui | | | n° de devis, indice de devis (A, B…), lien vers le devis |
 | status | TEXT | non | `'to_quote'` | `IN ('to_quote','quoted','to_review','approved','deposit','purchased','cancelled')` | §5 |
-| indice | TEXT | oui | | | lettre de l'indice déclaré sur le projet où l'article a changé pour la dernière fois (§7) |
+| indice | TEXT | oui | | | **plus lue ni écrite depuis ADR-0022** : l'indice est porté par chaque code (`project_item_placement.indice`, §7) |
+| first_diffusion_id | INTEGER | oui | | FK `project_diffusion` RESTRICT (posée par la migration 0005) | première diffusion qui a présenté l'article (ADR-0022) ; NULL = jamais diffusé (supprimable) ; DTO `diffused` |
 | sort_order | INTEGER | non | 0 | | |
 | option_of_id | INTEGER | oui | | FK `project_item` (RESTRICT, posée par la migration 0003) | article de base dont celui-ci est une option (ADR-0021) ; même projet, ni frais ni option (règle d'app) |
 | option_letter | TEXT | oui | | `GLOB '[A-Z]'` ; `(option_of_id IS NULL) = (option_letter IS NULL)` ; unique par base (index partiel) | lettre de l'option : A, B, C… |
@@ -215,12 +232,14 @@ Exemple (colonnes dans l'ordre du tableau, `project_id` → `option_letter`) : `
 | code | TEXT | non | — | `UNIQUE (project_id, code)` ; `length > 0` | code FF&E `<LOC>-<TYPE>-NN` de l'article dans cette localisation (§7, ADR-0018) |
 | qty_milli | INTEGER | non | 1000 | `>= 0` | par unité de localisation |
 | sort_order | INTEGER | non | 0 | | |
+| indice | TEXT | oui | | | indice propre au code (ADR-0022, migration 0005) : NULL = « - », puis A, B… (§7) |
+| diffused_item_id | INTEGER | oui | | (sans FK) | article présenté sous ce code à la dernière diffusion ; NULL = code jamais diffusé ; différent de l'article actuel = produit changé (option retenue) ; DTO `diffused` |
 
 `UNIQUE (project_item_id, COALESCE(location_id, 0))` (index d'expression). Un article `product` garde au moins une implantation ; un `fee` n'en a aucune.
 
 ### 4.12 `project_item_event` — journal
 
-`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `placement`, `indice`, `other`), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de fiche, d'option (rattachement, retenue, détachement, changement de la base) ou d'implantation (codes compris).
+`project_item_id` FK CASCADE, `kind` (`created`, `status`, `price`, `sheet` (champs de la fiche, nommés dans la note), `file` (fichier ajouté, modifié, retiré), `placement`, `indice`, `other`), `from_status`, `to_status`, `old_value`, `new_value` (JSON compact), `changed_at`, `note`. Écrit dans la transaction de chaque changement de statut, de prix (coût, remise, devise, taux), de fiche, d'option (rattachement, retenue, détachement, changement de la base) ou d'implantation (codes compris).
 
 ### 4.13 `item_code_sequence`
 
@@ -243,15 +262,15 @@ PK `(project_id, location_code, prefix)`, `next_value ≥ 1`, FK `project` CASCA
 
 ### 4.15 `project_file` — PDF émis
 
-`project_id` FK RESTRICT, `file_id` FK RESTRICT, `kind` (`sheets_pdf` \| `list_pdf`), `issued_at`, `indice` (lettre déclarée sur le projet au moment de l'émission, NULL avant la première déclaration). Chaque émission est conservée telle qu'envoyée ; les émissions entre deux déclarations sont des essais, la dernière émise depuis la déclaration courante est la fiche de référence.
+`project_id` FK RESTRICT, `file_id` FK RESTRICT, `kind` (`sheets_pdf` \| `list_pdf`), `issued_at`, `diffusion_id` (FK `project_diffusion` RESTRICT, migration 0005 ; NULL = document de travail ou listing), `indice` (plus lu ni écrit depuis ADR-0022). Chaque émission est conservée telle qu'envoyée, y compris celles d'une diffusion annulée (DTO `diffusionNumber`, `diffusionRevoked`).
 
 ### 4.16 `choice` — listes éditables (2026-10-14)
 
 `list` (`IN ('family','usage','prestation')`), `code` (généré du nom à la création, immuable, `UNIQUE (list, code)`), `name` (éditable, unique par liste après normalisation), `sort_order`, `archived_at`. Valeurs de départ posées par la migration (anciennes listes fixes). `project_item.family` / `usage`, `budget_line.family` (périmètre famille) et `professional.kind` gardent le **code** ; plus de `CHECK` sur ces colonnes, le service refuse un code absent ou archivé (422). Les statuts (article, projet), le genre d'article (`product` / `fee`) et le genre de client restent fixes : ils portent des règles de calcul ou de saisie.
 
-### 4.17 `project_indice` — déclarations d'indice
+### 4.17 `project_indice` — ancien régime (inerte)
 
-`project_id` FK CASCADE, `indice` (`length > 0`, `UNIQUE (project_id, indice)`), `declared_at`. Une ligne par « Nouvel indice » ; « Retirer l'indice » supprime la dernière, remet le projet sur la précédente et rend aux articles marqués leur lettre d'avant (événements `indice` de `project_item_event`, journal en ajout seul : old_value → new_value puis l'inverse).
+`project_id` FK CASCADE, `indice` (`length > 0`, `UNIQUE (project_id, indice)`), `declared_at`. Déclarations « Nouvel indice » du 2026-10-13 : **plus lue ni écrite depuis ADR-0022** (routes `/indice` retirées) ; gardée, la v1 n'autorise que des migrations additives (ADR-0020).
 
 ### 4.18 `capture` — boîte de réception de l'extension (ADR-0017)
 
@@ -267,6 +286,42 @@ PK `(project_id, location_code, prefix)`, `next_value ≥ 1`, FK `project` CASCA
 
 Photos : table `capture_image` (`capture_id` FK CASCADE, `file_id` FK RESTRICT, `sort_order`, `UNIQUE (capture_id, file_id)`) — toutes les photos de la page, téléchargées par le serveur ou envoyées par l'extension, comptées par `unlink_if_orphan` (2026-10-14). Globale (pas de projet) ; supprimée quand l'article est créé (« Utiliser ») ou sur « Supprimer », image retirée si plus référencée.
 
+### 4.19 `project_diffusion` — diffusions officielles des fiches (ADR-0022)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| project_id | INTEGER | non | — | FK `project` CASCADE | |
+| number | INTEGER | non | — | `>= 1` ; index unique partiel `(project_id, number) WHERE revoked_at IS NULL` | diffusion n (1, 2…), compté sur les diffusions vivantes |
+| issued_at | TS | non | | | |
+| revoked_at | TS | oui | | | diffusion annulée : la ligne et ses PDF restent, son numéro se réemploie |
+
+Créée par `services/diffusion.issue_sheets` quand la fenêtre « Fiches PDF » coche « Diffusion officielle » ; annulée par `revert_last_diffusion` (la dernière vivante seulement). DTO projet : `diffusionCount` (diffusions vivantes ; 0 = tout est libre), `lastDiffusion` (`id`, `number`, `issuedAt`).
+
+---
+
+### 4.20 `listing_profile` — colonnes du listing par destinataire (ADR-0023)
+
+| Colonne | Type | Null | Défaut | Contrainte | Commentaire |
+|---|---|---|---|---|---|
+| name | TEXT | non | — | `length > 0`, UNIQUE `uq_listing_profile_name` (et unicité sans accents ni casse vérifiée par le service) | « Client », « Installation »… |
+| columns | TEXT | non | — | `json_valid` et tableau JSON | clés du catalogue `ffe/listing.py` (photo, code, type, name, comments, link, reference, supplier, contact, dimensions, finish, family, usage, lead_time, quantity, amount, status, indice) ; imprimées dans l'ordre du catalogue |
+| sort_order | INTEGER | non | | | ordre d'affichage |
+| created_at, updated_at | TS | non | | | |
+
+Cinq lignes de départ insérées par la migration `0007_listing_profile` (« Complet », « Client », « Installation », « Achats », « Budget », colonnes : ADR-0023), modifiables et supprimables (suppression physique : aucune table ne référence un profil). Export JSON : table semée, écrasée à l'import comme `choice`.
+
+---
+
+### 4.21 `installation_plan`, `installation_sheet`, `installation_sheet_item`, `installation_sheet_marker` — planches d'installation (ADR-0024)
+
+`installation_plan` : `project_id` (FK RESTRICT), `name` (`length > 0`), `file_id` (image dessinée, FK `file` RESTRICT), `source_file_id` (PDF d'origine dont la 1re page a été rendue, nullable, FK `file` RESTRICT), `created_at`, `updated_at` ; UNIQUE `(id, project_id)` (cible de la FK composite des planches). Suppression physique quand aucune planche ne l'utilise (sinon 409) ; ses fichiers partent s'ils ne servent plus (`unlink_if_orphan`).
+
+`installation_sheet` : `project_id`, `location_id` (la pièce, FK composite `(location_id, project_id)` RESTRICT), `plan_id` (nullable, FK composite `(plan_id, project_id)` RESTRICT), `name` (`length > 0`, « Coin TV »), `per_page` (`IN (8, 12, 16)`, cases d'articles sur une page), `arrangement` (`IN ('ring', 'sides', 'ends', 'right')`, défaut `ring` : autour, à gauche et à droite, en haut et en bas, à droite du plan), `plan_rotation` (`IN (0, 90, 180, 270)`, sens horaire, défaut 0), `color_by_type` (`IN (0, 1)`, défaut 0 : repères et cartes dans la couleur du type), `sort_order`, `created_at`, `updated_at`. Suppression physique (ses articles avec elle).
+
+`installation_sheet_item` : `sheet_id` (FK CASCADE), `placement_id` (FK `project_item_placement` CASCADE : une implantation retirée quitte les planches), `position` (`>= 0`, case occupée, pages comprises : page = `position // per_page` ; une position absente = case laissée vide) ; UNIQUE `(sheet_id, placement_id)` ; l'unicité de `position` dans une planche est garantie par le service (`set_items` réécrit toutes les positions). Une implantation peut être sur plusieurs planches.
+
+`installation_sheet_marker` : `sheet_item_id` (FK `installation_sheet_item` CASCADE), `x_permille`, `y_permille` (`BETWEEN 0 AND 1000`, millièmes du plan tel qu'enregistré, avant rotation). Un repère numéroté par emplacement de l'article sur le plan ; réécrits avec la liste des cases (`set_items`). Rien de calculé n'est stocké : le nombre de pages et la grille de la disposition (`ffe/installation.layout`) se déduisent.
+
 ---
 
 ## 5. Statut unique (ADR-0013)
@@ -275,7 +330,7 @@ Photos : table `capture_image` (`capture_id` FK CASCADE, `file_id` FK RESTRICT, 
 
 - Changement **libre** entre les sept valeurs (`POST /project-items/{id}/status`), même statut → 409 ; note facultative ; événement `status` à chaque fois.
 - `is_counted = status <> 'cancelled'` ; **Prescrit** = Σ des articles comptés ; **Devisé** = ceux de rang ≥ 1 ; **Validé** = rang ≥ 2. Un `fee` compte dans les trois selon son statut.
-- Suppression physique : avant le premier indice du projet, tout article ; après, `to_quote` sans autre événement que `created`, sinon annuler (ADR-0021). Une base qui a des options ne se supprime pas.
+- Suppression physique : un article jamais diffusé (`first_diffusion_id` NULL, donc tout article avant la première diffusion), quel que soit son statut ; un article diffusé s'annule (409 sinon) (ADR-0022). Une base qui a des options ne se supprime pas (ADR-0021).
 - Projet `closed`/`cancelled` : toute écriture sur ses localisations et articles est refusée (409).
 
 ---
@@ -304,9 +359,9 @@ Ordre fixé : remise, puis change, puis quantité. Les totaux **par article** so
 
 ## 7. Codes FF&E, séquences, indices
 
-- Code (ADR-0018) : un par **implantation**, `<LOC>-<TYPE>-NN` — code de la localisation (non affecté → `<TYPE>-NN`), code du type, numéro à 2 chiffres minimum par (projet, localisation, type) ; frais : `FR-NN` sur l'article. Attribution (ADR-0021) : le plus petit numéro libre de la série, lu sur les codes existants. **Avant le premier indice**, un code libéré (suppression, déplacement, changement de type, article devenu option) est comblé : les codes suivants de la série descendent d'un cran (événement `placement`, ou `other` pour un frais) ; **après**, aucun code ne bouge et le trou va au prochain article. Même règle pour les lettres d'options. Un article annulé garde son code. Nouvelle implantation ou changement de localisation → nouveau code dans la localisation d'arrivée ; changement de type → toutes les implantations recodées (événement `placement`, codes avant / après), quel que soit le statut. Le code d'un produit ne se saisit pas ; celui d'un frais est éditable (unique par projet). DTO : `PlacementRead.code` ; `ProjectItemRead.itemCode` = libellé (frais : `FR-NN` ; produit : codes des implantations séparés par « · » ; option : codes de la base suivis de `-<lettre>`).
+- Code (ADR-0018) : un par **implantation**, `<LOC>-<TYPE>-NN` — code de la localisation (non affecté → `<TYPE>-NN`), code du type, numéro à 2 chiffres minimum par (projet, localisation, type) ; frais : `FR-NN` sur l'article. Attribution (ADR-0021) : le plus petit numéro libre de la série, lu sur les codes existants. **Avant la première diffusion** (ADR-0022), un code libéré (suppression, déplacement, changement de type, article devenu option) est comblé : les codes suivants de la série descendent d'un cran (événement `placement`, ou `other` pour un frais) ; **après**, aucun code ne bouge et le trou va au prochain article. Même règle pour les lettres d'options. Un article annulé garde son code. Nouvelle implantation ou changement de localisation → nouveau code dans la localisation d'arrivée ; changement de type → toutes les implantations recodées (événement `placement`, codes avant / après), quel que soit le statut. Le code d'un produit ne se saisit pas ; celui d'un frais est éditable (unique par projet). DTO : `PlacementRead.code` ; `ProjectItemRead.itemCode` = libellé (frais : `FR-NN` ; produit : codes des implantations séparés par « · » ; option : codes de la base suivis de `-<lettre>`).
 - Codes projet : `<project_code_prefix><AAAA>-NNN` par `MAX + 1` sur l'année ; éditables.
-- Indice de diffusion : déclaré sur le projet (« Nouvel indice », `POST /projects/{id}/indice`, lettre suivante A, B… Z, AA… ; ligne `project_indice`) ; tout article modifié (`updated_at`) depuis la déclaration précédente prend cette lettre dans `project_item.indice` (événement `indice`) ; `DELETE /projects/{id}/indice` retire la dernière déclaration (§4.17). Un export (fiches ou listing) ne pose jamais rien : il imprime l'indice courant (`project_file.indice`).
+- Diffusion et indice par code (ADR-0022, `services/diffusion.py`) : la diffusion se choisit à la génération des fiches (`POST /projects/{id}/exports/sheets`, `diffuse: true`) ; sans diffusion, document de travail qui ne change rien ; **indice en direct** (2026-10-16, `ProjectItem.live_indice`, `ProjectItemPlacement.coming_indice`, même règle que la diffusion) : pages et documents de travail montrent l'indice que la prochaine diffusion donnera (produit non annulé, hors option ; sinon l'indice stocké), DTO `placements[].change` = ce que la prochaine diffusion apporte au code (`new` : jamais diffusé, dès la 2e diffusion ; `revised` : produit remplacé ; `ProjectItem.live_change`, `ProjectItemPlacement.coming_change`) ; le listing ne change rien non plus. À chaque diffusion n, pour chaque article présenté (produit non annulé ; options seulement si `includeOptions`) : un code jamais diffusé prend « - » (NULL), à toute diffusion (2026-10-16 : un nouvel article commence sans indice) ; un code dont `diffused_item_id` diffère de l'article actuel (produit changé : option retenue) passe à la lettre suivante (`next_letter` : - → A → B… Z → AA…) ; sinon l'indice ne bouge pas (un changement de nom, de prix, de caractéristiques ne compte pas) ; `diffused_item_id` reçoit l'article, `first_diffusion_id` la diffusion si vide ; événement `indice` (état des codes avant / après, note `diffusion:<id>`). **Après la première diffusion** : codes figés ; une implantation diffusée ne se déplace ni ne se retire, un article diffusé ne change plus de type ni ne devient option, une localisation portant des codes diffusés garde son code (409 / 422) ; ce qui n'a jamais été diffusé reste libre. `DELETE /projects/{id}/diffusions/last` annule la dernière diffusion vivante : chaque code et chaque article reprennent l'état noté dans les événements `diffusion:<id>` (événement `indice` noté `annulation:<id>`), `revoked_at` posé. Fiches : options exclues sauf « Inclure les options » (sans indice, « - ») ; en-tête « Diffusion n » ou « Document de travail », indice imprimé par code ; marques des fiches (2026-10-16) : « Nouveau » (bleu ardoise, code jamais diffusé, dès la 2e diffusion), « Modifié » (vert sauge, produit remplacé), option (gris) ; bandeau en bord de page et pastille, encart de localisation inchangé ; les marques d'une diffusion sont prises avant qu'elle ne déplace les codes (`coming_changes`), la couverture les compte.
 
 ---
 

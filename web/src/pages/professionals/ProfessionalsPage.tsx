@@ -6,7 +6,7 @@ import { type Column } from '../../components/tables/DataTable'
 import { ListToolbar } from '../../components/tables/ListToolbar'
 import { TableCard, archivedColumn } from '../../components/tables/TableCard'
 import { PageHeader } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
+import { buttonClass } from '../../components/ui/Button'
 import { Pill } from '../../components/ui/Pill'
 import { useChoiceLabels } from '../../api/queries/choice'
 import { useToast } from '../../components/ui/Toast'
@@ -51,8 +51,8 @@ export function ProfessionalsPage() {
         title="Professionnels"
         subtitle={professionals.data ? `${professionals.data.total} professionnel${professionals.data.total > 1 ? 's' : ''}` : undefined}
         actions={
-          <Link to="/professionals/new">
-            <Button variant="primary">Nouveau professionnel</Button>
+          <Link to="/professionals/new" className={buttonClass('primary')}>
+            Nouveau professionnel
           </Link>
         }
       />

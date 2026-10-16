@@ -5,14 +5,10 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 ChoiceList = Literal["family", "usage", "prestation"]
 Name = Annotated[str, Field(min_length=1, max_length=100)]
-
-
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
 
 
 class ChoiceCreate(BaseSchema):
@@ -23,7 +19,7 @@ class ChoiceCreate(BaseSchema):
     @field_validator("name", mode="before")
     @classmethod
     def strip_name(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ChoiceUpdate(BaseSchema):
@@ -37,7 +33,7 @@ class ChoiceUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
 
 class ChoiceRead(BaseSchema):

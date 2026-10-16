@@ -2,18 +2,10 @@
 {% macro v(value, mono=False) -%}
   {% if value %}<div class="v{% if mono %} mono{% endif %}">{{ value }}</div>{% else %}<div class="v empty">—</div>{% endif %}
 {%- endmacro %}
-{% macro head(where) -%}
-  <div class="head">
-    <div class="brand"><img src="{{ assets_url }}/logo.svg" alt="">{{ agency.name or "FF&E" }}</div>
-    <div class="where">{{ project.name }}<br>Projet {{ project.code }}{% if where %} · {{ where }}{% endif %}</div>
-  </div>
-{%- endmacro %}
+{% from "_head.html" import head with context %}
 {% block body %}
 <section class="page cover">
-  <div class="head">
-    <div class="brand"><img src="{{ assets_url }}/logo.svg" alt="">{{ agency.name or "FF&E" }}</div>
-    <div class="where">{{ agency.address or "" }}</div>
-  </div>
+  {{ head("") }}
   <div class="title">
     <div class="rule"></div>
     <div class="label">Fiches de prescription</div>
@@ -22,7 +14,8 @@
     <div class="facts">
       <div class="label">Projet</div><div class="mono">{{ project.code }}</div>
       <div class="label">Contenu</div><div>{{ item_count }} article(s) · {{ location_count }} localisation(s)</div>
-      <div class="label">Diffusion</div><div>{% if indice %}<span class="pill filled">Indice {{ indice }}</span>{% else %}<span class="pill">Sans indice</span>{% endif %} <span class="muted">{{ issued_on }}</span></div>
+      <div class="label">Diffusion</div><div>{% if diffusion %}<span class="pill filled">Diffusion {{ diffusion }}</span>{% else %}<span class="pill">Document de travail</span>{% endif %} <span class="muted">{{ issued_on }}</span></div>
+      {% if new_count or revised_count %}<div class="label">Évolutions</div><div class="legend">{% if new_count %}<span class="mark-new"><i></i>{{ new_count }} nouveau(x)</span>{% endif %}{% if revised_count %}<span class="mark-revised"><i></i>{{ revised_count }} modifié(s)</span>{% endif %}</div>{% endif %}
     </div>
   </div>
   <div class="small muted">{{ agency.email or "" }}{% if agency.email and agency.phone %} · {% endif %}{{ agency.phone or "" }}</div>
@@ -36,23 +29,30 @@
     {% for loc in locations %}
       <tr class="location"><td colspan="6">{{ loc["code"] or "—" }} — {{ loc["name"] }} <span class="where">{% if loc["zone"] %}· {{ loc["zone"] }}{% endif %}{% if loc["level"] %} · {{ loc["level"] }}{% endif %}{% if loc["multiplier"] > 1 %} · × {{ loc["multiplier"] }}{% endif %}</span></td></tr>
       {% for a in loc["articles"] %}
-      <tr{% if a["option"] %} class="option"{% endif %}><td class="nowrap">{{ a["type"] }}</td><td class="code ffe">{{ a["item_code"] }}</td><td>{% if a["option"] %}<span class="opt-name">Option {{ a["option"] }}</span>{% endif %}{{ a["name"] }}</td><td class="nowrap">{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
+      {% set mark = "option" if a["option"] else a["change"] %}
+      <tr{% if mark %} class="mark mark-{{ mark }}"{% endif %}><td class="nowrap">{{ a["type"] }}</td><td class="code ffe">{{ a["item_code"] }}</td><td>{{ a["name"] }}</td><td class="nowrap">{{ loc["name"] }}</td><td class="num">{{ a["qty_text"] }}</td><td class="center">{{ a["indice"] }}</td></tr>
       {% endfor %}
     {% endfor %}
     </tbody>
+    {# A discreet key for the marks on the left edge of the rows (2026-10-16), in the table footer
+       so that it is repeated at the bottom of every page of the summary. #}
+    {% if new_count or revised_count or option_count %}<tfoot><tr><td colspan="6" class="legend key">{% if new_count %}<span class="mark-new"><i></i>Nouveau</span>{% endif %}{% if revised_count %}<span class="mark-revised"><i></i>Modifié (produit remplacé)</span>{% endif %}{% if option_count %}<span class="mark-option"><i></i>Option</span>{% endif %}</td></tr></tfoot>{% endif %}
   </table>
 </section>
 
 {% for loc in locations %}
   {% for a in loc["articles"] %}
-  <section class="page sheet{% if a["option"] %} option{% endif %}">
+  {% set mark = "option" if a["option"] else a["change"] %}
+  <section class="page sheet{% if mark %} mark mark-{{ mark }}{% endif %}">
     {{ head(loc["name"]) }}
     <table class="titling"><tr>
       <td>
-        {% if a["option"] %}<div class="option-kicker"><span class="tag">Option {{ a["option"] }}</span>Alternative à {{ a["base_code"] }}</div>{% endif %}
+        {% if a["option"] %}<div class="kicker"><span class="tag">Option {{ a["option"] }}</span>Alternative à {{ a["base_code"] }}</div>
+        {% elif a["change"] == "new" %}<div class="kicker"><span class="tag">Nouveau</span></div>
+        {% elif a["change"] == "revised" %}<div class="kicker"><span class="tag">Modifié · ind. {{ a["indice"] }}</span></div>{% endif %}
         <div class="label">Prescription · {{ a["item_code"] }}</div>
         <h1{% if a["name"] | length > 60 %} class="long"{% endif %}>{{ a["name"] }}</h1>
-        <div class="meta">{% if a["type"] %}<span>{{ a["type"] }}</span>{% endif %}<span>Quantité <strong>{{ a["qty_text"] }}</strong>{% if loc["multiplier"] > 1 %} par unité · × {{ loc["multiplier"] }}{% endif %}</span>{% if a["supplier_name"] %}<span>{{ a["supplier_name"] }}</span>{% endif %}</div>
+        <div class="meta">{% if a["type"] %}<span>{{ a["type"] }}</span>{% endif %}<span>Quantité <strong>{{ a["qty_text"] }}</strong>{% if loc["multiplier"] > 1 %} par unité · × {{ loc["multiplier"] }}{% endif %}</span></div>
       </td>
       <td class="gap"></td>
       <td class="where-box"><div class="loc">
@@ -74,7 +74,7 @@
     </div>
     {% if a["license_note"] %}<div class="usage-note">{{ a["license_note"] }}</div>{% endif %}
 
-    <table class="section-head"><tr><td><span class="label">Produit</span></td><td class="aside">{% if a["supplier_name"] %}Fournisseur : {{ a["supplier_name"] }}{% endif %}</td></tr></table>
+    <table class="section-head"><tr><td><span class="label">Produit</span></td><td class="aside"></td></tr></table>
     <table class="cells">
       <tr>
         <td><div class="k">Nom</div>{{ v(a["product_name"]) }}</td>
@@ -104,7 +104,7 @@
     </tr></table>
 
     <table class="sheet-foot columns"><tr>
-      <td style="width:50%"><div class="block-head label">Diffusion</div><div class="frame issued">{% if a["indice"] %}Indice {{ a["indice"] }}{% else %}Sans indice{% endif %}<br><span class="muted">{{ issued_on }}</span></div></td>
+      <td style="width:50%"><div class="block-head label">Diffusion</div><div class="frame issued">{% if diffusion %}Diffusion {{ diffusion }} · indice {{ a["indice"] }}{% else %}Document de travail · indice {{ a["indice"] }}{% endif %}<br><span class="muted">{{ issued_on }}</span></div></td>
       <td style="width:50%"><div class="block-head label">Validation</div><div class="frame sign"></div></td>
     </tr></table>
   </section>

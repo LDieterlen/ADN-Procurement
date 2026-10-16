@@ -20,12 +20,15 @@ from ffe.exports.pdf import (
     render_pdf,
 )
 from ffe.i18n import fr
+from ffe.listing import COLUMNS, in_catalogue_order, printed_groups
 from ffe.models import (
     Category,
     Client,
+    File,
     Location,
     Project,
     ProjectItem,
+    ProjectItemFile,
     Setting,
     Supplier,
 )
@@ -35,14 +38,20 @@ from ffe.services.project_item import list_items
 BAND = tuple((kind, fr.FILE_KIND_LABELS[kind]) for kind in ("image", "finish", "drawing"))
 
 
+def main_photo(item: ProjectItem) -> ProjectItemFile | None:
+    """The article's photo on every document: the main one, else the first; images only."""
+    pictures = [j for j in item.files if j.file.mime_type.startswith("image/")]
+    return next((j for j in pictures if j.is_primary), None) or next(
+        (j for j in pictures if j.kind == "image"), None
+    )
+
+
 def _images(item: ProjectItem) -> tuple[list[dict[str, Any]], str | None]:
     """The sheet's image band (spec « Fiche 1b » v2): at most one photo (the main one, else the
     first), one finish and one plan, in that order of priority; images only (a PDF plan is not
     drawn). Also the photo's usage note."""
     pictures = [j for j in item.files if j.file.mime_type.startswith("image/")]
-    photo = next((j for j in pictures if j.is_primary), None) or next(
-        (j for j in pictures if j.kind == "image"), None
-    )
+    photo = main_photo(item)
     chosen = {"image": photo} | {
         kind: next((j for j in pictures if j.kind == kind), None) for kind in ("finish", "drawing")
     }
@@ -54,8 +63,23 @@ def _images(item: ProjectItem) -> tuple[list[dict[str, Any]], str | None]:
     return band, photo.file.license_note if photo else None
 
 
-def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
-    """One row per (article, placement), in location order; fee lines are left out."""
+def coming_changes(session: Session, project_id: int) -> dict[int, str | None]:
+    """placement id → what the next diffusion brings to its code (« new », « revised »)."""
+    return {
+        p.id: item.live_change(p)
+        for item in list_items(session, project_id)
+        for p in item.placements
+    }
+
+
+def article_rows(
+    session: Session,
+    project_id: int,
+    include_options: bool = False,
+    changes: dict[int, str | None] | None = None,
+) -> list[dict[str, Any]]:
+    """One row per (article, placement), in location order; fee lines are left out. `changes`:
+    the marks of an issue taken before its diffusion moved the codes; None = as of now."""
     locations = {
         z.id: z for z in session.scalars(select(Location).where(Location.project_id == project_id))
     }
@@ -66,6 +90,8 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in list_items(session, project_id):
         if item.kind != "product":
+            continue
+        if item.option_letter and not include_options:  # options: alternatives, off the sheets
             continue
         band, license_note = _images(item)
         photo = band[0]["src"] if band and band[0]["kind"] == "image" else None
@@ -93,7 +119,16 @@ def article_rows(session: Session, project_id: int) -> list[dict[str, Any]]:
                     "product_name": item.product_name,
                     "status": fr.ITEM_STATUS_LABELS[item.status],
                     "cancelled": item.status == "cancelled",
-                    "indice": item.indice or "",
+                    # The code's indice now (ADR-0022): what the next diffusion gives it.
+                    "indice": (item.live_indice(placement) or "-")
+                    if not item.option_letter
+                    else "-",
+                    # New or revised since the previous diffusion (2026-10-16): marked on the sheet.
+                    "change": None
+                    if item.option_letter
+                    else changes.get(placement.id)
+                    if changes is not None
+                    else item.live_change(placement),
                     "family": families.get(item.family or "", ""),
                     "usage": usages.get(item.usage or "", ""),
                     "comments": item.comments,
@@ -149,16 +184,33 @@ def _by_location(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return blocks
 
 
-def _header(session: Session, project_id: int, today: date) -> dict[str, Any]:
+def document_header(session: Session, project_id: int, today: date) -> dict[str, Any]:
     project = session.get(Project, project_id)
     assert project is not None
     client = session.get(Client, project.client_id)
     setting = session.get(Setting, 1)
     assert setting is not None
+    # The procurement company the project is run for (top right of the sheets), with its logo.
+    logo = (
+        session.get(File, project.procurement_logo_file_id)
+        if project.procurement_logo_file_id
+        else None
+    )
+    agency_logo = (
+        session.get(File, setting.agency_logo_file_id) if setting.agency_logo_file_id else None
+    )
     return {
-        "footer": f"{setting.agency_name or 'FFE'} · {project.code} {project.name}",
-        "agency": {"name": setting.agency_name, "address": setting.agency_address},
+        # Bottom left: who made the document (the agency of the settings, 2026-10-16).
+        "footer": fr.PDF_MADE_BY.format(agency=setting.agency_name) if setting.agency_name else "",
+        "agency": {
+            "name": setting.agency_name,
+            "email": setting.agency_email,
+            "phone": setting.agency_phone,
+            "logo": agency_logo.filename if agency_logo else None,  # top left of the sheets
+        },
         "project": {"code": project.code, "name": project.name},
+        # The procurement company the project is run for (top right of the sheets), with its logo.
+        "procurement": {"name": project.procurement_name, "logo": logo.filename if logo else None},
         "client_name": client.name if client else "",
         "issued_on": today.isoformat(),
     }
@@ -179,42 +231,114 @@ def _place_band(row: dict[str, Any], files_dir: Path) -> None:
 
 
 def sheets_context(
-    session: Session, project_id: int, today: date, indice: str | None = None, *, files_dir: Path
+    session: Session,
+    project_id: int,
+    today: date,
+    diffusion: int | None = None,
+    *,
+    files_dir: Path,
+    printable: bool = False,
+    include_options: bool = False,
+    changes: dict[int, str | None] | None = None,
+    hide_agency_name: bool = False,
+    hide_studio: bool = False,
+    hide_agency_logo: bool = False,
 ) -> dict[str, Any]:
-    rows = [r for r in article_rows(session, project_id) if not r["cancelled"]]
+    """`diffusion`: the number of the official diffusion these sheets are issued for (ADR-0022),
+    None for a working document."""
+    rows = [
+        r for r in article_rows(session, project_id, include_options, changes) if not r["cancelled"]
+    ]
     for row in rows:
         _place_band(row, files_dir)
     blocks = _by_location(rows)
+    header = document_header(session, project_id, today)
+    if hide_agency_name:  # advanced options of « Fiches PDF » (2026-10-16)
+        header["footer"] = ""
+    if hide_agency_logo:
+        header["agency"] = {**header["agency"], "logo": None}
     return {
-        **_header(session, project_id, today),
+        **header,
+        "studio_footer": not hide_studio,  # « Racoon Studio », centred at the bottom of each page
+        "printable": printable,
         "title": f"Fiches de prescription {project_id}",
-        "indice": indice or "",
+        "diffusion": diffusion,
         "item_count": len(rows),
+        "new_count": sum(1 for r in rows if r["change"] == "new"),
+        "revised_count": sum(1 for r in rows if r["change"] == "revised"),
+        "option_count": sum(1 for r in rows if r["option"]),
         "location_count": len(blocks),
         "locations": blocks,
     }
 
 
-def list_context(session: Session, project_id: int, today: date) -> dict[str, Any]:
-    rows = article_rows(session, project_id)
+def list_context(
+    session: Session,
+    project_id: int,
+    today: date,
+    printable: bool = False,
+    columns: list[str] | None = None,
+    profile_name: str | None = None,
+    include_options: bool = False,
+) -> dict[str, Any]:
+    """`columns`: the columns of a listing profile (ADR-0023), None = all of them; options only
+    when asked (2026-10-16)."""
+    rows = article_rows(session, project_id, include_options=include_options)
+    shown = in_catalogue_order(columns) if columns else list(COLUMNS)
     return {
-        **_header(session, project_id, today),
+        **document_header(session, project_id, today),
+        "printable": printable,
         "title": f"Listing FF&E {project_id}",
+        "columns": printed_groups(shown, fr.LISTING_COLUMN_LABELS),
+        "profile_name": profile_name,
         "locations": _by_location(rows),
         "row_count": len(rows),
     }
 
 
 def build_sheets(
-    session: Session, files_dir: Path, project_id: int, today: date, indice: str | None = None
+    session: Session,
+    files_dir: Path,
+    project_id: int,
+    today: date,
+    diffusion: int | None = None,
+    printable: bool = False,
+    include_options: bool = False,
+    changes: dict[int, str | None] | None = None,
+    *,
+    hide_agency_name: bool = False,
+    hide_studio: bool = False,
+    hide_agency_logo: bool = False,
 ) -> tuple[str, bytes]:
-    context = sheets_context(session, project_id, today, indice, files_dir=files_dir)
+    context = sheets_context(
+        session,
+        project_id,
+        today,
+        diffusion,
+        files_dir=files_dir,
+        printable=printable,
+        include_options=include_options,
+        changes=changes,
+        hide_agency_name=hide_agency_name,
+        hide_studio=hide_studio,
+        hide_agency_logo=hide_agency_logo,
+    )
     html = render_html("sheets.html", context)
     return html, render_pdf(html, files_dir)
 
 
 def build_list(
-    session: Session, files_dir: Path, project_id: int, today: date
+    session: Session,
+    files_dir: Path,
+    project_id: int,
+    today: date,
+    printable: bool = False,
+    columns: list[str] | None = None,
+    profile_name: str | None = None,
+    include_options: bool = False,
 ) -> tuple[str, bytes]:
-    html = render_html("list.html", list_context(session, project_id, today))
+    context = list_context(
+        session, project_id, today, printable, columns, profile_name, include_options
+    )
+    html = render_html("list.html", context)
     return html, render_pdf(html, files_dir)

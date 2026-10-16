@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { focusManager } from '@tanstack/react-query'
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { installFakeApi, itemRow, placementRow, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
@@ -127,11 +129,11 @@ describe('page article', () => {
     const user = userEvent.setup()
     renderApp('/projects/1/items/1')
     await user.type(await screen.findByLabelText('Référence'), 'BLS01')
-    await user.click(screen.getByRole('button', { name: 'Retour au projet' }))
+    await user.click(screen.getByRole('link', { name: 'Retour au projet' }))
     const dialog = await screen.findByRole('dialog', { name: 'Modifications non enregistrées' })
     await user.click(within(dialog).getByRole('button', { name: 'Rester sur la page' }))
     expect(screen.getByRole('heading', { name: 'Beat Light Fat' })).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Retour au projet' }))
+    await user.click(screen.getByRole('link', { name: 'Retour au projet' }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Enregistrer et quitter' }))
     expect(await screen.findByRole('heading', { name: 'Rénovation' })).toBeTruthy()
     expect(api.items[0]?.reference).toBe('BLS01')
@@ -165,7 +167,7 @@ describe('page article', () => {
     renderApp('/projects/1/items/1')
     const card = await screen.findByRole('region', { name: 'Options' })
     expect(within(card).getByText(/Aucune option/)).toBeTruthy()
-    await user.click(within(card).getByRole('button', { name: '+ Nouvelle option' }))
+    await user.click(within(card).getByRole('link', { name: '+ Nouvelle option' }))
     expect(await screen.findByRole('heading', { name: 'Nouvelle option' })).toBeTruthy()
     expect(screen.queryByRole('region', { name: 'Implantation' })).toBeNull()
     await user.type(screen.getByLabelText('Nom'), 'Lampe Artemide')
@@ -225,6 +227,39 @@ describe('page article', () => {
     await screen.findByText('Article enregistré.')
     const sent = api.requests.find((r) => r.path.endsWith('/save'))?.body as { sheet: Record<string, unknown> }
     expect(Object.keys(sent.sheet)).toEqual(['comments'])
+  })
+
+  test('un article diffusé : ni suppression ni déplacement de ses codes, son indice affiché', async () => {
+    api.items[0]!.diffused = true
+    api.items[0]!.placements[0]!.diffused = true
+    api.items[0]!.placements[0]!.indice = 'B'
+    api.items[0]!.placements[0]!.change = 'revised'
+    renderApp('/projects/1/items/1')
+    const table = await screen.findByRole('table', { name: "Implantations de l'article" })
+    expect(within(table).getByText('B')).toBeTruthy()
+    expect(within(table).getByText('Modifié')).toBeTruthy() // its product changed since the last diffusion
+    expect(within(table).queryByLabelText(/Localisation de l'implantation/)).toBeNull()
+    expect(within(table).queryByRole('button', { name: /Retirer de/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: "Supprimer l'article" })).toBeNull()
+  })
+
+  test('un article devenu option entre-temps ne renvoie pas ses anciennes implantations en la retenant', async () => {
+    const user = userEvent.setup()
+    api.items.push(itemRow({ projectId: 1, name: 'Variante', categoryId: api.items[0]!.categoryId, placements: [placementRow(2, 1, 1000)] }, 2))
+    renderApp('/projects/1/items/2')
+    await screen.findByRole('heading', { name: 'Variante' })
+    // Attached as an option elsewhere: it loses its placements; the page reloads it.
+    Object.assign(api.items[1]!, { optionOfId: 1, optionLetter: 'A', placements: [] })
+    act(() => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+    await user.click(await screen.findByRole('button', { name: 'Retenir cette option' }))
+    await user.click(saveButton())
+    await waitFor(() => expect(api.requests.some((r) => r.path.endsWith('/save'))).toBe(true))
+    const sent = api.requests.find((r) => r.path.endsWith('/save'))?.body as Record<string, unknown>
+    expect(sent.optionAction).toBe('retain')
+    expect(sent.placements).toBeUndefined()
   })
 
   test("la localisation d'une implantation se change en place, sans la recréer", async () => {

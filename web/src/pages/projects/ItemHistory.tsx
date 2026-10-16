@@ -1,12 +1,14 @@
-// The journal of an article (statuses, prices, placements, indices), newest last.
+// The journal of an article (statuses, prices, sheet fields, files, placements, indices), newest last.
 import { ITEM_STATUS_LABELS, type EventRead } from '../../api/queries/projectItem'
 
 const EVENT_LABELS: Record<string, string> = {
   created: 'Création',
   status: 'État',
   price: 'Prix',
+  sheet: 'Fiche',
+  file: 'Fichier',
   placement: 'Implantation',
-  indice: 'Indice',
+  indice: 'Diffusion',
   other: 'Autre',
 }
 
@@ -26,7 +28,7 @@ export function ItemHistory({ events }: { events: EventRead[] }) {
                 : e.kind === 'created' && e.note
                   ? e.note
                   : ''}
-            {e.note && e.kind !== 'created' ? ` — ${e.note}` : ''}
+            {e.note && e.kind !== 'created' ? (e.kind === 'sheet' || e.kind === 'file' ? e.note : ` — ${e.note}`) : ''}
           </span>
         </li>
       ))}

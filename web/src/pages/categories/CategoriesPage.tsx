@@ -7,7 +7,7 @@ import { useArchiveCategory, useCategories, useUnarchiveCategory, type CategoryR
 import { type Column } from '../../components/tables/DataTable'
 import { ListToolbar } from '../../components/tables/ListToolbar'
 import { TableCard, archivedColumn } from '../../components/tables/TableCard'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/Card'
 import { Segmented } from '../../components/ui/Segmented'
 import { useToast } from '../../components/ui/Toast'
@@ -34,8 +34,8 @@ export function CategoriesPage() {
         subtitle="Les valeurs proposées dans les menus : types de produit, familles, usages, prestations"
         actions={
           tab === 'types' && (
-            <Link to="/categories/new">
-              <Button variant="primary">Nouveau type</Button>
+            <Link to="/categories/new" className={buttonClass('primary')}>
+              Nouveau type
             </Link>
           )
         }

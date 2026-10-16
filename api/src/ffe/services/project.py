@@ -1,8 +1,9 @@
 """`project` service: code generation `<prefix><YYYY>-NNN`, status as archiving, read-only when closed."""
 
 import re
+from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ffe.deps import Clock
@@ -12,14 +13,13 @@ from ffe.models import (
     BudgetLine,
     Client,
     Project,
-    ProjectIndice,
-    ProjectItem,
-    ProjectItemEvent,
+    ProjectDiffusion,
     Setting,
 )
 from ffe.models.project import PROJECT_CLOSED_STATUSES
 from ffe.schemas.project import ProjectCreate, ProjectStatusChange, ProjectUpdate
 from ffe.services.base import stamp
+from ffe.services.file import check_logo, unlink_if_orphan
 
 RESOURCE = "project"
 
@@ -96,6 +96,7 @@ def _check_code_free(session: Session, code: str, exclude_id: int | None) -> Non
 def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Project:
     with session.begin():
         _check_client(session, data.client_id)
+        check_logo(session, data.procurement_logo_file_id, "procurementLogoFileId")
         values = data.model_dump()
         code = values.pop("code") or next_code(session, clock)
         _check_code_free(session, code, None)
@@ -117,7 +118,9 @@ def create_project(session: Session, data: ProjectCreate, clock: Clock) -> Proje
     return project
 
 
-def update_project(session: Session, project_id: int, data: ProjectUpdate, clock: Clock) -> Project:
+def update_project(
+    session: Session, project_id: int, data: ProjectUpdate, clock: Clock, files_dir: Path
+) -> Project:
     with session.begin():
         project = ensure_open(get_project(session, project_id))
         changes = data.model_dump(exclude_unset=True)
@@ -125,9 +128,14 @@ def update_project(session: Session, project_id: int, data: ProjectUpdate, clock
             _check_client(session, changes["client_id"])
         if "code" in changes and changes["code"] != project.code:
             _check_code_free(session, changes["code"], project_id)
+        old_logo = project.procurement_logo_file_id
+        if changes.get("procurement_logo_file_id") not in (None, old_logo):
+            check_logo(session, changes["procurement_logo_file_id"], "procurementLogoFileId")
         for field_name, value in changes.items():
             setattr(project, field_name, value)
         project.updated_at = stamp(clock)
+    if old_logo is not None and project.procurement_logo_file_id != old_logo:
+        unlink_if_orphan(session, files_dir, old_logo)  # a replaced logo leaves the disk
     return project
 
 
@@ -151,87 +159,23 @@ def open_project_count(session: Session, client_id: int) -> int:
     return len(list(rows))
 
 
-def next_letter(current: str | None) -> str:
-    """A, B … Z, AA, AB … (Excel-style)."""
-    if not current:
-        return "A"
-    digits = [ord(ch) - 65 for ch in current]
-    i = len(digits) - 1
-    while i >= 0:
-        if digits[i] < 25:
-            digits[i] += 1
-            return "".join(chr(65 + d) for d in digits)
-        digits[i] = 0
-        i -= 1
-    return "A" + "".join(chr(65 + d) for d in digits)
-
-
-def next_indice(session: Session, project_id: int, clock: Clock) -> Project:
-    """Declares a new diffusion: the project takes the next letter and every article changed since
-    the previous declaration (or never stamped) takes it too, each change journaled (`indice`
-    event) so the declaration can be taken back. Exports never stamp anything (2026-10-13)."""
-    with session.begin():
-        project = ensure_open(get_project(session, project_id))
-        letter = next_letter(project.indice)
-        since = project.indice_changed_at
-        now = stamp(clock)
-        for item in session.scalars(
-            select(ProjectItem).where(ProjectItem.project_id == project_id)
-        ):
-            if item.indice is None or since is None or item.updated_at > since:
-                _journal_indice(session, item, letter, now)
-        session.add(ProjectIndice(project_id=project_id, indice=letter, declared_at=now))
-        project.indice = letter
-        project.indice_changed_at = now
-        project.updated_at = now
-    return project
-
-
-def revert_indice(session: Session, project_id: int, clock: Clock) -> Project:
-    """Takes the last declaration back: the project returns to the previous letter and every
-    article stamped by that declaration gets its former letter (journaled again)."""
-    with session.begin():
-        project = ensure_open(get_project(session, project_id))
-        history = list(
-            session.scalars(
-                select(ProjectIndice)
-                .where(ProjectIndice.project_id == project_id)
-                .order_by(ProjectIndice.declared_at.desc(), ProjectIndice.id.desc())
-            )
-        )
-        if not history:
-            raise ConflictError(fr.PROJECT_NO_INDICE)
-        last, previous = history[0], (history[1] if len(history) > 1 else None)
-        now = stamp(clock)
-        stamped = session.scalars(
-            select(ProjectItemEvent)
-            .join(ProjectItem, ProjectItem.id == ProjectItemEvent.project_item_id)
-            .where(
-                ProjectItem.project_id == project_id,
-                ProjectItemEvent.kind == "indice",
-                ProjectItemEvent.changed_at == last.declared_at,
-                ProjectItemEvent.new_value == last.indice,
-            )
-        ).all()
-        for event in stamped:
-            item = session.get(ProjectItem, event.project_item_id)
-            if item is not None and item.indice == last.indice:
-                _journal_indice(session, item, event.old_value, now)
-        session.delete(last)
-        project.indice = previous.indice if previous else None
-        project.indice_changed_at = previous.declared_at if previous else None
-        project.updated_at = now
-    return project
-
-
-def _journal_indice(session: Session, item: ProjectItem, letter: str | None, now: str) -> None:
-    session.add(
-        ProjectItemEvent(
-            project_item_id=item.id,
-            kind="indice",
-            old_value=item.indice,
-            new_value=letter,
-            changed_at=now,
+def live_diffusions(session: Session, project_id: int) -> list[ProjectDiffusion]:
+    return list(
+        session.scalars(
+            select(ProjectDiffusion)
+            .where(ProjectDiffusion.project_id == project_id, ProjectDiffusion.revoked_at.is_(None))
+            .order_by(ProjectDiffusion.number)
         )
     )
-    item.indice = letter
+
+
+def is_diffused(session: Session, project_id: int) -> bool:
+    """At least one live diffusion: the codes are frozen, a diffused article is cancelled, never
+    deleted (ADR-0022)."""
+    return bool(
+        session.scalar(
+            select(func.count())
+            .select_from(ProjectDiffusion)
+            .where(ProjectDiffusion.project_id == project_id, ProjectDiffusion.revoked_at.is_(None))
+        )
+    )

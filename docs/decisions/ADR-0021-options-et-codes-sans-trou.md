@@ -1,6 +1,6 @@
 # ADR-0021 — Options d'un article, codes sans trou avant le premier indice
 Date : 2026-10-15
-Statut : acceptée (questionnaire du 2026-10-15, recommandations retenues) ; remplace « un numéro n'est jamais réutilisé » d'ADR-0018 et « `item_code_sequence` jamais décrémentée » d'ADR-0012/0013
+Statut : acceptée (questionnaire du 2026-10-15, recommandations retenues) ; remplace « un numéro n'est jamais réutilisé » d'ADR-0018 et « `item_code_sequence` jamais décrémentée » d'ADR-0012/0013 ; « premier indice » se lit « première diffusion » depuis ADR-0022
 
 ## Contexte
 L'utilisatrice veut proposer des alternatives à un article (options), codées comme lui avec une lettre, et des codes sans trou (pas de 01 puis 03). ADR-0018 ne réutilisait jamais un numéro : chaque déplacement ou suppression laissait un trou.

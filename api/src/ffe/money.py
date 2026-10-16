@@ -78,6 +78,11 @@ def is_approved_or_later(status: str) -> bool:
     return STATUS_RANK[status] >= APPROVED_RANK
 
 
+def sum_cents(parts: Iterable[int]) -> int:
+    """Sum of amounts already rounded to the cent (each share keeps its own rounding)."""
+    return sum(parts)
+
+
 def share_bp(part: int, whole: int) -> int:
     """Share of `part` in `whole` in basis points (0 when the whole is 0)."""
     if whole <= 0 or part <= 0:

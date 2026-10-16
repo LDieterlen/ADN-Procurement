@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError } from '../../api/errors'
 import { useArchiveSupplier, useCreateSupplier, useSupplier, useUnarchiveSupplier, useUpdateSupplier } from '../../api/queries/supplier'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
@@ -82,8 +82,8 @@ export function SupplierEditPage() {
           {archived && <span className="ml-3 rounded bg-track px-2 py-0.5 align-middle text-xs">Archivé</span>}
         </h1>
         <div className="flex gap-2">
-          <Link to="/suppliers">
-            <Button variant="ghost">Retour</Button>
+          <Link to="/suppliers" className={buttonClass('ghost')}>
+            Retour
           </Link>
           {supplier && !archived && (
             <Button variant="danger" onClick={confirmArchive}>

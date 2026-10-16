@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 ClientKind = Literal["individual", "company"]
 
@@ -15,10 +15,6 @@ Long = Annotated[str | None, Field(max_length=2000)]
 CountryCode = Annotated[str, Field(pattern=r"^[A-Z]{2}$")]
 Siren = Annotated[str | None, Field(pattern=r"^[0-9]{9}$")]
 Email = Annotated[str | None, Field(max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
-
-
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
 
 
 class ClientCreate(BaseSchema):
@@ -38,7 +34,7 @@ class ClientCreate(BaseSchema):
     @field_validator("name", "contact_name", "city", "postal_code", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ClientUpdate(BaseSchema):
@@ -62,12 +58,12 @@ class ClientUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator("contact_name", "city", "postal_code", mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ClientRead(BaseSchema):

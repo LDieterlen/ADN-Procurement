@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% set page_size = "A3" %}
+{% set landscape = true %}
+{% from "_head.html" import head with context %}
+{# Installation pages (ADR-0024): A3 landscape, the plan in its block, the articles in the other
+   cells in the saved order, empty cells kept (`ffe.installation.layout`). Fixed px boxes in a
+   table (WeasyPrint lays tables out reliably, never CSS grid); content box 1499 × 1047 px. #}
+{% block body %}
+<style>
+  .install-title { margin-top: 14px; height: 34px; }
+  .install-title td { padding: 0; vertical-align: bottom; }
+  .install-title h1 { font-size: 28px; }
+  .install-title .room { font-size: 12px; color: #6b645c; margin-left: 12px; }
+  .install-title .pages { text-align: right; font-size: 11px; color: #6b645c; }
+  table.install { margin-top: 10px; table-layout: fixed; border-collapse: collapse; }
+  table.install td { padding: 0; vertical-align: top; overflow: hidden; }
+  .card { margin: 6px auto; box-sizing: border-box; border: 1px solid #e4e0d9; background: #fff; overflow: hidden; }
+  .card .photo { display: block; width: 100%; object-fit: contain; }
+  .card .photo.empty { background: repeating-linear-gradient(135deg, #f3f0eb 0, #f3f0eb 6px, #ebe7e0 6px, #ebe7e0 12px); }
+  .card .text { padding: 5px 8px 0; border-top: 1px solid #e4e0d9; }
+  .card .code { font: 500 15px "IBM Plex Mono", monospace; white-space: nowrap; overflow: hidden; }
+  .card .name { font-size: 10.5px; line-height: 1.3; max-height: 27px; overflow: hidden; }
+  .card .qty { font-size: 10px; color: #6b645c; white-space: nowrap; overflow: hidden; }
+  .plan { margin: 6px; padding: 10px; box-sizing: border-box; border: 1px solid #1c1a17; background: #fff; }
+  .plan .drawing { position: relative; }
+  .plan .drawing img { position: absolute; display: block; }
+  .dot { position: absolute; width: 14px; height: 14px; border-radius: 7px; border: 0.75px solid #ffffff; color: #ffffff; font: 600 8px/14px "IBM Plex Sans", sans-serif; text-align: center; box-sizing: content-box; margin: -0.75px 0 0 -0.75px; opacity: 0.88; }
+  .card { position: relative; }
+  .card .num { position: absolute; left: 6px; top: 6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; color: #ffffff; font: 600 10px/18px "IBM Plex Sans", sans-serif; text-align: center; box-sizing: border-box; }
+  .card.colored { border-left-width: 4px; }
+  .legend-line { margin-top: 2px; font-size: 10.5px; color: #6b645c; text-align: right; }
+  .legend-line span { margin-left: 14px; white-space: nowrap; }
+  .legend-line i { display: inline-block; width: 9px; height: 9px; border-radius: 5px; margin-right: 5px; vertical-align: -1px; }
+  .plan.empty { border-style: dashed; color: #a39b91; text-align: center; font-size: 13px; }
+</style>
+{% for page in pages %}
+<section class="page">
+  {{ head(page.room) }}
+  <table class="install-title"><tr>
+    <td><h1 style="display: inline">{{ page.title }}</h1><span class="room">{{ page.room }}</span></td>
+    <td class="pages">{% if page.count > 1 %}Page {{ page.number }} / {{ page.count }} de la planche{% endif %}
+      {% if page.legend %}<div class="legend-line">{% for name, color in page.legend.items() %}<span><i style="background: {{ color }}"></i>{{ name }}</span>{% endfor %}</div>{% endif %}</td>
+  </tr></table>
+  <table class="install" style="width: {{ grid.width }}px">
+    <colgroup>{% for w in page.col_widths %}<col style="width: {{ w }}px">{% endfor %}</colgroup>
+    {% for row in page.rows %}
+    <tr>
+      {% for cell in row %}
+        {% if cell.kind == "card" %}
+        <td style="height: {{ cell.h }}px"><div class="card{% if page.colored %} colored{% endif %}" style="{% if page.colored %}border-left-color: {{ cell.a.color }}; {% endif %}width: {{ cell.card_w }}px; height: {{ cell.card_h }}px; margin-top: {{ 6 + cell.top }}px">
+          {% if cell.a.photo %}<img class="photo" src="{{ cell.a.photo }}" alt="" style="height: {{ cell.photo_h }}px">{% else %}<div class="photo empty" style="height: {{ cell.photo_h }}px"></div>{% endif %}
+          <span class="num" style="background: {{ cell.a.color }}">{{ cell.a.number }}</span><div class="text"><div class="code">{{ cell.a.code }}</div><div class="name">{{ cell.a.name }}</div><div class="qty">{% if cell.a.type %}{{ cell.a.type }} · {% endif %}Qté {{ cell.a.qty_text }}</div></div>
+        </div></td>
+        {% elif cell.kind == "plan" %}
+        <td colspan="{{ cell.colspan }}" rowspan="{{ cell.rowspan }}"><div class="plan{% if not page.plan %} empty{% endif %}" style="height: {{ cell.box_h }}px">{% if page.plan and page.plan_rect %}{% set r = page.plan_rect %}<div class="drawing" style="height: {{ cell.drawing_h }}px"><img src="{{ page.plan }}" alt="Plan" style="left: {{ r.left }}px; top: {{ r.top }}px; width: {{ r.w }}px; height: {{ r.h }}px">{% for d in page.dots %}<div class="dot" style="left: {{ d.left }}px; top: {{ d.top }}px; background: {{ d.color }}">{{ d.number }}</div>{% endfor %}</div>{% elif page.plan %}<img src="{{ page.plan }}" alt="Plan" style="display: block; width: 100%; height: 100%; object-fit: contain">{% else %}<div style="padding-top: {{ (cell.box_h - 28) // 2 }}px">Aucun plan choisi</div>{% endif %}</div></td>
+        {% elif cell.kind == "empty" %}
+        <td style="height: {{ cell.h }}px"></td>
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endfor %}
+{% endblock %}

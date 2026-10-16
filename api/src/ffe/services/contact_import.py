@@ -165,7 +165,11 @@ def import_contacts(session: Session, text: str, clock: Clock) -> ContactImportR
         name = row.name
         first_kind = names_in_file.setdefault(normalize_key(name), row.kind)
         if first_kind != row.kind:
-            label = "Fournisseur" if row.kind == "supplier" else listed.get(row.kind, row.kind)
+            label = (
+                fr.resource_label("supplier")
+                if row.kind == "supplier"
+                else listed.get(row.kind, row.kind)
+            )
             name = f"{row.name} ({label})"
             result.renamed.append((row.name, name))
         prefix = fr.CONTACT_IMPORT_EMAIL_NOTE.format(email="")

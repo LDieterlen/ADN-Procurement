@@ -14,6 +14,7 @@ from ffe.schemas.project import (
     ProjectUpdate,
 )
 from ffe.services import budget as budget_service
+from ffe.services import diffusion as diffusion_service
 from ffe.services import project as service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -58,20 +59,15 @@ def update_project(
     project_id: ProjectId, payload: ProjectUpdate, session: SessionDep, deps: DepsDep
 ) -> ProjectRead:
     return ProjectRead.model_validate(
-        service.update_project(session, project_id, payload, deps.clock)
+        service.update_project(session, project_id, payload, deps.clock, deps.settings.files_dir)
     )
 
 
-@router.post("/{project_id}/indice", operation_id="nextProjectIndice")
-def next_project_indice(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectRead:
-    """Declares the next diffusion letter; the articles changed since the previous one take it."""
-    return ProjectRead.model_validate(service.next_indice(session, project_id, deps.clock))
-
-
-@router.delete("/{project_id}/indice", operation_id="revertProjectIndice")
-def revert_project_indice(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectRead:
-    """Takes the last declaration back (wrong click): previous letter on the project and its articles."""
-    return ProjectRead.model_validate(service.revert_indice(session, project_id, deps.clock))
+@router.delete("/{project_id}/diffusions/last", operation_id="revertLastDiffusion")
+def revert_last_diffusion(project_id: ProjectId, session: SessionDep, deps: DepsDep) -> ProjectRead:
+    """Takes the last official diffusion back (ADR-0022): indices and rules as before it."""
+    diffusion_service.revert_last_diffusion(session, project_id, deps.clock)
+    return ProjectRead.model_validate(service.get_project(session, project_id))
 
 
 @router.post("/{project_id}/status", operation_id="changeProjectStatus")

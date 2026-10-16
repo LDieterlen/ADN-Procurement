@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { ITEM_STATUS_LABELS, type ProjectItemRead } from '../../api/queries/projectItem'
 import { centsToText } from '../../components/forms/MoneyField'
 import { Thumb } from '../../components/Thumb'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
 import { CandidatePicker } from './CandidatePicker'
@@ -40,10 +40,8 @@ export function OptionsCard({
       meta={options.length ? `${options.length} option${options.length > 1 ? 's' : ''} · montants indicatifs, hors totaux` : undefined}
       actions={
         !readOnly && (
-          <Link to={`/projects/${item.projectId}/items/new?optionOf=${item.id}`}>
-            <Button variant="secondary" size="sm">
-              + Nouvelle option
-            </Button>
+          <Link to={`/projects/${item.projectId}/items/new?optionOf=${item.id}`} className={buttonClass('secondary', 'sm')}>
+            + Nouvelle option
           </Link>
         )
       }

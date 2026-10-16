@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 ItemKind = Literal["product", "fee"]
 ItemStatus = Literal[
@@ -39,10 +39,6 @@ TEXTS = (
 )
 
 
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
-
-
 class PlacementCreate(BaseSchema):
     location_id: int | None = None  # None = « non affecté »
     qty_milli: Milli = 1000
@@ -67,6 +63,11 @@ class PlacementRead(BaseSchema):
     project_item_id: int
     location_id: int | None
     code: str
+    indice: (
+        str | None
+    )  # the code's indice now, as the next diffusion gives it (ADR-0022); None = « - »
+    change: Literal["new", "revised"] | None = None  # what the next diffusion brings to the code
+    diffused: bool = False  # shown in a diffusion: never moved nor removed
     qty_milli: int
     sort_order: int
     created_at: str
@@ -104,7 +105,7 @@ class ProjectItemCreate(BaseSchema):
     @field_validator(*TEXTS, mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ProjectItemUpdate(BaseSchema):
@@ -147,7 +148,7 @@ class ProjectItemUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator(
         "reference",
@@ -159,7 +160,7 @@ class ProjectItemUpdate(BaseSchema):
     )
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class StatusChange(BaseSchema):
@@ -235,7 +236,7 @@ class ProjectItemRead(BaseSchema):
     quote_indice: str | None
     quote_url: str | None
     status: ItemStatus
-    indice: str | None
+    diffused: bool  # presented in a diffusion: cancelled, never deleted (ADR-0022)
     option_of_id: int | None
     option_letter: str | None
     sort_order: int
@@ -254,7 +255,15 @@ class ProjectItemRead(BaseSchema):
         return cls(
             **base,
             item_code=code_label(item),
-            placements=[PlacementRead.model_validate(p) for p in item.placements],
+            placements=[
+                PlacementRead.model_validate(p).model_copy(
+                    update={
+                        "indice": item.live_indice(p),
+                        "change": item.live_change(p),
+                    }
+                )
+                for p in item.placements
+            ],
             files=[ItemFileRead.from_junction(f) for f in item.files],
         )
 

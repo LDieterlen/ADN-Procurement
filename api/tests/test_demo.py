@@ -25,4 +25,5 @@ def test_demo_project_is_created_once_and_consistent(
         line["totalHtCents"] for line in summary["lines"] if line["counted"]
     )
     assert [row["key"] for row in summary["byZone"]] == ["Hébergement", "Zones communes", ""]
-    assert client.get(f"/api/v1/projects/{project.id}/exports/sheets.pdf").status_code == 200
+    sheets = client.post(f"/api/v1/projects/{project.id}/exports/sheets", json={})
+    assert sheets.status_code == 200, sheets.text

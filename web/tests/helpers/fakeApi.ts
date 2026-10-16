@@ -12,6 +12,7 @@ type FileRead = components['schemas']['FileRead']
 type ProjectRead = components['schemas']['ProjectRead']
 type LocationRead = components['schemas']['LocationRead']
 type ProjectItemRead = components['schemas']['ProjectItemRead']
+type PlacementRead = components['schemas']['PlacementRead']
 type ProjectSummaryRead = components['schemas']['ProjectSummaryRead']
 type SummaryRowRead = components['schemas']['SummaryRowRead']
 type BudgetLineRead = components['schemas']['BudgetLineRead']
@@ -21,6 +22,28 @@ type CaptureRead = components['schemas']['CaptureRead']
 type ChoiceRead = components['schemas']['ChoiceRead']
 type ProjectFileRead = components['schemas']['ProjectFileRead']
 type EventRead = components['schemas']['EventRead']
+type ListingProfileRead = components['schemas']['ListingProfileRead']
+type ListingColumn = ListingProfileRead['columns'][number]
+const LISTING_COLUMNS: ListingColumn[] = [
+  'photo',
+  'code',
+  'type',
+  'name',
+  'comments',
+  'link',
+  'reference',
+  'supplier',
+  'contact',
+  'dimensions',
+  'finish',
+  'family',
+  'usage',
+  'lead_time',
+  'quantity',
+  'amount',
+  'status',
+  'indice',
+]
 
 const NOW = '2026-10-10T12:00:00Z'
 const LATER = '2026-10-10T13:00:00Z'
@@ -50,7 +73,16 @@ export type FakeApi = {
   setting: SettingRead
   captures: CaptureRead[]
   choices: ChoiceRead[]
-  indiceHistory: { projectId: number; indice: string | null; changedAt: string | null; stamped: { item: ProjectItemRead; before: string | null }[] }[]
+  listingProfiles: ListingProfileRead[]
+  /** Diffusions (ADR-0022): the state of each code before it, to take the last one back. */
+  diffusions: {
+    projectId: number
+    number: number
+    before: { placement: PlacementRead; indice: string | null; shown: number | null }[]
+    firstItems: ProjectItemRead[]
+  }[]
+  /** code (placement id) → the article it showed at the last diffusion. */
+  shown: Map<number, number>
   exports: ProjectFileRead[]
   events: EventRead[]
   sequences: Record<string, number>
@@ -179,8 +211,10 @@ export function projectRow(p: Partial<ProjectRead>, id: number): ProjectRead {
     siteAddress: null,
     dueOn: null,
     notes: null,
-    indice: null,
-    indiceChangedAt: null,
+    diffusionCount: 0,
+    lastDiffusion: null,
+    procurementName: null,
+    procurementLogoFileId: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...p,
@@ -217,7 +251,7 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
     quoteIndice: null,
     quoteUrl: null,
     status: 'to_quote',
-    indice: null,
+    diffused: false,
     optionOfId: null,
     optionLetter: null,
     sortOrder: 0,
@@ -233,7 +267,19 @@ export function itemRow(i: Partial<ProjectItemRead>, id: number): ProjectItemRea
 
 /** `code` empty = the item's code (fixtures); the fake API gives real codes (ADR-0018). */
 export function placementRow(itemId: number, locationId: number | null, qtyMilli = 1000, code = '') {
-  return { id: placementSeq++, projectItemId: itemId, locationId, code, qtyMilli, sortOrder: 0, createdAt: NOW, updatedAt: NOW }
+  return {
+    id: placementSeq++,
+    projectItemId: itemId,
+    locationId,
+    code,
+    indice: null,
+    change: null,
+    diffused: false,
+    qtyMilli,
+    sortOrder: 0,
+    createdAt: NOW,
+    updatedAt: NOW,
+  }
 }
 
 /** Minimal multipart/form-data reader: the first `file` part, as bytes plus its filename. */
@@ -503,27 +549,21 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
     project.status = (body as { status: ProjectRead['status'] }).status
     return json(200, project)
   }
-  if (sub === 'indice' && method === 'POST') {
-    if (['closed', 'cancelled'].includes(project.status)) return error(409, 'conflict', 'Projet en lecture seule.')
-    const letter = project.indice ? String.fromCharCode(project.indice.charCodeAt(0) + 1) : 'A'
-    const stamped: { item: ProjectItemRead; before: string | null }[] = []
-    for (const item of state.items.filter((i) => i.projectId === project.id))
-      if (item.indice === null || project.indiceChangedAt === null || item.updatedAt > project.indiceChangedAt) {
-        stamped.push({ item, before: item.indice })
-        item.indice = letter
-      }
-    state.indiceHistory.push({ projectId: project.id, indice: project.indice, changedAt: project.indiceChangedAt, stamped })
-    project.indice = letter
-    project.indiceChangedAt = LATER
-    return json(200, project)
-  }
-  if (sub === 'indice' && method === 'DELETE') {
-    const index = state.indiceHistory.map((h) => h.projectId).lastIndexOf(project.id)
-    if (index < 0) return error(409, 'conflict', 'Aucun indice à retirer sur ce projet.')
-    const [last] = state.indiceHistory.splice(index, 1)
-    for (const { item, before } of last!.stamped) item.indice = before
-    project.indice = last!.indice
-    project.indiceChangedAt = last!.changedAt
+  if (sub === 'diffusions/last' && method === 'DELETE') {
+    const index = state.diffusions.map((d) => d.projectId).lastIndexOf(project.id)
+    if (index < 0) return error(409, 'conflict', 'Aucune diffusion à annuler sur ce projet.')
+    const [last] = state.diffusions.splice(index, 1)
+    for (const { placement, indice, shown } of last!.before) {
+      placement.indice = indice
+      placement.diffused = shown !== null
+      if (shown === null) state.shown.delete(placement.id)
+      else state.shown.set(placement.id, shown)
+    }
+    for (const item of last!.firstItems) item.diffused = false
+    for (const e of state.exports) if (e.projectId === project.id && e.diffusionNumber === last!.number) e.diffusionRevoked = true
+    const live = state.diffusions.filter((d) => d.projectId === project.id)
+    project.diffusionCount = live.length
+    project.lastDiffusion = live.length ? { id: live.length, number: live.at(-1)!.number, issuedAt: LATER } : null
     return json(200, project)
   }
   if (sub === 'project-items' && method === 'GET') {
@@ -551,18 +591,61 @@ function handleProjects(state: FakeApi, url: URL, method: string, rest: string |
       200,
       state.exports.filter((e) => e.projectId === project.id),
     )
-  if ((sub === 'exports/sheets.pdf' || sub === 'exports/list.pdf') && method === 'GET') {
-    const sheets = sub === 'exports/sheets.pdf'
-    const indice = sheets ? project.indice : null
-    const name = sheets ? `${project.code}-fiches${indice ? `-${indice}` : ''}-2026-10-10.pdf` : `${project.code}-listing-2026-10-10.pdf`
+  if (sub === 'exports/sheets' && method === 'POST') {
+    // « Fiches PDF » (ADR-0022): a diffusion moves the indices of the codes, then one PDF per paper.
+    const ask = (body ?? {}) as { diffuse?: boolean; papers?: ('color' | 'white')[]; includeOptions?: boolean }
+    let number: number | null = null
+    if (ask.diffuse) {
+      number = project.diffusionCount + 1
+      const before: { placement: PlacementRead; indice: string | null; shown: number | null }[] = []
+      const firstItems: ProjectItemRead[] = []
+      for (const item of state.items.filter((i) => i.projectId === project.id && i.kind === 'product' && i.status !== 'cancelled' && i.optionOfId === null)) {
+        for (const placement of item.placements) {
+          const shown = state.shown.get(placement.id) ?? null
+          before.push({ placement, indice: placement.indice, shown })
+          if (shown === null) placement.indice = null
+          else if (shown !== item.id) placement.indice = placement.indice ? String.fromCharCode(placement.indice.charCodeAt(0) + 1) : 'A'
+          state.shown.set(placement.id, item.id)
+          placement.diffused = true
+        }
+        if (!item.diffused) {
+          item.diffused = true
+          firstItems.push(item)
+        }
+      }
+      state.diffusions.push({ projectId: project.id, number, before, firstItems })
+      project.diffusionCount = number
+      project.lastDiffusion = { id: number, number, issuedAt: LATER }
+    }
+    const issued: ProjectFileRead[] = []
+    for (const paper of ask.papers ?? ['color']) {
+      const name = `${project.code}-fiches${number ? `-diffusion${number}` : ''}${paper === 'white' ? '-impression' : ''}-2026-10-10.pdf`
+      const row: ProjectFileRead = {
+        id: state.exports.length + 1,
+        projectId: project.id,
+        fileId: 900 + state.exports.length,
+        kind: 'sheets_pdf',
+        issuedAt: LATER,
+        diffusionNumber: number,
+        diffusionRevoked: false,
+        originalName: name,
+        sizeBytes: 4,
+      }
+      state.exports.unshift(row)
+      issued.push(row)
+    }
+    return json(200, issued)
+  }
+  if (sub === 'exports/list.pdf' && method === 'GET') {
     state.exports.unshift({
       id: state.exports.length + 1,
       projectId: project.id,
       fileId: 900 + state.exports.length,
-      kind: sheets ? 'sheets_pdf' : 'list_pdf',
+      kind: 'list_pdf',
       issuedAt: LATER,
-      indice,
-      originalName: name,
+      diffusionNumber: null,
+      diffusionRevoked: false,
+      originalName: `${project.code}-listing-2026-10-10.pdf`,
       sizeBytes: 4,
     })
     return new Response('%PDF', { status: 200, headers: { 'Content-Type': 'application/pdf' } })
@@ -872,8 +955,7 @@ function handleItems(state: FakeApi, method: string, rest: string | undefined, b
   }
   if (!sub && method === 'DELETE') {
     if (state.items.some((i) => i.optionOfId === item.id)) return error(409, 'conflict', "Cet article a des options : les supprimer ou en retenir une d'abord.")
-    if (project.indice !== null && (item.status !== 'to_quote' || state.events.some((e) => e.projectItemId === item.id && e.kind !== 'created')))
-      return error(409, 'conflict', "Après le premier indice, seul un article « à chiffrer » sans historique se supprime ; l'annuler sinon.")
+    if (item.diffused) return error(409, 'conflict', 'Cet article a déjà été diffusé : il ne se supprime plus, l’annuler.')
     state.items = state.items.filter((i) => i.id !== item.id)
     return new Response(null, { status: 204 })
   }
@@ -1167,12 +1249,14 @@ export function installFakeApi(
       agencyAddress: null,
       agencyEmail: null,
       agencyPhone: null,
+      agencyLogoFileId: null,
       extensionToken: null,
       createdAt: NOW,
       updatedAt: NOW,
     },
     captures: (seed.captures ?? []).map((c, i) => captureRow(c, i + 1)),
-    indiceHistory: [],
+    diffusions: [],
+    shown: new Map(),
     choices: (
       [
         ['family', 'custom', 'Pièce sur-mesure'],
@@ -1190,6 +1274,13 @@ export function installFakeApi(
         ['prestation', 'artisan', 'Artisan'],
       ] as const
     ).map(([list, code, name], i) => ({ id: i + 1, list, code, name, sortOrder: (i + 1) * 10, ...base })),
+    listingProfiles: (
+      [
+        ['Complet', [...LISTING_COLUMNS]],
+        ['Client', ['photo', 'code', 'type', 'name', 'dimensions', 'finish', 'quantity', 'status', 'indice']],
+        ['Achats', ['code', 'name', 'reference', 'supplier', 'quantity', 'amount']],
+      ] as const
+    ).map(([name, columns], i) => ({ id: i + 1, name, columns: [...columns], sortOrder: (i + 1) * 10, createdAt: NOW, updatedAt: NOW })),
     exports: [],
     lastBackupAt: null,
     backupDirOk: true,
@@ -1258,6 +1349,31 @@ export function installFakeApi(
       else if (choiceMatch[2] === 'unarchive') choice.archivedAt = null
       else if (method === 'PATCH') Object.assign(choice, body)
       return json(200, choice)
+    }
+    // Listing profiles (ADR-0023).
+    if (url.pathname === '/api/v1/listing-profiles/columns' && method === 'GET')
+      return json(
+        200,
+        LISTING_COLUMNS.map((key) => ({ key, label: key === 'name' ? 'Désignation' : key === 'quantity' ? 'Qté' : key })),
+      )
+    if (url.pathname === '/api/v1/listing-profiles' && method === 'GET') return json(200, state.listingProfiles)
+    if (url.pathname === '/api/v1/listing-profiles' && method === 'POST') {
+      const data = body as { name: string; columns: ListingColumn[] }
+      if (state.listingProfiles.some((p) => normalize(p.name) === normalize(data.name))) return validation('name', 'Un profil de listing porte déjà ce nom.')
+      const created = { id: state.listingProfiles.length + 10, name: data.name, columns: data.columns, sortOrder: 1000, createdAt: NOW, updatedAt: NOW }
+      state.listingProfiles.push(created)
+      return json(201, created)
+    }
+    const profileMatch = /^\/api\/v1\/listing-profiles\/(\d+)$/.exec(url.pathname)
+    if (profileMatch) {
+      const index = state.listingProfiles.findIndex((p) => p.id === Number(profileMatch[1]))
+      if (index < 0) return error(404, 'not_found', `Profil de listing n° ${profileMatch[1]} introuvable.`)
+      if (method === 'DELETE') {
+        state.listingProfiles.splice(index, 1)
+        return new Response(null, { status: 204 })
+      }
+      Object.assign(state.listingProfiles[index]!, body)
+      return json(200, state.listingProfiles[index])
     }
     if (url.pathname === '/api/v1/captures' && method === 'GET') return json(200, state.captures)
     const captureMatch = /^\/api\/v1\/captures\/(\d+)$/.exec(url.pathname)

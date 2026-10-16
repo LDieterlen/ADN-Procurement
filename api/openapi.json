@@ -1222,6 +1222,29 @@
         "title": "ClientUpdate",
         "type": "object"
       },
+      "DiffusionRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issuedAt": {
+            "title": "Issuedat",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "issuedAt"
+        ],
+        "title": "DiffusionRead",
+        "type": "object"
+      },
       "EventRead": {
         "properties": {
           "changedAt": {
@@ -1522,6 +1545,739 @@
           "logPath"
         ],
         "title": "HealthRead",
+        "type": "object"
+      },
+      "InstallationArticle": {
+        "description": "A placement as the sheet shows it: its code, its article and its photo.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "itemId": {
+            "title": "Itemid",
+            "type": "integer"
+          },
+          "markers": {
+            "items": {
+              "$ref": "#/components/schemas/InstallationMarker"
+            },
+            "title": "Markers",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "otherSheets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Othersheets",
+            "type": "array"
+          },
+          "outOfRoom": {
+            "title": "Outofroom",
+            "type": "boolean"
+          },
+          "photoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photofileid"
+          },
+          "placementId": {
+            "title": "Placementid",
+            "type": "integer"
+          },
+          "qtyMilli": {
+            "title": "Qtymilli",
+            "type": "integer"
+          },
+          "typeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typename"
+          }
+        },
+        "required": [
+          "placementId",
+          "itemId",
+          "code",
+          "name",
+          "typeName",
+          "qtyMilli",
+          "photoFileId",
+          "color",
+          "markers",
+          "otherSheets",
+          "outOfRoom"
+        ],
+        "title": "InstallationArticle",
+        "type": "object"
+      },
+      "InstallationCellIn": {
+        "properties": {
+          "markers": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/InstallationMarker"
+            },
+            "maxItems": 50,
+            "title": "Markers",
+            "type": "array"
+          },
+          "placementId": {
+            "minimum": 1.0,
+            "title": "Placementid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "placementId"
+        ],
+        "title": "InstallationCellIn",
+        "type": "object"
+      },
+      "InstallationLayout": {
+        "description": "A page's grid (`ffe.installation.layout`): column widths and row heights in px of the A3\npage, the block the plan spans, the article cells in reading order.",
+        "properties": {
+          "arrangement": {
+            "enum": [
+              "ring",
+              "sides",
+              "ends",
+              "right"
+            ],
+            "title": "Arrangement",
+            "type": "string"
+          },
+          "colWidths": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Colwidths",
+            "type": "array"
+          },
+          "perPage": {
+            "title": "Perpage",
+            "type": "integer"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/InstallationPlanBox"
+          },
+          "rowHeights": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Rowheights",
+            "type": "array"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/InstallationSlot"
+            },
+            "title": "Slots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "arrangement",
+          "perPage",
+          "colWidths",
+          "rowHeights",
+          "plan",
+          "slots"
+        ],
+        "title": "InstallationLayout",
+        "type": "object"
+      },
+      "InstallationMarker": {
+        "description": "A numbered dot on the plan, in thousandths of the plan as stored (before any rotation).",
+        "properties": {
+          "x": {
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "InstallationMarker",
+        "type": "object"
+      },
+      "InstallationPlanBox": {
+        "properties": {
+          "col": {
+            "title": "Col",
+            "type": "integer"
+          },
+          "cols": {
+            "title": "Cols",
+            "type": "integer"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "col",
+          "rows",
+          "cols"
+        ],
+        "title": "InstallationPlanBox",
+        "type": "object"
+      },
+      "InstallationPlanCreate": {
+        "properties": {
+          "fileId": {
+            "minimum": 1.0,
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "fileId"
+        ],
+        "title": "InstallationPlanCreate",
+        "type": "object"
+      },
+      "InstallationPlanRead": {
+        "properties": {
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "fileId": {
+            "title": "Fileid",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "sourceFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcefileid"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "name",
+          "fileId",
+          "sourceFileId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "InstallationPlanRead",
+        "type": "object"
+      },
+      "InstallationPlanUpdate": {
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "InstallationPlanUpdate",
+        "type": "object"
+      },
+      "InstallationSheetCreate": {
+        "properties": {
+          "arrangement": {
+            "default": "ring",
+            "enum": [
+              "ring",
+              "sides",
+              "ends",
+              "right"
+            ],
+            "title": "Arrangement",
+            "type": "string"
+          },
+          "colorByType": {
+            "default": false,
+            "title": "Colorbytype",
+            "type": "boolean"
+          },
+          "locationId": {
+            "minimum": 1.0,
+            "title": "Locationid",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "perPage": {
+            "default": 12,
+            "enum": [
+              8,
+              12,
+              16
+            ],
+            "title": "Perpage",
+            "type": "integer"
+          },
+          "planId": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planid"
+          },
+          "planRotation": {
+            "default": 0,
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "title": "Planrotation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "locationId",
+          "name"
+        ],
+        "title": "InstallationSheetCreate",
+        "type": "object"
+      },
+      "InstallationSheetDetail": {
+        "properties": {
+          "arrangement": {
+            "enum": [
+              "ring",
+              "sides",
+              "ends",
+              "right"
+            ],
+            "title": "Arrangement",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/InstallationArticle"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "colorByType": {
+            "title": "Colorbytype",
+            "type": "boolean"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCount": {
+            "title": "Itemcount",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/InstallationArticle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "layouts": {
+            "items": {
+              "$ref": "#/components/schemas/InstallationLayout"
+            },
+            "title": "Layouts",
+            "type": "array"
+          },
+          "locationId": {
+            "title": "Locationid",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pageCount": {
+            "title": "Pagecount",
+            "type": "integer"
+          },
+          "perPage": {
+            "title": "Perpage",
+            "type": "integer"
+          },
+          "planId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planid"
+          },
+          "planRotation": {
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "title": "Planrotation",
+            "type": "integer"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "locationId",
+          "planId",
+          "name",
+          "perPage",
+          "arrangement",
+          "planRotation",
+          "colorByType",
+          "sortOrder",
+          "itemCount",
+          "pageCount",
+          "createdAt",
+          "updatedAt",
+          "items",
+          "candidates",
+          "layouts"
+        ],
+        "title": "InstallationSheetDetail",
+        "type": "object"
+      },
+      "InstallationSheetItemsSet": {
+        "description": "The sheet's cells in order, saved at once: an article and its dots on the plan, or null\nfor a cell left empty.",
+        "properties": {
+          "cells": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/InstallationCellIn"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxItems": 800,
+            "title": "Cells",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "InstallationSheetItemsSet",
+        "type": "object"
+      },
+      "InstallationSheetRead": {
+        "properties": {
+          "arrangement": {
+            "enum": [
+              "ring",
+              "sides",
+              "ends",
+              "right"
+            ],
+            "title": "Arrangement",
+            "type": "string"
+          },
+          "colorByType": {
+            "title": "Colorbytype",
+            "type": "boolean"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "itemCount": {
+            "title": "Itemcount",
+            "type": "integer"
+          },
+          "locationId": {
+            "title": "Locationid",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pageCount": {
+            "title": "Pagecount",
+            "type": "integer"
+          },
+          "perPage": {
+            "title": "Perpage",
+            "type": "integer"
+          },
+          "planId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planid"
+          },
+          "planRotation": {
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "title": "Planrotation",
+            "type": "integer"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "integer"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "locationId",
+          "planId",
+          "name",
+          "perPage",
+          "arrangement",
+          "planRotation",
+          "colorByType",
+          "sortOrder",
+          "itemCount",
+          "pageCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "InstallationSheetRead",
+        "type": "object"
+      },
+      "InstallationSheetUpdate": {
+        "properties": {
+          "arrangement": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ring",
+                  "sides",
+                  "ends",
+                  "right"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrangement"
+          },
+          "colorByType": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Colorbytype"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "perPage": {
+            "anyOf": [
+              {
+                "enum": [
+                  8,
+                  12,
+                  16
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perpage"
+          },
+          "planId": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planid"
+          },
+          "planRotation": {
+            "anyOf": [
+              {
+                "enum": [
+                  0,
+                  90,
+                  180,
+                  270
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planrotation"
+          }
+        },
+        "title": "InstallationSheetUpdate",
+        "type": "object"
+      },
+      "InstallationSlot": {
+        "properties": {
+          "col": {
+            "title": "Col",
+            "type": "integer"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "col"
+        ],
+        "title": "InstallationSlot",
         "type": "object"
       },
       "ItemFileAttach": {
@@ -1836,6 +2592,214 @@
           "placements"
         ],
         "title": "LineAmountsRead",
+        "type": "object"
+      },
+      "ListingColumnRead": {
+        "properties": {
+          "key": {
+            "enum": [
+              "photo",
+              "code",
+              "type",
+              "name",
+              "comments",
+              "link",
+              "reference",
+              "supplier",
+              "contact",
+              "dimensions",
+              "finish",
+              "family",
+              "usage",
+              "lead_time",
+              "quantity",
+              "amount",
+              "status",
+              "indice"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ListingColumnRead",
+        "type": "object"
+      },
+      "ListingProfileCreate": {
+        "properties": {
+          "columns": {
+            "items": {
+              "enum": [
+                "photo",
+                "code",
+                "type",
+                "name",
+                "comments",
+                "link",
+                "reference",
+                "supplier",
+                "contact",
+                "dimensions",
+                "finish",
+                "family",
+                "usage",
+                "lead_time",
+                "quantity",
+                "amount",
+                "status",
+                "indice"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "columns"
+        ],
+        "title": "ListingProfileCreate",
+        "type": "object"
+      },
+      "ListingProfileRead": {
+        "properties": {
+          "columns": {
+            "items": {
+              "enum": [
+                "photo",
+                "code",
+                "type",
+                "name",
+                "comments",
+                "link",
+                "reference",
+                "supplier",
+                "contact",
+                "dimensions",
+                "finish",
+                "family",
+                "usage",
+                "lead_time",
+                "quantity",
+                "amount",
+                "status",
+                "indice"
+              ],
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sortOrder": {
+            "title": "Sortorder",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "columns",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ListingProfileRead",
+        "type": "object"
+      },
+      "ListingProfileUpdate": {
+        "properties": {
+          "columns": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "photo",
+                    "code",
+                    "type",
+                    "name",
+                    "comments",
+                    "link",
+                    "reference",
+                    "supplier",
+                    "contact",
+                    "dimensions",
+                    "finish",
+                    "family",
+                    "usage",
+                    "lead_time",
+                    "quantity",
+                    "amount",
+                    "status",
+                    "indice"
+                  ],
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sortOrder": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sortorder"
+          }
+        },
+        "title": "ListingProfileUpdate",
         "type": "object"
       },
       "LocationCreate": {
@@ -2187,6 +3151,21 @@
       },
       "PlacementRead": {
         "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new",
+                  "revised"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
           "code": {
             "title": "Code",
             "type": "string"
@@ -2195,9 +3174,25 @@
             "title": "Createdat",
             "type": "string"
           },
+          "diffused": {
+            "default": false,
+            "title": "Diffused",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indice"
           },
           "locationId": {
             "anyOf": [
@@ -2232,6 +3227,7 @@
           "projectItemId",
           "locationId",
           "code",
+          "indice",
           "qtyMilli",
           "sortOrder",
           "createdAt",
@@ -2844,6 +3840,29 @@
             ],
             "title": "Notes"
           },
+          "procurementLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementlogofileid"
+          },
+          "procurementName": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementname"
+          },
           "siteAddress": {
             "anyOf": [
               {
@@ -2866,6 +3885,22 @@
       },
       "ProjectFileRead": {
         "properties": {
+          "diffusionNumber": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diffusionnumber"
+          },
+          "diffusionRevoked": {
+            "default": false,
+            "title": "Diffusionrevoked",
+            "type": "boolean"
+          },
           "fileId": {
             "title": "Fileid",
             "type": "integer"
@@ -2873,17 +3908,6 @@
           "id": {
             "title": "Id",
             "type": "integer"
-          },
-          "indice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice"
           },
           "issuedAt": {
             "title": "Issuedat",
@@ -3244,6 +4268,10 @@
             "title": "Currency",
             "type": "string"
           },
+          "diffused": {
+            "title": "Diffused",
+            "type": "boolean"
+          },
           "dimensions": {
             "anyOf": [
               {
@@ -3295,17 +4323,6 @@
           "id": {
             "title": "Id",
             "type": "integer"
-          },
-          "indice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice"
           },
           "itemCode": {
             "title": "Itemcode",
@@ -3499,7 +4516,7 @@
           "quoteIndice",
           "quoteUrl",
           "status",
-          "indice",
+          "diffused",
           "optionOfId",
           "optionLetter",
           "sortOrder",
@@ -3801,6 +4818,11 @@
             "title": "Createdat",
             "type": "string"
           },
+          "diffusionCount": {
+            "default": 0,
+            "title": "Diffusioncount",
+            "type": "integer"
+          },
           "dueOn": {
             "anyOf": [
               {
@@ -3816,31 +4838,19 @@
             "title": "Id",
             "type": "integer"
           },
-          "indice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice"
-          },
-          "indiceChangedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indicechangedat"
-          },
           "itemCount": {
             "title": "Itemcount",
             "type": "integer"
+          },
+          "lastDiffusion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiffusionRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "title": "Name",
@@ -3856,6 +4866,28 @@
               }
             ],
             "title": "Notes"
+          },
+          "procurementLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementlogofileid"
+          },
+          "procurementName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementname"
           },
           "siteAddress": {
             "anyOf": [
@@ -3897,8 +4929,8 @@
           "siteAddress",
           "dueOn",
           "notes",
-          "indice",
-          "indiceChangedAt",
+          "procurementName",
+          "procurementLogoFileId",
           "createdAt",
           "updatedAt",
           "budgetCents",
@@ -3922,6 +4954,11 @@
             "title": "Createdat",
             "type": "string"
           },
+          "diffusionCount": {
+            "default": 0,
+            "title": "Diffusioncount",
+            "type": "integer"
+          },
           "dueOn": {
             "anyOf": [
               {
@@ -3937,27 +4974,15 @@
             "title": "Id",
             "type": "integer"
           },
-          "indice": {
+          "lastDiffusion": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/DiffusionRead"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Indice"
-          },
-          "indiceChangedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indicechangedat"
+            ]
           },
           "name": {
             "title": "Name",
@@ -3973,6 +4998,28 @@
               }
             ],
             "title": "Notes"
+          },
+          "procurementLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementlogofileid"
+          },
+          "procurementName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementname"
           },
           "siteAddress": {
             "anyOf": [
@@ -4010,8 +5057,8 @@
           "siteAddress",
           "dueOn",
           "notes",
-          "indice",
-          "indiceChangedAt",
+          "procurementName",
+          "procurementLogoFileId",
           "createdAt",
           "updatedAt"
         ],
@@ -4219,6 +5266,29 @@
             ],
             "title": "Notes"
           },
+          "procurementLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementlogofileid"
+          },
+          "procurementName": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procurementname"
+          },
           "siteAddress": {
             "anyOf": [
               {
@@ -4258,6 +5328,17 @@
               }
             ],
             "title": "Agencyemail"
+          },
+          "agencyLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencylogofileid"
           },
           "agencyName": {
             "title": "Agencyname",
@@ -4353,6 +5434,17 @@
             ],
             "title": "Agencyemail"
           },
+          "agencyLogoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agencylogofileid"
+          },
           "agencyName": {
             "anyOf": [
               {
@@ -4392,6 +5484,50 @@
           }
         },
         "title": "SettingUpdate",
+        "type": "object"
+      },
+      "SheetsIssue": {
+        "description": "« Fiches PDF » (ADR-0022): an official diffusion or a working document, on one or two\npapers (tinted for the screen, white for a printer), options included or not.",
+        "properties": {
+          "diffuse": {
+            "default": false,
+            "title": "Diffuse",
+            "type": "boolean"
+          },
+          "hideAgencyLogo": {
+            "default": false,
+            "title": "Hideagencylogo",
+            "type": "boolean"
+          },
+          "hideAgencyName": {
+            "default": false,
+            "title": "Hideagencyname",
+            "type": "boolean"
+          },
+          "hideStudio": {
+            "default": false,
+            "title": "Hidestudio",
+            "type": "boolean"
+          },
+          "includeOptions": {
+            "default": false,
+            "title": "Includeoptions",
+            "type": "boolean"
+          },
+          "papers": {
+            "items": {
+              "enum": [
+                "color",
+                "white"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Papers",
+            "type": "array"
+          }
+        },
+        "title": "SheetsIssue",
         "type": "object"
       },
       "StatusChange": {
@@ -6223,6 +7359,500 @@
         ]
       }
     },
+    "/api/v1/installation-plans/{plan_id}": {
+      "delete": {
+        "operationId": "deleteInstallationPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Plan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Plan",
+        "tags": [
+          "installation"
+        ]
+      },
+      "patch": {
+        "operationId": "updateInstallationPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Plan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationPlanUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationPlanRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Plan",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/installation-sheets/{sheet_id}": {
+      "delete": {
+        "operationId": "deleteInstallationSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sheet_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Sheet Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Sheet",
+        "tags": [
+          "installation"
+        ]
+      },
+      "get": {
+        "operationId": "getInstallationSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sheet_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Sheet Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationSheetDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Sheet",
+        "tags": [
+          "installation"
+        ]
+      },
+      "patch": {
+        "operationId": "updateInstallationSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sheet_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Sheet Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationSheetUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationSheetDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Sheet",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/installation-sheets/{sheet_id}/items": {
+      "put": {
+        "operationId": "setInstallationSheetItems",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sheet_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Sheet Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationSheetItemsSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationSheetDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Items",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/installation-sheets/{sheet_id}/pdf": {
+      "get": {
+        "operationId": "exportInstallationSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sheet_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Sheet Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "print",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Print",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Sheet",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/listing-profiles": {
+      "get": {
+        "operationId": "listListingProfiles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ListingProfileRead"
+                  },
+                  "title": "Response Listlistingprofiles",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Profiles",
+        "tags": [
+          "listing-profiles"
+        ]
+      },
+      "post": {
+        "operationId": "createListingProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingProfileCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Profile",
+        "tags": [
+          "listing-profiles"
+        ]
+      }
+    },
+    "/api/v1/listing-profiles/columns": {
+      "get": {
+        "description": "The column catalogue, in printing order, with its French labels.",
+        "operationId": "listListingColumns",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ListingColumnRead"
+                  },
+                  "title": "Response Listlistingcolumns",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Columns",
+        "tags": [
+          "listing-profiles"
+        ]
+      }
+    },
+    "/api/v1/listing-profiles/{profile_id}": {
+      "delete": {
+        "operationId": "deleteListingProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Profile Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Profile",
+        "tags": [
+          "listing-profiles"
+        ]
+      },
+      "patch": {
+        "operationId": "updateListingProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Profile Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Profile",
+        "tags": [
+          "listing-profiles"
+        ]
+      }
+    },
     "/api/v1/locations/{location_id}": {
       "delete": {
         "operationId": "deleteLocation",
@@ -7861,6 +9491,50 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/diffusions/last": {
+      "delete": {
+        "description": "Takes the last official diffusion back (ADR-0022): indices and rules as before it.",
+        "operationId": "revertLastDiffusion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revert Last Diffusion",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/exports": {
       "get": {
         "operationId": "listProjectExports",
@@ -7910,6 +9584,7 @@
     },
     "/api/v1/projects/{project_id}/exports/list.pdf": {
       "get": {
+        "description": "Listing PDF: the columns of listing profile `profile` (ADR-0023), all of them without;\nthe options only with `options=true`.",
         "operationId": "exportList",
         "parameters": [
           {
@@ -7920,6 +9595,43 @@
               "minimum": 1,
               "title": "Project Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "print",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Print",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Profile"
+            }
+          },
+          {
+            "in": "query",
+            "name": "options",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Options",
+              "type": "boolean"
             }
           }
         ],
@@ -7947,9 +9659,10 @@
         ]
       }
     },
-    "/api/v1/projects/{project_id}/exports/sheets.pdf": {
-      "get": {
-        "operationId": "exportSheets",
+    "/api/v1/projects/{project_id}/exports/sheets": {
+      "post": {
+        "description": "« Fiches PDF » (ADR-0022): issues the sheets on each paper asked, as an official diffusion\n(indices moved) or a working document; the PDFs are then downloaded from `/files/{id}`.",
+        "operationId": "issueSheets",
         "parameters": [
           {
             "in": "path",
@@ -7959,6 +9672,288 @@
               "minimum": 1,
               "title": "Project Id",
               "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetsIssue"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectFileRead"
+                  },
+                  "title": "Response Issuesheets",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Sheets",
+        "tags": [
+          "exports"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/installation-plans": {
+      "get": {
+        "operationId": "listInstallationPlans",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstallationPlanRead"
+                  },
+                  "title": "Response Listinstallationplans",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Plans",
+        "tags": [
+          "installation"
+        ]
+      },
+      "post": {
+        "description": "`fileId`: an uploaded image, or a PDF whose first page is drawn.",
+        "operationId": "createInstallationPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationPlanCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationPlanRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Plan",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/installation-sheets": {
+      "get": {
+        "operationId": "listInstallationSheets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstallationSheetRead"
+                  },
+                  "title": "Response Listinstallationsheets",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sheets",
+        "tags": [
+          "installation"
+        ]
+      },
+      "post": {
+        "operationId": "createInstallationSheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationSheetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationSheetDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Sheet",
+        "tags": [
+          "installation"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/installation.pdf": {
+      "get": {
+        "description": "Every sheet of the project, or of one room with `locationId`.",
+        "operationId": "exportInstallation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "print",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Print",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locationId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Locationid"
             }
           }
         ],
@@ -7980,95 +9975,9 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Export Sheets",
+        "summary": "Export Installation",
         "tags": [
-          "exports"
-        ]
-      }
-    },
-    "/api/v1/projects/{project_id}/indice": {
-      "delete": {
-        "description": "Takes the last declaration back (wrong click): previous letter on the project and its articles.",
-        "operationId": "revertProjectIndice",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "minimum": 1,
-              "title": "Project Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Revert Project Indice",
-        "tags": [
-          "projects"
-        ]
-      },
-      "post": {
-        "description": "Declares the next diffusion letter; the articles changed since the previous one take it.",
-        "operationId": "nextProjectIndice",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "minimum": 1,
-              "title": "Project Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Next Project Indice",
-        "tags": [
-          "projects"
+          "installation"
         ]
       }
     },

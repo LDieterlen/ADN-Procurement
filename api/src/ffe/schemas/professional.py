@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 ProfessionalKind = Annotated[str, Field(min_length=1, max_length=40)]  # code of a « prestation »
 Name = Annotated[str, Field(min_length=1, max_length=200)]
@@ -25,10 +25,6 @@ STRIPPED = (
 )
 
 
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
-
-
 class ProfessionalCreate(BaseSchema):
     name: Name
     kind: ProfessionalKind = "manufacturer"
@@ -46,7 +42,7 @@ class ProfessionalCreate(BaseSchema):
     @field_validator(*STRIPPED, mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ProfessionalUpdate(BaseSchema):
@@ -68,12 +64,12 @@ class ProfessionalUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator(*STRIPPED[1:], mode="before")
     @classmethod
     def strip_text(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
 
 class ProfessionalRead(BaseSchema):

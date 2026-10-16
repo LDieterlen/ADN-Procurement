@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ffe.deps import Clock
 from ffe.errors import ConflictError, ErrorDetail, NotFoundError, ValidationAppError
 from ffe.i18n import fr
-from ffe.models import Location
+from ffe.models import BudgetLine, InstallationSheet, Location, ProjectItemPlacement
 from ffe.schemas.location import LocationCreate, LocationReorder, LocationUpdate
 from ffe.services.base import stamp
 from ffe.services.common import archive as common_archive
@@ -78,6 +78,15 @@ def update_location(
         changes = data.model_dump(exclude_unset=True)
         if "code" in changes and changes["code"].lower() != location.code.lower():
             _check_code_free(session, location.project_id, changes["code"], location_id)
+            if session.scalar(  # its codes were diffused: they never change (ADR-0022)
+                select(func.count())
+                .select_from(ProjectItemPlacement)
+                .where(
+                    ProjectItemPlacement.location_id == location_id,
+                    ProjectItemPlacement.diffused_item_id.is_not(None),
+                )
+            ):
+                raise ConflictError(fr.LOCATION_CODE_DIFFUSED)
         old_code = location.code
         for field_name, value in changes.items():
             setattr(location, field_name, value)
@@ -108,6 +117,17 @@ def delete_location(session: Session, location_id: int) -> None:
     with session.begin():
         location = get_location(session, location_id)
         ensure_open(get_project(session, location.project_id))
+        # Named refusals rather than the database's generic one (RESTRICT foreign keys).
+        for model, column, message in (
+            (ProjectItemPlacement, ProjectItemPlacement.location_id, fr.LOCATION_HAS_PLACEMENTS),
+            (InstallationSheet, InstallationSheet.location_id, fr.LOCATION_HAS_SHEETS),
+            (BudgetLine, BudgetLine.location_id, fr.LOCATION_HAS_BUDGET),
+        ):
+            used = session.scalar(
+                select(func.count()).select_from(model).where(column == location_id)
+            )
+            if used:
+                raise ConflictError(message.format(count=used))
         session.delete(location)
 
 

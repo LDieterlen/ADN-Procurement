@@ -5,7 +5,7 @@
 // asks first (2026-10-15). The supplier can be created in place.
 import { useEffect, useRef, useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
-import { Link, useBlocker, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useProjectSummary } from '../../api/queries/budget'
 import { useCategories } from '../../api/queries/category'
@@ -27,12 +27,13 @@ import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { centsToText } from '../../components/forms/MoneyField'
 import { milliToText } from '../../components/forms/QuantityField'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { Card, Dot, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Pill } from '../../components/ui/Pill'
 import { useToast } from '../../components/ui/Toast'
+import { UnsavedChanges, useUnsavedGuard } from '../../components/ui/UnsavedChanges'
 import { NewSupplierModal } from './InlineCreate'
 import { ItemFiles } from './ItemFiles'
 import { ItemHistory } from './ItemHistory'
@@ -98,7 +99,11 @@ export function ItemPage() {
   const leaving = useRef(false) // set before a navigation that must not be stopped (after a delete)
   const [version, setVersion] = useState(0) // bumped when the page reloads the article: resets the typed quantities
 
-  const original = item.data ? draftOf(item.data) : null
+  // The draft is compared with the article it started from, never with a newer copy of it: a
+  // refetch (the article became an option elsewhere, lost its placements…) must not make the old
+  // draft look like a change and send stale placements.
+  const [startedFrom, setStartedFrom] = useState<ProjectItemRead | null>(item.data ?? null)
+  const original = startedFrom ? draftOf(startedFrom) : null
   const draftDirty = draft !== null && original !== null && !sameJson(draft, original)
   const dirty = form.formState.isDirty || draftDirty
 
@@ -113,6 +118,7 @@ export function ItemPage() {
       loaded.current = item.data.id
       form.reset(fromItem(item.data))
       setDraft(draftOf(item.data))
+      setStartedFrom(item.data)
       setVersion((v) => v + 1)
     }
   }, [item.data, form])
@@ -122,17 +128,8 @@ export function ItemPage() {
       if (item.data && field in fromItem(item.data)) form.setError(field as Path<ItemFormValues>, { type: 'server', message: detail.message })
     }
   }, [serverErrors, form, item.data])
-  // Closing the tab or reloading with pending changes: the browser's own warning.
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
   const readOnly = project.data ? CLOSED_STATUSES.includes(project.data.status) : false
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => dirty && !readOnly && !leaving.current && currentLocation.pathname !== nextLocation.pathname,
-  )
+  const blocker = useUnsavedGuard(dirty && !readOnly, leaving)
 
   // An article that does not load (deleted, wrong address, API stopped) says so, never « Chargement… » forever.
   if (project.isError || item.isError) {
@@ -155,8 +152,8 @@ export function ItemPage() {
   const all = projectItems.data ?? []
   const base = it.optionOfId !== null ? all.find((i) => i.id === it.optionOfId) : undefined
   const itemOptions = all.filter((i) => i.optionOfId === it.id)
-  // Before the project's first indice any article can be deleted (ADR-0021); after, only a new one.
-  const deletable = !readOnly && itemOptions.length === 0 && (p.indice === null || it.status === 'to_quote')
+  // An article never presented in a diffusion can be deleted; a diffused one is cancelled (ADR-0022).
+  const deletable = !readOnly && itemOptions.length === 0 && !it.diffused
   // Always from the latest draft: an upload finishing later never undoes the changes made meanwhile.
   const patch = (change: Partial<Draft>) => setDraft((prev) => (prev ? { ...prev, ...change } : prev))
 
@@ -168,8 +165,10 @@ export function ItemPage() {
     await form.handleSubmit(async (values) => {
       const data: ItemSave = { attachOptions: d.attach }
       if (form.formState.isDirty) data.sheet = changedFields(toUpdatePayload(values, it), Object.keys(form.formState.dirtyFields))
-      if (d.status.status !== it.status) data.status = d.status
-      if (!sameJson(d.placements, original?.placements))
+      // Against the article the draft started from, not a later read (another tab's change kept).
+      if (d.status.status !== (original?.status.status ?? it.status)) data.status = d.status
+      // An option or a fee has no placement of its own: never sent.
+      if (it.kind === 'product' && it.optionOfId === null && !sameJson(d.placements, original?.placements))
         data.placements = d.placements.map((pl) => ({ id: pl.id, locationId: pl.locationId, qtyMilli: pl.qtyMilli, sortOrder: pl.sortOrder }))
       if (!sameJson(d.files, original?.files))
         data.files = d.files.map((f, index) => ({ fileId: f.fileId, kind: f.kind, isPrimary: f.isPrimary, caption: f.caption, sortOrder: index }))
@@ -178,6 +177,7 @@ export function ItemPage() {
         const result = await save.mutateAsync({ id: it.id, data })
         form.reset(fromItem(result))
         setDraft(draftOf(result))
+        setStartedFrom(result)
         setVersion((v) => v + 1)
         toast.show({ kind: 'success', message: 'Article enregistré.' })
         saved = true
@@ -193,6 +193,7 @@ export function ItemPage() {
   function discard() {
     form.reset(fromItem(it))
     setDraft(draftOf(it))
+    setStartedFrom(it)
     setVersion((v) => v + 1)
     setBanner(null)
   }
@@ -232,7 +233,7 @@ export function ItemPage() {
             ) : (
               <StatusSelect item={it} readOnly={readOnly} value={d.status.status} onChange={(status, note) => patch({ status: { status, note } })} />
             )}
-            {d.status.status !== it.status && <span className="text-xs text-warn">à enregistrer</span>}
+            {d.status.status !== (original?.status.status ?? it.status) && <span className="text-xs text-warn">à enregistrer</span>}
             {amounts && (
               <>
                 <Dot />
@@ -242,18 +243,18 @@ export function ItemPage() {
                 </span>
               </>
             )}
-            {it.indice && (
+            {it.diffused && (
               <>
                 <Dot />
-                <span>Indice {it.indice}</span>
+                <span>Diffusé</span>
               </>
             )}
           </>
         }
         actions={
           <>
-            <Link to={`/projects/${p.id}`}>
-              <Button variant="ghost">Retour au projet</Button>
+            <Link to={`/projects/${p.id}`} className={buttonClass('ghost')}>
+              Retour au projet
             </Link>
             {saveButton}
           </>
@@ -323,7 +324,7 @@ export function ItemPage() {
                   form={form}
                   kind={it.kind}
                   categories={(categories.data ?? [])
-                    .filter((c) => it.optionOfId === null || c.id === it.categoryId) // an option keeps its base's type
+                    .filter((c) => (it.optionOfId === null && !it.diffused) || c.id === it.categoryId) // an option, or a diffused article (frozen code), keeps its type
                     .map((c) => ({ id: c.id, label: `${c.code} — ${c.name}` }))}
                   suppliers={options(suppliers.data?.items.filter((s) => s.archivedAt === null || s.id === it.supplierId))}
                   onCreateSupplier={readOnly ? undefined : () => setModal('supplier')}
@@ -373,21 +374,6 @@ export function ItemPage() {
           )}
         </div>
       </div>
-      {dirty && !readOnly && (
-        <div
-          role="region"
-          aria-label="Modifications non enregistrées"
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-6 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur"
-        >
-          <div className="mx-auto flex max-w-[1240px] items-center gap-3">
-            <span className="text-sm text-ink-2">Modifications non enregistrées.</span>
-            <Button variant="ghost" className="ml-auto" onClick={discard}>
-              Annuler les modifications
-            </Button>
-            {saveButton}
-          </div>
-        </div>
-      )}
       <NewSupplierModal
         open={modal === 'supplier'}
         onClose={() => setModal(null)}
@@ -397,25 +383,9 @@ export function ItemPage() {
           toast.show({ kind: 'success', message: 'Fournisseur créé.' })
         }}
       />
-      <ConfirmDialog
-        open={blocker.state === 'blocked'}
-        title="Modifications non enregistrées"
-        actions={[
-          {
-            label: 'Enregistrer et quitter',
-            variant: 'primary',
-            onClick: () =>
-              void saveAll().then((ok) => {
-                if (ok) blocker.proceed?.()
-                else blocker.reset?.()
-              }),
-          },
-          { label: 'Quitter sans enregistrer', variant: 'danger', onClick: () => blocker.proceed?.() },
-          { label: 'Rester sur la page', onClick: () => blocker.reset?.() },
-        ]}
-      >
+      <UnsavedChanges guarded={dirty && !readOnly} blocker={blocker} saveButton={saveButton} onDiscard={discard} onSave={saveAll}>
         Les modifications de cet article ne sont pas enregistrées.
-      </ConfirmDialog>
+      </UnsavedChanges>
       <ConfirmDialog
         open={confirmDelete}
         title={`Supprimer ${it.itemCode} ?`}
@@ -439,9 +409,9 @@ export function ItemPage() {
           { label: 'Annuler', onClick: () => setConfirmDelete(false) },
         ]}
       >
-        {p.indice === null
-          ? 'Avant le premier indice, tout article se supprime ; ses codes sont libérés et les suivants remontent.'
-          : "Possible tant que l'article est « à chiffrer » et sans historique ; sinon, l'annuler."}
+        {p.diffusionCount === 0
+          ? 'Avant la première diffusion, tout article se supprime ; ses codes sont libérés et les suivants remontent.'
+          : 'Cet article n’a encore figuré dans aucune diffusion : il se supprime ; son code reste libre pour le prochain article.'}
       </ConfirmDialog>
     </section>
   )

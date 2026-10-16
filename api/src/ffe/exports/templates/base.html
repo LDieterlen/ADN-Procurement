@@ -1,24 +1,26 @@
+{# The paper: warm and tinted on screen, plain white for a printer (`printable`, 2026-10-15). #}
+{% set paper = "#ffffff" if printable else "#fbfaf7" %}
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <title>{{ title }}</title>
 <style>
-  /* Design « Fiche déco 1b Catalogue », v2 (references/Fiche deco/Spec fiche 1b.md, 2026-10-15) : palette
-     chaude, Newsreader pour les titres, IBM Plex Sans pour le texte, IBM Plex Mono pour les codes et les libellés. Unités en px :
-     1 px = 1/96 in, la page A4 fait 794 × 1123 px, comme la maquette. */
+  /* Design « Fiche déco 1b Catalogue », v2 (references/Fiche deco/Spec fiche 1b.md, 2026-10-15): a warm
+     palette, Newsreader for the titles, IBM Plex Sans for the text, IBM Plex Mono for codes and labels. Units in px:
+     1 px = 1/96 in, an A4 page is 794 × 1123 px, as in the mock-up (A3 landscape for the installation pages). */
   @font-face { font-family: "Newsreader"; src: url("{{ assets_url }}/Newsreader[opsz,wght].ttf"); font-weight: 200 800; }
   @font-face { font-family: "IBM Plex Sans"; src: url("{{ assets_url }}/IBMPlexSans[wdth,wght].ttf"); font-weight: 100 700; }
   @font-face { font-family: "IBM Plex Mono"; src: url("{{ assets_url }}/IBMPlexMono-Regular.ttf"); font-weight: 400; }
   @font-face { font-family: "IBM Plex Mono"; src: url("{{ assets_url }}/IBMPlexMono-Medium.ttf"); font-weight: 500; }
   @page {
-    size: A4{% if landscape %} landscape{% endif %};
+    size: {{ page_size | default("A4") }}{% if landscape %} landscape{% endif %};
     margin: 36px 44px 40px;
-    background: #fbfaf7;
-    @bottom-left { content: "{{ footer }}"; font: 400 10px "IBM Plex Sans", sans-serif; color: #a39b91; vertical-align: top; padding-top: 6px; }
+    background: {{ paper }};
+    @bottom-left { content: "{{ footer | replace('\\', '\\\\') | replace('"', '\\"') | safe }}"; font: 400 10px "IBM Plex Sans", sans-serif; color: #a39b91; vertical-align: top; padding-top: 6px; }
     @bottom-right { content: "page " counter(page) " / " counter(pages); font: 400 10px "IBM Plex Sans", sans-serif; color: #a39b91; vertical-align: top; padding-top: 6px; }
   }
-  html { background: #fbfaf7; }
+  html { background: {{ paper }}; }
   body { font-family: "IBM Plex Sans", "DejaVu Sans", sans-serif; font-size: 13px; line-height: 1.4; color: #1c1a17; margin: 0; }
   a { color: #6d4a3a; text-decoration: none; }
   h1 { margin: 0; font: 500 36px/1.1 "Newsreader", serif; letter-spacing: -0.01em; }
@@ -32,11 +34,23 @@
   table { width: 100%; border-collapse: collapse; }
   td, th { vertical-align: top; }
 
-  /* Running head */
-  .head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1.5px solid #1c1a17; }
-  .head .brand { display: flex; align-items: center; gap: 10px; font: 600 12px "IBM Plex Sans", sans-serif; letter-spacing: 0.14em; }
-  .head .brand img { width: 30px; height: 30px; }
-  .head .where { font-size: 11px; color: #6b645c; text-align: right; line-height: 1.5; }
+  /* « Racoon Studio » centred in the bottom margin of every sheet page: a fixed box repeats on each
+     page; the logo and the two lines « RACOON / STUDIO » are centred on each other. */
+  .studio-mark { position: fixed; left: 0; right: 0; bottom: -20px; display: flex; justify-content: center; align-items: center; gap: 6px; }
+  .studio-mark img { width: 15px; height: 15px; }
+  .studio-mark span { font: 400 6.5px/1.15 "IBM Plex Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #a39b91; }
+  /* Running head of the sheets (2026-10-15, _head.html): the designer at left, the project in the
+     middle, the procurement company at right; three equal columns so the project name stays centred. */
+  .sheet-head { width: 100%; table-layout: fixed; border-collapse: collapse; border-bottom: 1.5px solid #1c1a17; }
+  .sheet-head td { height: 40px; padding: 0 0 12px; vertical-align: middle; }
+  .sheet-head td.side { width: 30%; }
+  .sheet-head img { max-width: 120px; max-height: 38px; vertical-align: middle; }
+  .sheet-head .project { text-align: center; }
+  .sheet-head .project .name { font: 500 16px/1.15 "Newsreader", serif; }
+  .sheet-head .project .sub { margin-top: 2px; font-size: 10px; color: #6b645c; }
+  .sheet-head .procurement { text-align: right; font: 600 11px "IBM Plex Sans", sans-serif; }
+  .sheet-head .procurement span { vertical-align: middle; }
+  .sheet-head .procurement span + img { margin-left: 10px; }
 
   /* Cover */
   .cover { height: 1040px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -51,6 +65,7 @@
   .list td { padding: 8px 8px 8px 0; border-bottom: 1px solid #e4e0d9; font-size: 12px; }
   .list tr.location td { padding-top: 18px; padding-bottom: 6px; border-bottom: 1px solid #1c1a17; font-weight: 600; font-size: 12.5px; }
   .list tr.location .where { font-weight: 400; color: #6b645c; }
+  .list tbody tr { break-inside: avoid; }  /* a row never cut between two pages */
   .list td.code { font: 400 11.5px "IBM Plex Mono", monospace; white-space: nowrap; }
   .list td.num, .list th.num { text-align: right; white-space: nowrap; }
   .list td.center, .list th.center { text-align: center; }
@@ -74,20 +89,26 @@
   .titling .meta span { margin-right: 18px; }
   .titling .meta strong { color: #1c1a17; font-weight: 600; }
   .loc { background: #2a2420; color: #fbfaf7; padding: 16px 18px; }
-  /* An option (ADR-0021) on the same plain paper, told apart by one colour, terracotta, used as a
-     thread: an edge strip along the page (like a divider tab), a filled tag naming it, the location
-     box in that colour instead of the dark brown; in the lists, its row is tinted and marked on
-     its left edge. */
-  .sheet.option::before { content: ""; position: absolute; left: -44px; top: -36px; width: 10px; height: 1123px; background: #b0623e; }
-  .option-kicker { margin-bottom: 10px; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #b0623e; }
-  .option-kicker .tag { display: inline-block; padding: 4px 9px 3px; margin-right: 9px; background: #b0623e; color: #fbfaf7; }
-  .sheet.option .loc { background: #b0623e; }
-  .sheet.option .loc .label { color: #f3d9cc; }
-  .sheet.option .loc .sub { color: #f8e7de; }
-  tr.option td { background: #f6ece6; }  /* lists only: the sheets keep one plain paper */
-  tr.option td:first-child { border-left: 3px solid #b0623e; padding-left: 8px; }
-  tr.option td.ffe { padding-left: 14px; color: #6b645c; }
-  .opt-name { font: 500 9.5px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #b0623e; margin-right: 6px; }
+  /* Marks of a sheet (2026-10-16), one system and one colour each, muted to the paper (slate blue,
+     sage green: told apart by hue and lightness), never red nor orange: a strip along the page edge and a tag above the title; the location box
+     keeps its colour. « Nouveau » (blue): a code shown for the first time since the previous
+     diffusion; « Modifié » (sage green): its product changed, new indice; option (warm grey,
+     ADR-0021): an alternative. In the lists: the row marked on its left edge, a small tag. */
+  .sheet.mark::before { content: ""; position: absolute; left: -44px; top: -36px; width: 8px; height: 1123px; background: var(--mark); }
+  .mark-new { --mark: #46667f; --mark-soft: #e4eaef; }
+  .mark-revised { --mark: #6b8a72; --mark-soft: #e6ede7; }
+  .mark-option { --mark: #9a948c; --mark-soft: #efece8; }
+  .kicker { margin-bottom: 10px; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mark); }
+  .kicker .tag { display: inline-block; padding: 4px 9px 3px; margin-right: 9px; background: var(--mark); color: #ffffff; }
+  .mark-option .kicker .tag { background: var(--mark-soft); color: #5f5952; }
+  tr.mark td:first-child { border-left: 3px solid var(--mark); padding-left: 8px; }
+  tr.mark-option td { background: var(--mark-soft); }
+  tr.mark-option td.ffe { padding-left: 14px; color: #6b645c; }
+  .opt-name { font: 500 9.5px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mark); margin-right: 6px; }
+  .legend span { margin-right: 14px; white-space: nowrap; }
+  .list td.legend.key { padding-top: 12px; border-bottom: 0; font-size: 9.5px; color: #8a837b; }
+  .legend.key i { width: 6px; height: 6px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; background: var(--mark); }
   .loc .label { font-size: 9px; color: #b8a89c; }
   .loc .name { font: 500 30px/1.1 "Newsreader", serif; margin-top: 6px; }
   .loc .sub { font-size: 12px; color: #e6dcd3; margin-top: 4px; }
@@ -96,7 +117,7 @@
   .band .img.empty { background: repeating-linear-gradient(135deg, #ece8e1 0, #ece8e1 6px, #e3ded6 6px, #e3ded6 12px); }
   .band .img img { width: 100%; height: 100%; display: block; }  /* fit and background: pdf.band_layout */
   .band .img.plan { background: #fff; border: 1px solid #e4e0d9; }
-  .band .tag { position: absolute; left: 10px; bottom: 10px; background: #fbfaf7; padding: 3px 7px; font: 400 9px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6b645c; }
+  .band .tag { position: absolute; left: 10px; bottom: 10px; background: {{ paper }}; padding: 3px 7px; font: 400 9px "IBM Plex Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6b645c; }
   .usage-note { margin-top: 4px; font-size: 9px; color: #a39b91; text-align: right; }
   .section-head { margin-top: 26px; padding-bottom: 8px; border-bottom: 1px solid #1c1a17; }
   .section-head td { padding: 0; vertical-align: bottom; }
@@ -122,6 +143,7 @@
 </style>
 </head>
 <body>
+{% if studio_footer %}<div class="studio-mark"><img src="{{ assets_url }}/racoon-footer.svg" alt=""><span>Racoon<br>Studio</span></div>{% endif %}
 {% block body %}{% endblock %}
 </body>
 </html>

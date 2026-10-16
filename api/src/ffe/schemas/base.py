@@ -1,10 +1,15 @@
 """Common schema base: snake_case in Python, camelCase in JSON (ARCHITECTURE §4)."""
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+
+def strip_text(value: Any) -> Any:
+    """Surrounding spaces off a text input (the « before » step of the schemas' validators)."""
+    return value.strip() if isinstance(value, str) else value
 
 
 class BaseSchema(BaseModel):

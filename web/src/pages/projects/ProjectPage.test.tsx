@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { installFakeApi, itemRow, placementRow, type FakeApi } from '../../../tests/helpers/fakeApi'
 import { renderApp } from '../../../tests/helpers/render'
 
@@ -125,44 +125,87 @@ describe('page projet', () => {
     expect(api.events.filter((e) => e.kind === 'status').map((e) => e.toStatus)).toEqual(['approved', 'cancelled'])
   })
 
-  test('les PDF sont émis et listés dans « Documents émis »', async () => {
+  test('« Listing PDF » : le profil et le papier choisis, le PDF téléchargé', async () => {
     const user = userEvent.setup()
+    const clicked: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push(this.getAttribute('href') ?? '')
+    })
     renderApp('/projects/1')
     await screen.findByRole('heading', { name: 'Rénovation' })
-    expect(screen.getByRole('link', { name: 'Fiches PDF' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/sheets.pdf')
-    expect(screen.getByRole('link', { name: 'Listing PDF' }).getAttribute('href')).toBe('/api/v1/projects/1/exports/list.pdf')
-    expect((await screen.findByRole('link', { name: 'Budget détaillé →' })).getAttribute('href')).toBe('/projects/1/budget')
-    expect(screen.getByRole('link', { name: '+ Ajouter un article' }).getAttribute('href')).toBe('/projects/1/items/new')
-    await user.click(screen.getByRole('link', { name: 'Modifier' }))
-    expect(await screen.findByRole('heading', { name: 'Modifier Rénovation' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Listing PDF' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Listing PDF' })
+    await user.selectOptions(await within(dialog).findByLabelText('Profil du listing'), 'Client')
+    const chips = within(dialog).getByRole('list', { name: 'Colonnes imprimées' })
+    expect(
+      within(chips)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['photo', 'code', 'type', 'Désignation', 'dimensions', 'finish', 'Qté', 'status', 'indice'])
+    await user.click(within(dialog).getByRole('radio', { name: 'Blanc' }))
+    await user.click(within(dialog).getByLabelText('Inclure les options'))
+    await user.click(within(dialog).getByRole('button', { name: 'Générer' }))
+    expect(clicked).toEqual(['/api/v1/projects/1/exports/list.pdf?print=true&profile=2&options=true'])
+    click.mockRestore()
   })
 
-  test('« Nouvel indice » : confirmation, pastille Indice A, et la dernière fiche émise depuis devient la référence', async () => {
+  test('« Fiches PDF » : document de travail, puis diffusion sur les deux papiers', async () => {
     const user = userEvent.setup()
     renderApp('/projects/1')
     await screen.findByRole('heading', { name: 'Rénovation' })
-    expect(screen.getByText('Sans indice')).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Nouvel indice' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Première diffusion : indice A ?' })
-    await user.click(within(dialog).getByRole('button', { name: 'Déclarer l’indice A' }))
-    await screen.findByText('Indice A')
-    expect(api.projects[0]?.indice).toBe('A')
-    expect(api.items.every((i) => i.indice === 'A')).toBe(true)
-    await fetch('http://localhost/api/v1/projects/1/exports/sheets.pdf') // a first PDF, then a second: the latest is the reference
-    await fetch('http://localhost/api/v1/projects/1/exports/sheets.pdf')
-    await fetch('http://localhost/api/v1/projects/1/exports/list.pdf')
-    await user.click(screen.getByRole('link', { name: 'Budget détaillé →' }))
-    await user.click(await screen.findByRole('link', { name: 'Rénovation' }))
+    expect(screen.getByText('Non diffusé')).toBeTruthy()
+    // A working document: no diffusion, nothing changes.
+    await user.click(screen.getByRole('button', { name: 'Fiches PDF' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Fiches PDF' })
+    await user.click(within(dialog).getByRole('button', { name: 'Générer' }))
+    await screen.findByText('Fiches émises (document de travail).')
+    expect(api.projects[0]?.diffusionCount).toBe(0)
+    // The first official diffusion, on both papers, options included.
+    await user.click(screen.getByRole('button', { name: 'Fiches PDF' }))
+    dialog = await screen.findByRole('dialog', { name: 'Fiches PDF' })
+    await user.click(within(dialog).getByLabelText(/Diffusion officielle/))
+    await user.click(within(dialog).getByRole('radio', { name: 'Les deux' }))
+    await user.click(within(dialog).getByLabelText('Inclure les options'))
+    await user.click(within(dialog).getByText('Options avancées'))
+    await user.click(within(dialog).getByLabelText('Masquer Racoon Studio'))
+    await user.click(within(dialog).getByRole('button', { name: 'Diffuser (diffusion 1)' }))
+    await screen.findByText('Diffusion 1 faite.')
+    expect(api.requests.filter((r) => r.path.endsWith('/exports/sheets')).at(-1)?.body).toEqual({
+      diffuse: true,
+      papers: ['color', 'white'],
+      includeOptions: true,
+      hideAgencyName: false,
+      hideStudio: true,
+      hideAgencyLogo: false,
+    })
+    expect(await screen.findByText('Diffusion 1')).toBeTruthy()
+    expect(api.exports.slice(0, 2).map((e) => e.originalName)).toEqual([
+      '2026-001-fiches-diffusion1-impression-2026-10-10.pdf',
+      '2026-001-fiches-diffusion1-2026-10-10.pdf',
+    ])
+  })
+
+  test('Historique : documents de travail et diffusions ; la dernière diffusion s’annule', async () => {
+    const user = userEvent.setup()
+    await fetch('http://localhost/api/v1/projects/1/exports/sheets', {
+      method: 'POST',
+      body: JSON.stringify({ diffuse: false }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    await fetch('http://localhost/api/v1/projects/1/exports/sheets', {
+      method: 'POST',
+      body: JSON.stringify({ diffuse: true }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    renderApp('/projects/1?vue=historique')
     const docs = await screen.findByRole('list', { name: 'Documents émis' })
-    const rows = within(docs).getAllByRole('listitem')
-    expect(rows).toHaveLength(3)
-    expect(within(rows[1]!).getByText('Fiches de référence, indice A')).toBeTruthy()
-    expect(within(rows[2]!).queryByText(/Fiches de référence/)).toBeNull()
-    await user.click(screen.getByRole('button', { name: "Retirer l'indice A" }))
-    const undo = await screen.findByRole('dialog', { name: "Retirer l'indice A ?" })
-    await user.click(within(undo).getByRole('button', { name: "Retirer l'indice A" }))
-    await screen.findByText('Sans indice')
-    expect(api.projects[0]?.indice).toBeNull()
-    expect(api.items.every((i) => i.indice === null)).toBe(true)
+    expect(within(docs).getByText('Diffusion 1')).toBeTruthy()
+    expect(within(docs).getByText('Document de travail')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Annuler la diffusion 1' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Annuler la diffusion 1 ?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Annuler la diffusion 1' }))
+    expect(await within(docs).findByText('Diffusion 1 annulée')).toBeTruthy()
+    expect(api.projects[0]?.diffusionCount).toBe(0)
+    expect(screen.getByText('Non diffusé')).toBeTruthy()
   })
 })

@@ -1,9 +1,12 @@
 """Export / import JSON: shape, round trip, refusals (ARCHITECTURE §5)."""
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import Engine, insert, text
 from sqlalchemy.orm import Session
 
@@ -42,18 +45,20 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
     document = export_json(engine, clock)
     assert document["format"] == "ffe-export" and document["version"] == 1
     assert document["exportedAt"] == "2026-10-09T12:00:00Z"
-    assert document["schemaRevision"] == "0003"
+    assert document["schemaRevision"] == "0009"
     assert list(document["tables"]) == [
         "setting",
         "client",
         "category",
         "choice",
+        "listing_profile",
         "professional",
         "supplier",
         "file",
         "capture",
         "capture_image",
         "project",
+        "project_diffusion",
         "project_indice",
         "location",
         "project_item",
@@ -61,6 +66,10 @@ def test_export_has_the_documented_shape(engine: Engine, clock: Clock) -> None:
         "project_item_event",
         "item_code_sequence",
         "project_item_file",
+        "installation_plan",
+        "installation_sheet",
+        "installation_sheet_item",
+        "installation_sheet_marker",
         "budget_line",
         "project_file",
     ]
@@ -81,12 +90,14 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
             "client": 2,
             "category": 0,
             "choice": 13,
+            "listing_profile": 5,
             "professional": 0,
             "supplier": 0,
             "file": 0,
             "capture": 0,
             "capture_image": 0,
             "project": 0,
+            "project_diffusion": 0,
             "project_indice": 0,
             "location": 0,
             "project_item": 0,
@@ -94,6 +105,10 @@ def test_round_trip_into_a_fresh_database(engine: Engine, clock: Clock, ext4_tmp
             "project_item_event": 0,
             "item_code_sequence": 0,
             "project_item_file": 0,
+            "installation_plan": 0,
+            "installation_sheet": 0,
+            "installation_sheet_item": 0,
+            "installation_sheet_marker": 0,
             "budget_line": 0,
             "project_file": 0,
         }
@@ -179,3 +194,49 @@ def test_export_files_copies_the_attachments_next_to_the_document(ext4_tmp: Path
     (files_dir / ("e" * 64 + ".png")).write_bytes(b"E")
     assert export_files(files_dir, ext4_tmp / "out" / "files") == 1
     assert (ext4_tmp / "out" / "files" / ("e" * 64 + ".png")).read_bytes() == b"E"
+
+
+def test_a_settings_logo_survives_the_round_trip_and_a_replace(
+    client: TestClient, engine: Engine, clock: Clock, ext4_tmp: Path
+) -> None:
+    """The settings row comes first but points at a file (the agency logo, migration 0006)."""
+    buffer = BytesIO()
+    Image.new("RGB", (20, 20), (9, 9, 9)).save(buffer, "PNG")
+    logo = client.post(
+        "/api/v1/files", files={"file": ("logo.png", buffer.getvalue(), "image/png")}
+    ).json()
+    assert (
+        client.patch("/api/v1/settings", json={"agencyLogoFileId": logo["id"]}).status_code == 200
+    )
+    document = export_json(engine, clock)
+    fresh = create_db_engine(ext4_tmp / "fresh.sqlite")
+    try:
+        upgrade_head(fresh)
+        import_json(fresh, document)
+        import_json(fresh, document, replace=True)  # emptied first, logo included
+        assert export_json(fresh, clock)["tables"]["setting"][0]["agencyLogoFileId"] == logo["id"]
+    finally:
+        fresh.dispose()
+
+
+def test_an_export_of_an_older_revision_lacking_the_new_columns_imports(
+    session: Session, engine: Engine, clock: Clock, ext4_tmp: Path
+) -> None:
+    """The real base exports at its own revision (v1 and later): columns added since are absent."""
+    project = make_project(session, clock)
+    make_item(session, clock, project.id)
+    document = export_json(engine, clock)
+    document["schemaRevision"] = "0003"
+    for row in document["tables"]["project"]:
+        del row["procurementName"], row["procurementLogoFileId"]
+    for row in document["tables"]["project_item_placement"]:
+        del row["indice"], row["diffusedItemId"]
+    for row in document["tables"]["setting"]:
+        del row["agencyLogoFileId"]
+    fresh = create_db_engine(ext4_tmp / "fresh.sqlite")
+    try:
+        upgrade_head(fresh)
+        imported = import_json(fresh, document)
+        assert imported["project"] == 1 and imported["project_item_placement"] == 1
+    finally:
+        fresh.dispose()

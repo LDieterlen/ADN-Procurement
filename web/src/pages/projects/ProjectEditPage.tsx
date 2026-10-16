@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useClients } from '../../api/queries/client'
 import { useCreateProject, useProject, useUpdateProject } from '../../api/queries/project'
-import { Button } from '../../components/ui/Button'
+import { buttonClass } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -12,7 +12,17 @@ import { useSubmitErrors } from '../common/useSubmitErrors'
 import { NewClientModal } from './InlineCreate'
 import { fromProject, ProjectForm, toPayload, toUpdatePayload, type ProjectFormValues } from './ProjectForm'
 
-const EMPTY: ProjectFormValues = { name: '', code: '', clientId: null, siteAddress: '', dueOn: null, notes: '', globalBudgetCents: null }
+const EMPTY: ProjectFormValues = {
+  name: '',
+  code: '',
+  clientId: null,
+  siteAddress: '',
+  dueOn: null,
+  notes: '',
+  globalBudgetCents: null,
+  procurementName: '',
+  procurementLogoFileId: null,
+}
 
 export function ProjectEditPage() {
   const params = useParams<{ id: string }>()
@@ -78,8 +88,8 @@ export function ProjectEditPage() {
           </>
         }
         actions={
-          <Link to={project ? `/projects/${project.id}` : '/projects'}>
-            <Button variant="ghost">Retour</Button>
+          <Link to={project ? `/projects/${project.id}` : '/projects'} className={buttonClass('ghost')}>
+            Retour
           </Link>
         }
       />

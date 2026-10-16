@@ -1,10 +1,12 @@
-// Pure project form (ADR-0013): name, client (creatable in place), budget at creation, code, due date, site, notes.
+// Pure project form (ADR-0013): name, client (creatable in place), budget at creation, code, due date, site,
+// the procurement company and its logo (printed at the top right of the sheets, 2026-10-15), notes.
 import { useEffect } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import type { ErrorDetail } from '../../api/errors'
 import type { ProjectCreate, ProjectRead, ProjectUpdate } from '../../api/queries/project'
 import { DateField } from '../../components/forms/DateField'
 import { EntityPicker, type PickerOption } from '../../components/forms/EntityPicker'
+import { LogoField } from '../../components/forms/LogoField'
 import { MoneyField } from '../../components/forms/MoneyField'
 import { Form } from '../../components/forms/Form'
 import { TextArea } from '../../components/forms/TextArea'
@@ -19,12 +21,34 @@ export type ProjectFormValues = {
   dueOn: string | null
   notes: string
   globalBudgetCents: number | null
+  procurementName: string
+  procurementLogoFileId: number | null
 }
 
-const EMPTY: ProjectFormValues = { name: '', code: '', clientId: null, siteAddress: '', dueOn: null, notes: '', globalBudgetCents: null }
+const EMPTY: ProjectFormValues = {
+  name: '',
+  code: '',
+  clientId: null,
+  siteAddress: '',
+  dueOn: null,
+  notes: '',
+  globalBudgetCents: null,
+  procurementName: '',
+  procurementLogoFileId: null,
+}
 
 export function fromProject(p: ProjectRead): ProjectFormValues {
-  return { name: p.name, code: p.code, clientId: p.clientId, siteAddress: p.siteAddress ?? '', dueOn: p.dueOn, notes: p.notes ?? '', globalBudgetCents: null }
+  return {
+    name: p.name,
+    code: p.code,
+    clientId: p.clientId,
+    siteAddress: p.siteAddress ?? '',
+    dueOn: p.dueOn,
+    notes: p.notes ?? '',
+    globalBudgetCents: null,
+    procurementName: p.procurementName ?? '',
+    procurementLogoFileId: p.procurementLogoFileId,
+  }
 }
 
 const orNull = (text: string): string | null => (text.trim() === '' ? null : text.trim())
@@ -38,6 +62,8 @@ export function toPayload(v: ProjectFormValues): ProjectCreate {
     dueOn: v.dueOn,
     notes: orNull(v.notes),
     globalBudgetCents: v.globalBudgetCents,
+    procurementName: orNull(v.procurementName),
+    procurementLogoFileId: v.procurementLogoFileId,
   }
 }
 
@@ -85,6 +111,8 @@ export function ProjectForm({
         <DateField name="dueOn" label="Échéance" />
         <TextInput name="code" label="Code" hint={initial ? 'Éditable' : 'Vide = généré (AAAA-NNN)'} />
         <TextInput name="siteAddress" label="Adresse du chantier" />
+        <TextInput name="procurementName" label="Société de procurement" hint="Imprimée en haut à droite des fiches" />
+        <LogoField<ProjectFormValues> name="procurementLogoFileId" label="Logo de la société" alt="Logo de la société de procurement" />
         <div className="col-span-2">
           <TextArea name="notes" label="Notes" />
         </div>

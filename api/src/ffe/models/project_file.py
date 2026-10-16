@@ -14,6 +14,7 @@ class ProjectFile(Base):
         CheckConstraint("kind IN ('sheets_pdf', 'list_pdf')", name="kind_enum"),
         Index("ix_project_file_project_id", "project_id"),
         Index("ix_project_file_file_id", "file_id"),
+        Index("ix_project_file_diffusion_id", "diffusion_id"),
         STRICT,
     )
 
@@ -26,6 +27,9 @@ class ProjectFile(Base):
     )
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     issued_at: Mapped[str] = mapped_column(Text, nullable=False)
-    indice: Mapped[str | None] = mapped_column(Text)  # spec sheets: A, B, C… (ADR-0012)
+    indice: Mapped[str | None] = mapped_column(Text)  # unused since ADR-0022
+    # The diffusion this spec-sheet PDF was issued for (ADR-0022, migration 0005); NULL = a working
+    # document. ON DELETE RESTRICT is in the migration.
+    diffusion_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("project_diffusion.id"))
 
     file: Mapped[File] = relationship(File, lazy="joined")

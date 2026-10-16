@@ -22,7 +22,7 @@ def test_empty_file_upgrades_to_head_and_matches_models(ext4_tmp: Path) -> None:
         assert current_revision(engine) is None
         assert has_pending(engine)
         upgrade_head(engine)
-        assert current_revision(engine) == head_revision() == "0003"
+        assert current_revision(engine) == head_revision() == "0009"
         assert not has_pending(engine)
         check(engine)  # raises when models and migrations differ
     finally:
@@ -34,6 +34,12 @@ def test_revision_chain_grows_from_the_frozen_v1() -> None:
         "0001",
         "0002",
         "0003",
+        "0004",
+        "0005",
+        "0006",
+        "0007",
+        "0008",
+        "0009",
     ]  # ADR-0020: 0001 frozen, then additive migrations
 
 

@@ -8,7 +8,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from conftest import make_client, make_project
+from conftest import PDF_BYTES, PNG_BYTES, make_client, make_project
+from ffe.config import Settings
 from ffe.deps import Clock
 
 URL = "/api/v1/projects"
@@ -126,3 +127,36 @@ def test_global_budget_can_be_created_with_the_project(
         "/api/v1/projects", json={"name": "Sans budget", "clientId": owner.id}
     ).json()
     assert client.get(f"/api/v1/projects/{without['id']}/budget-lines").json() == []
+
+
+def test_the_procurement_company_and_its_logo_belong_to_the_project(
+    client: TestClient, client_id: int, settings: Settings
+) -> None:
+    """2026-10-15: printed at the top right of the sheets; the logo is an uploaded image."""
+
+    def upload(name: str, data: bytes, mime: str) -> int:
+        return int(client.post("/api/v1/files", files={"file": (name, data, mime)}).json()["id"])
+
+    logo = upload("logo.png", PNG_BYTES, "image/png")
+    created = client.post(
+        URL,
+        json={
+            "name": "Hôtel",
+            "clientId": client_id,
+            "procurementName": "Procure & Co",
+            "procurementLogoFileId": logo,
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert (body["procurementName"], body["procurementLogoFileId"]) == ("Procure & Co", logo)
+    pdf = upload("plan.pdf", PDF_BYTES, "application/pdf")
+    refused = client.patch(f"{URL}/{body['id']}", json={"procurementLogoFileId": pdf})
+    assert refused.status_code == 422
+    assert refused.json()["details"][0]["field"] == "procurementLogoFileId"
+    other = upload("autre.png", PNG_BYTES + b"x", "image/png")
+    client.patch(f"{URL}/{body['id']}", json={"procurementLogoFileId": other})
+    assert (
+        client.get(f"/api/v1/files/{logo}/content").status_code == 404
+    )  # the replaced logo is gone
+    assert client.get(f"/api/v1/files/{other}/content").status_code == 200

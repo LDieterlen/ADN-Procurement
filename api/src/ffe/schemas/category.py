@@ -5,14 +5,10 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 
 from ffe.i18n import fr
-from ffe.schemas.base import BaseSchema
+from ffe.schemas.base import BaseSchema, strip_text
 
 Name = Annotated[str, Field(min_length=1, max_length=100)]
 Code = Annotated[str, Field(pattern=r"^[A-Z]{2,4}$")]
-
-
-def _strip(value: Any) -> Any:
-    return value.strip() if isinstance(value, str) else value
 
 
 class CategoryCreate(BaseSchema):
@@ -23,7 +19,7 @@ class CategoryCreate(BaseSchema):
     @field_validator("name", mode="before")
     @classmethod
     def strip_name(cls, value: Any) -> Any:
-        return _strip(value)
+        return strip_text(value)
 
     @field_validator("code", mode="before")
     @classmethod
@@ -45,7 +41,7 @@ class CategoryUpdate(BaseSchema):
     def required_fields_cannot_be_cleared(cls, value: Any) -> Any:
         if value is None:
             raise ValueError(fr.FIELD_REQUIRED)
-        return _strip(value)
+        return strip_text(value)
 
 
 class CategoryRead(BaseSchema):

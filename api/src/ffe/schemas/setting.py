@@ -28,6 +28,7 @@ class SettingUpdate(BaseSchema):
     agency_address: Address = None
     agency_email: Email = None
     agency_phone: Phone = None
+    agency_logo_file_id: int | None = None  # an image uploaded by POST /files; null removes it
 
     @field_validator("project_code_prefix", mode="before")
     @classmethod
@@ -58,6 +59,7 @@ class SettingRead(BaseSchema):
     agency_address: str | None
     agency_email: str | None
     agency_phone: str | None
+    agency_logo_file_id: int | None = None
     extension_token: str | None  # ADR-0017, shown once on the settings page
     created_at: str
     updated_at: str

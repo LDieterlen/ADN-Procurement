@@ -6,7 +6,7 @@ import type { ErrorDetail } from '../../api/errors'
 import { useCategory, useCreateCategory, useUpdateCategory, type CategoryRead } from '../../api/queries/category'
 import { Form } from '../../components/forms/Form'
 import { TextInput } from '../../components/forms/TextInput'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useSubmitErrors } from '../common/useSubmitErrors'
@@ -104,8 +104,8 @@ export function CategoryEditPage() {
           </Link>
         }
         actions={
-          <Link to="/categories">
-            <Button variant="ghost">Retour</Button>
+          <Link to="/categories" className={buttonClass('ghost')}>
+            Retour
           </Link>
         }
       />

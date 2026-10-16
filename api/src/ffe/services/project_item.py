@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from ffe import money
@@ -41,7 +41,7 @@ from ffe.schemas.project_item import (
 from ffe.services.base import normalize_key, stamp
 from ffe.services.choice import check_code
 from ffe.services.file import get_file, unlink_if_orphan
-from ffe.services.project import ensure_open, get_project
+from ffe.services.project import ensure_open, get_project, is_diffused
 
 RESOURCE = "project_item"
 FEE_PREFIX = "FR"
@@ -177,7 +177,10 @@ def list_events(session: Session, item_id: int) -> list[ProjectItemEvent]:
 def type_code(session: Session, category_id: int) -> str:
     category = session.get(Category, category_id)
     if category is None:
-        raise _err("categoryId", fr.NOT_FOUND.format(resource="Type de produit", id=category_id))
+        raise _err(
+            "categoryId",
+            fr.NOT_FOUND.format(resource=fr.resource_label("category"), id=category_id),
+        )
     if category.archived_at is not None:
         raise _err("categoryId", fr.CATEGORY_MUST_BE_ACTIVE)
     return category.code
@@ -241,11 +244,12 @@ def placement_code(session: Session, project_id: int, location_id: int | None, p
 
 
 def _before_first_indice(session: Session, project_id: int) -> bool:
-    return get_project(session, project_id).indice is None
+    """Before the project's first diffusion everything is free (ADR-0021/0022)."""
+    return not is_diffused(session, project_id)
 
 
 def _compact(session: Session, project_id: int, head: str, clock: Clock) -> None:
-    """Closes the gaps of a series after a code was freed, before the project's first indice only:
+    """Closes the gaps of a series after a code was freed, before the project's first diffusion only:
     the following codes move down one step, journaled on their article (ADR-0021). After it, no
     issued code moves; the next new code fills the gap."""
     if not head or not _before_first_indice(session, project_id):
@@ -343,7 +347,9 @@ def _resolve_defaults(
             raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
     if data.kind == "product" and values["category_id"] is None:
         raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
-    _check_reference(session, Category, "categoryId", values["category_id"], "Type de produit")
+    _check_reference(
+        session, Category, "categoryId", values["category_id"], fr.resource_label("category")
+    )
     # The name is required ; the designation defaults to it (and a bare designation, e.g. a fee
     # typed inline, is its own name).
     values["product_name"] = values["product_name"] or values["name"]
@@ -351,7 +357,7 @@ def _resolve_defaults(
     if not values["name"]:
         raise _err("productName", fr.ITEM_PRODUCT_NAME_REQUIRED)
     supplier = _check_reference(
-        session, Supplier, "supplierId", values["supplier_id"], "Fournisseur"
+        session, Supplier, "supplierId", values["supplier_id"], fr.resource_label("supplier")
     )
     if values["currency"] is None:
         values["currency"] = supplier.currency if supplier is not None else "EUR"
@@ -463,6 +469,8 @@ def _update_placement(
     item, placement = _placement(session, placement_id)
     changes = data.model_dump(exclude_unset=True)
     if "location_id" in changes and changes["location_id"] != placement.location_id:
+        if placement.diffused_item_id is not None:  # a diffused code never changes (ADR-0022)
+            raise ConflictError(fr.PLACEMENT_DIFFUSED)
         _check_location(session, item.project_id, changes["location_id"])
         if any(
             p.id != placement.id and p.location_id == changes["location_id"]
@@ -492,6 +500,8 @@ def delete_placement(session: Session, placement_id: int, clock: Clock) -> Proje
 def _delete_placement(session: Session, placement_id: int, clock: Clock) -> ProjectItem:
     """Body of `delete_placement`, inside the caller's transaction (also used by `save_item`)."""
     item, placement = _placement(session, placement_id)
+    if placement.diffused_item_id is not None:  # a diffused code never disappears (ADR-0022)
+        raise ConflictError(fr.PLACEMENT_DIFFUSED)
     if len(item.placements) <= 1:
         raise ConflictError(fr.PLACEMENT_LAST_ONE)
     before = _placements_json(item)
@@ -599,7 +609,9 @@ def _update_item(
             raise _err("supplierId", fr.ITEM_FEE_NEEDS_SUPPLIER)
     elif "category_id" in changes and changes["category_id"] is None:
         raise _err("categoryId", fr.ITEM_CATEGORY_REQUIRED)
-    _check_reference(session, Supplier, "supplierId", changes.get("supplier_id"), "Fournisseur")
+    _check_reference(
+        session, Supplier, "supplierId", changes.get("supplier_id"), fr.resource_label("supplier")
+    )
     if (
         "category_id" in changes
         and changes["category_id"] is not None
@@ -608,6 +620,8 @@ def _update_item(
         # A new type recodes every placement (ADR-0018), journaled with the codes.
         if item.option_of_id is not None:
             raise _err("categoryId", fr.OPTION_TYPE_LOCKED)
+        if any(p.diffused_item_id is not None for p in item.placements):
+            raise _err("categoryId", fr.ITEM_TYPE_DIFFUSED)
         _recode(session, item, type_code(session, changes["category_id"]), clock)
         for option in _options_of(session, item.id):  # options share the base's type
             option.category_id = changes["category_id"]
@@ -621,40 +635,55 @@ def _update_item(
         elif fx_given is None and "currency" in changes:
             changes["fx_rate_micro"] = resolve_fx(session, item.project_id, currency, None)
     before_price = price_json(item)
+    sheet = {f: getattr(item, f) for f in changes if f in fr.ITEM_SHEET_FIELD_LABELS}
     for field_name, value in changes.items():
         setattr(item, field_name, value)
     item.updated_at = stamp(clock)
     after_price = price_json(item)
     if after_price != before_price:
         write_event(session, item, "price", clock, old_value=before_price, new_value=after_price)
+    changed = [f for f in sheet if getattr(item, f) != sheet[f]]
+    if changed:  # the sheet itself: name, reference, dimensions… (CLAUDE.md: always journaled)
+        write_event(
+            session,
+            item,
+            "sheet",
+            clock,
+            old_value=_json({f: sheet[f] for f in changed}),
+            new_value=_json({f: getattr(item, f) for f in changed}),
+            note=fr.ITEM_SHEET_CHANGED_NOTE.format(
+                fields=", ".join(fr.ITEM_SHEET_FIELD_LABELS[f] for f in changed)
+            ),
+        )
     return item
 
 
+def _json(value: Any) -> str:
+    return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+
+
+def _file_state(junction: ProjectItemFile) -> str:
+    return _json(
+        {
+            "file": junction.file_id,
+            "kind": junction.kind,
+            "primary": bool(junction.is_primary),
+            "caption": junction.caption,
+        }
+    )
+
+
 def delete_item(session: Session, item_id: int, clock: Clock, files_dir: Path) -> None:
-    """Physical deletion (DATA_MODEL §5, ADR-0021): any article before the project's first indice;
-    after it, « à chiffrer » with no event other than `created`. Never a base with options. The
-    freed codes (or option letter) are closed up before the first indice."""
+    """Physical deletion (DATA_MODEL §5, ADR-0022): any article never presented in a diffusion (all
+    of them before the first one); a diffused article is cancelled instead. Never a base with
+    options. The freed codes (or option letter) are closed up before the first diffusion."""
     with session.begin():
         item = get_item(session, item_id)
         ensure_open(get_project(session, item.project_id))
         if _options_of(session, item.id):
             raise ConflictError(fr.ITEM_HAS_OPTIONS)
-        if not _before_first_indice(session, item.project_id):
-            others = session.scalar(
-                select(func.count())
-                .select_from(ProjectItemEvent)
-                .where(
-                    ProjectItemEvent.project_item_id == item_id,
-                    ProjectItemEvent.kind != "created",
-                    # an option's note « base modified » is not its own history
-                    or_(
-                        ProjectItemEvent.note.is_(None),
-                        ProjectItemEvent.note != fr.OPTION_BASE_CHANGED_NOTE,
-                    ),
-                )
-            )
-            if item.status != "to_quote" or others:
-                raise ConflictError(fr.ITEM_DELETE_ONLY_NEW)
+        if item.first_diffusion_id is not None:  # shown officially: cancelled, never deleted
+            raise ConflictError(fr.ITEM_DELETE_ONLY_NEW)
         freed = [_head_of(p.code) for p in item.placements]
         if item.item_code:
             freed.append(_head_of(item.item_code))
@@ -705,7 +734,7 @@ def _next_letter(session: Session, base_id: int) -> str:
 
 
 def _compact_letters(session: Session, base_id: int, clock: Clock) -> None:
-    """Before the first indice, the letters of the options stay A, B, C… without a gap."""
+    """Before the first diffusion, the letters of the options stay A, B, C… without a gap."""
     base = session.get(ProjectItem, base_id)
     if base is None or not _before_first_indice(session, base.project_id):
         return
@@ -737,7 +766,7 @@ def _recode(session: Session, item: ProjectItem, prefix: str, clock: Clock) -> N
 
 def attach_option(session: Session, base_id: int, data: OptionAttach, clock: Clock) -> ProjectItem:
     """An existing article becomes an option of `base_id`: it gives up its placements (their codes
-    are closed up before the first indice) and takes the next letter (ADR-0021)."""
+    are closed up before the first diffusion) and takes the next letter (ADR-0021)."""
     with session.begin():
         item = _attach_option(session, base_id, data, clock)
     return _reloaded(session, item)
@@ -759,6 +788,8 @@ def _attach_option(session: Session, base_id: int, data: OptionAttach, clock: Cl
         raise _err("projectItemId", fr.OPTION_CANDIDATE_INVALID)
     if item.category_id != base.category_id:
         raise _err("projectItemId", fr.OPTION_TYPE_MISMATCH)
+    if item.first_diffusion_id is not None:  # its diffused codes would disappear (ADR-0022)
+        raise _err("projectItemId", fr.OPTION_ATTACH_DIFFUSED)
     before = _placements_json(item)
     freed = [_head_of(p.code) for p in item.placements]
     letter = _next_letter(session, base.id)
@@ -782,7 +813,7 @@ def _attach_option(session: Session, base_id: int, data: OptionAttach, clock: Cl
 
 def detach_option(session: Session, option_id: int, clock: Clock) -> ProjectItem:
     """The option becomes an independent article with one unassigned placement of 1 (to place);
-    the letters of the remaining options are closed up before the first indice (ADR-0021)."""
+    the letters of the remaining options are closed up before the first diffusion (ADR-0021)."""
     with session.begin():
         option = _detach_option(session, option_id, clock)
     return _reloaded(session, option)
@@ -929,18 +960,26 @@ def _attach_file(session: Session, item_id: int, data: ItemFileAttach, clock: Cl
             junction.is_primary = 0
         session.flush()
     now = stamp(clock)
-    item.files.append(
-        ProjectItemFile(
-            file_id=data.file_id,
-            kind=data.kind,
-            is_primary=int(data.is_primary),
-            caption=data.caption,
-            sort_order=data.sort_order,
-            created_at=now,
-            updated_at=now,
-        )
+    junction = ProjectItemFile(
+        file_id=data.file_id,
+        kind=data.kind,
+        is_primary=int(data.is_primary),
+        caption=data.caption,
+        sort_order=data.sort_order,
+        created_at=now,
+        updated_at=now,
     )
+    item.files.append(junction)
     item.updated_at = now
+    name = get_file(session, data.file_id).original_name
+    write_event(
+        session,
+        item,
+        "file",
+        clock,
+        new_value=_file_state(junction),
+        note=fr.ITEM_FILE_ADDED_NOTE.format(name=name),
+    )
     return item
 
 
@@ -970,9 +1009,21 @@ def _update_file(
             if other.file_id != file_id:
                 other.is_primary = 0
         session.flush()
+    before = _file_state(junction)
     for field_name, value in changes.items():
         setattr(junction, field_name, int(value) if field_name == "is_primary" else value)
     junction.updated_at = item.updated_at = stamp(clock)
+    after = _file_state(junction)
+    if after != before and set(changes) - {"sort_order"}:  # an order change alone is not news
+        write_event(
+            session,
+            item,
+            "file",
+            clock,
+            old_value=before,
+            new_value=after,
+            note=fr.ITEM_FILE_CHANGED_NOTE.format(name=junction.file.original_name),
+        )
     return item
 
 
@@ -988,8 +1039,18 @@ def detach_file(
 def _detach_file(session: Session, item_id: int, file_id: int, clock: Clock) -> ProjectItem:
     """Body of `detach_file`, inside the caller's transaction (also used by `save_item`)."""
     item = _editable(session, item_id)
-    item.files.remove(_junction(item, file_id))
+    junction = _junction(item, file_id)
+    before, name = _file_state(junction), junction.file.original_name
+    item.files.remove(junction)
     item.updated_at = stamp(clock)
+    write_event(
+        session,
+        item,
+        "file",
+        clock,
+        old_value=before,
+        note=fr.ITEM_FILE_REMOVED_NOTE.format(name=name),
+    )
     return item
 
 
@@ -1069,6 +1130,8 @@ def _save_placements(
     moved = {placement_id for placement_id, _ in moves}
     for placement_id in [pid for pid in current if pid not in kept and pid not in moved]:
         placement = current[placement_id]
+        if placement.diffused_item_id is not None:  # a diffused code never disappears (ADR-0022)
+            raise ConflictError(fr.PLACEMENT_DIFFUSED)
         before = _placements_json(item)
         freed = _head_of(placement.code)
         item.placements.remove(placement)

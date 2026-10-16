@@ -53,6 +53,19 @@ describe('projets', () => {
     expect(await screen.findByText(/Aucune localisation/)).toBeTruthy()
   })
 
+  test('la société de procurement et son logo se saisissent sur le projet (en-tête des fiches)', async () => {
+    const user = userEvent.setup()
+    renderApp('/projects/1/edit')
+    await user.type(await screen.findByLabelText('Société de procurement'), 'Procure & Co')
+    const png = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])], 'logo.png', { type: 'image/png' })
+    await user.upload(screen.getByLabelText('Logo de la société à déposer'), png)
+    expect(await screen.findByAltText('Logo de la société de procurement')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    await screen.findByRole('heading', { name: 'Rénovation étages' })
+    expect(api.projects[0]).toMatchObject({ procurementName: 'Procure & Co' })
+    expect(api.projects[0]?.procurementLogoFileId).not.toBeNull()
+  })
+
   test('un client peut être créé depuis le formulaire du projet', async () => {
     const user = userEvent.setup()
     renderApp('/projects/new')

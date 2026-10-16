@@ -6,7 +6,7 @@ import { type Column } from '../../components/tables/DataTable'
 import { ListToolbar } from '../../components/tables/ListToolbar'
 import { TableCard, archivedColumn } from '../../components/tables/TableCard'
 import { PageHeader } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
+import { buttonClass } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 
 const LIMIT = 50
@@ -40,8 +40,8 @@ export function SuppliersPage() {
         title="Fournisseurs"
         subtitle={suppliers.data ? `${suppliers.data.total} fournisseur${suppliers.data.total > 1 ? 's' : ''}` : undefined}
         actions={
-          <Link to="/suppliers/new">
-            <Button variant="primary">Nouveau fournisseur</Button>
+          <Link to="/suppliers/new" className={buttonClass('primary')}>
+            Nouveau fournisseur
           </Link>
         }
       />

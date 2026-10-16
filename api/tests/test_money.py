@@ -103,3 +103,8 @@ def test_amounts_are_non_negative_integers_and_monotonic_in_quantity(
     assert a.total_ht_cents >= 0 and isinstance(a.total_ht_cents, int)
     assert b.total_ht_cents >= a.total_ht_cents
     assert a.net_unit_cents <= cost
+
+
+def test_sum_cents_adds_shares_already_rounded() -> None:
+    assert money.sum_cents([]) == 0
+    assert money.sum_cents([33_33, 33_33, 33_34]) == 100_00  # three thirds of 100,00 €

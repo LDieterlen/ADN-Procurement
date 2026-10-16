@@ -5,7 +5,7 @@ import { type Column } from '../../components/tables/DataTable'
 import { ListToolbar } from '../../components/tables/ListToolbar'
 import { TableCard, archivedColumn } from '../../components/tables/TableCard'
 import { PageHeader } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
+import { buttonClass } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 
 export const KIND_LABELS: Record<ClientRead['kind'], string> = { individual: 'Particulier', company: 'Société' }
@@ -36,8 +36,8 @@ export function ClientsPage() {
         title="Clients"
         subtitle={clients.data ? `${clients.data.length} client${clients.data.length > 1 ? 's' : ''}` : undefined}
         actions={
-          <Link to="/clients/new">
-            <Button variant="primary">Nouveau client</Button>
+          <Link to="/clients/new" className={buttonClass('primary')}>
+            Nouveau client
           </Link>
         }
       />

@@ -12,6 +12,9 @@ RESOURCE_LABELS: dict[str, str] = {
     "project_item": "article",
     "placement": "implantation",
     "capture": "capture",
+    "listing_profile": "profil de listing",
+    "installation_plan": "plan",
+    "installation_sheet": "planche d'installation",
 }
 
 CONTACT_IMPORT_MISSING_COLUMNS = "Colonnes manquantes dans le fichier : {columns}."
@@ -26,7 +29,7 @@ PROJECT_STATUS_LABELS: dict[str, str] = {
 }
 PROJECT_READ_ONLY = "Projet n° {id} {status} : le rouvrir (statut) avant de le modifier."
 PROJECT_CODE_TAKEN = "Ce code de projet est déjà utilisé."
-PROJECT_NO_INDICE = "Aucun indice à retirer sur ce projet."
+PROJECT_NO_DIFFUSION = "Aucune diffusion à annuler sur ce projet."
 PROJECT_CLIENT_MUST_BE_ACTIVE = "Le client est archivé."
 CLIENT_HAS_OPEN_PROJECTS = (
     "Le client n° {id} a {count} projet(s) non clos : les clore ou les annuler avant d'archiver."
@@ -42,6 +45,72 @@ ITEM_STATUS_LABELS: dict[str, str] = {
 }
 CHOICE_UNKNOWN = "Valeur absente de la liste (ou archivée) : la choisir dans Listes."
 CHOICE_NAME_TAKEN = "Ce libellé existe déjà dans cette liste."
+LISTING_PROFILE_NAME_TAKEN = "Un profil de listing porte déjà ce nom."
+# Installation sheets (ADR-0024).
+PLAN_FILE_REFUSED = (
+    "Le plan doit être une image (JPEG, PNG, WebP) ou un PDF déposé dans l'application."
+)
+PLAN_PDF_UNREADABLE = "Ce PDF ne peut pas être lu : l'exporter en image ou en PDF standard."
+PLAN_IN_USE = (
+    "Ce plan est utilisé par {count} planche(s) : leur choisir un autre plan avant de le supprimer."
+)
+# Journal of an article: the sheet fields changed (event « sheet ») and its files (event « file »).
+ITEM_SHEET_FIELD_LABELS: dict[str, str] = {
+    "category_id": "type",
+    "supplier_id": "fournisseur",
+    "name": "désignation",
+    "product_name": "description",
+    "reference": "référence",
+    "family": "famille",
+    "usage": "usage",
+    "finish": "finitions",
+    "dimensions": "dimensions",
+    "lead_time": "délai",
+    "source_url": "lien",
+    "comments": "commentaires",
+    "quote_ref": "n° de devis",
+    "quote_indice": "indice du devis",
+    "quote_url": "lien du devis",
+    "item_code": "code",
+}
+ITEM_SHEET_CHANGED_NOTE = "Fiche modifiée : {fields}."
+ITEM_FILE_ADDED_NOTE = "Fichier ajouté : {name}."
+ITEM_FILE_CHANGED_NOTE = "Fichier modifié : {name}."
+ITEM_FILE_REMOVED_NOTE = "Fichier retiré : {name}."
+LOCATION_HAS_PLACEMENTS = (
+    "Cette localisation porte {count} implantation(s) : les déplacer ou l'archiver."
+)
+LOCATION_HAS_SHEETS = "Cette localisation a {count} planche(s) d'installation : les supprimer d'abord (onglet Installation)."
+LOCATION_HAS_BUDGET = (
+    "Cette localisation a {count} ligne(s) de budget : les retirer d'abord (page Budget)."
+)
+SHEET_REFERENCE_UNKNOWN = "Introuvable dans ce projet."
+SHEET_PLACEMENT_REPEATED = "Un article figure deux fois dans la liste."
+SHEET_PLACEMENT_NOT_INSTALLED = (
+    "L'article {code} est annulé (ou un frais) : il n'a pas sa place sur une planche."
+)
+SHEET_PLACEMENT_OUT_OF_ROOM = "L'article {code} n'est pas dans la pièce de cette planche."
+# Columns of the listing PDF (ADR-0023), in printing order (`ffe.listing.COLUMNS`).
+LISTING_COLUMN_LABELS: dict[str, str] = {
+    "photo": "Photo",
+    "code": "Code FF&E",
+    "type": "Type",
+    "name": "Désignation",
+    "comments": "Commentaires",
+    "link": "Lien",
+    "reference": "Référence",
+    "supplier": "Fournisseur",
+    "contact": "Contact",
+    "dimensions": "Dimensions",
+    "finish": "Finitions",
+    "family": "Famille",
+    "usage": "Usage",
+    "lead_time": "Délai",
+    "quantity": "Qté",
+    "amount": "Montant HT €",
+    "status": "État",
+    "indice": "Ind.",
+}
 ITEM_SAME_STATUS = "L'article est déjà dans ce statut."
 ITEM_CATEGORY_REQUIRED = "Un type de produit est nécessaire."
 ITEM_PRODUCT_NAME_REQUIRED = "Un nom est nécessaire."
@@ -54,8 +123,17 @@ ITEM_CODE_FEE_ONLY = (
 )
 ITEM_CODE_TAKEN = "Ce code FF&E est déjà utilisé dans le projet."
 ITEM_DELETE_ONLY_NEW = (
-    "Après le premier indice, seul un article « à chiffrer » sans historique se supprime ; "
-    "l'annuler sinon."
+    "Cet article a déjà été diffusé : il ne se supprime plus, l'annuler (seul un article ajouté "
+    "depuis la dernière diffusion se supprime)."
+)
+PLACEMENT_DIFFUSED = (
+    "Cette implantation a déjà été diffusée : son code ne change plus (ni déplacement ni retrait) ; "
+    "annuler l'article si besoin."
+)
+ITEM_TYPE_DIFFUSED = "Cet article a déjà été diffusé : son type (et donc son code) ne change plus."
+OPTION_ATTACH_DIFFUSED = "Cet article a déjà été diffusé : il ne peut plus devenir une option."
+LOCATION_CODE_DIFFUSED = (
+    "Cette localisation porte des codes déjà diffusés : son code ne change plus."
 )
 ITEM_HAS_OPTIONS = "Cet article a des options : les supprimer ou en retenir une d'abord."
 OPTION_BASE_INVALID = (
@@ -75,6 +153,9 @@ OPTION_DETACHED_NOTE = "Option {letter} détachée : article indépendant, non a
 # Labels of the budget compilations and of the PDFs (never in a service, CLAUDE.md).
 LABEL_PROJECT = "Projet"
 LABEL_UNASSIGNED = "Non affecté"
+LABEL_NO_TYPE = "Sans type"
+PDF_MADE_BY = "Réalisé par {agency}"  # bottom left of the PDFs
+INSTALLATION_PDF_TITLE = "Installation {project}"
 LABEL_NO_ZONE = "Sans zone"
 LABEL_NO_FAMILY = "Sans famille"
 LABEL_NO_SUPPLIER = "Sans fournisseur"
@@ -118,6 +199,7 @@ CATEGORY_MUST_BE_ACTIVE = "Le type de produit est archivé."
 
 CATEGORY_NAME_TAKEN = "Un type de produit porte déjà ce nom."
 CATEGORY_CODE_TAKEN = "Ce code est déjà utilisé."
+LOGO_NOT_IMAGE = "Le logo doit être une image (JPEG, PNG ou WebP) déposée dans l'application."
 CATEGORY_CODE_RESERVED = "Code réservé aux frais (FR-01, FR-02…) : en choisir un autre."
 
 NOT_FOUND = "{resource} n° {id} introuvable."

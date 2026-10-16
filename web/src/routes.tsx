@@ -9,6 +9,7 @@ import { ClientsPage } from './pages/clients/ClientsPage'
 import { ProfessionalEditPage } from './pages/professionals/ProfessionalEditPage'
 import { ProfessionalsPage } from './pages/professionals/ProfessionalsPage'
 import { BudgetPage } from './pages/projects/BudgetPage'
+import { InstallationSheetPage } from './pages/projects/InstallationSheetPage'
 import { ItemNewPage } from './pages/projects/ItemNewPage'
 import { ItemPage } from './pages/projects/ItemPage'
 import { ProjectEditPage } from './pages/projects/ProjectEditPage'
@@ -29,6 +30,7 @@ export function AppRoutes() {
         <Route path="/projects/:id/budget" element={<BudgetPage />} />
         <Route path="/projects/:id/items/new" element={<ItemNewPage />} />
         <Route path="/projects/:id/items/:itemId" element={<ItemPage />} />
+        <Route path="/projects/:id/installation/:sheetId" element={<InstallationSheetPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/new" element={<ClientEditPage />} />
         <Route path="/clients/:id" element={<ClientEditPage />} />

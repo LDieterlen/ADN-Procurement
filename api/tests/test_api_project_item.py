@@ -84,7 +84,7 @@ def test_create_with_the_full_sheet_and_the_price(
     assert body["sourceUrl"] == "https://example.com/beat"
     assert body["unitCostCents"] == 125_000 and body["currency"] == "GBP"
     assert body["discountBp"] == 1500 and body["fxRateMicro"] == GBP
-    assert body["indice"] is None and body["kind"] == "product"
+    assert body["diffused"] is False and body["kind"] == "product"
     assert [p["locationId"] for p in body["placements"]] == [world["cha"].id]
     events = client.get(f"/api/v1/project-items/{body['id']}/events").json()
     assert [e["kind"] for e in events] == ["created"]
@@ -115,22 +115,29 @@ def test_codes_follow_location_then_type_without_gap_before_the_first_indice(
     assert create(placements=[{"locationId": world["cha"].id}])["itemCode"] == "CHA-LUD-02"
 
 
-def test_after_the_first_indice_codes_never_move_and_the_gap_is_filled(
+def test_after_the_first_diffusion_codes_never_move_and_a_gap_is_filled(
     client: TestClient, world: dict[str, Any]
 ) -> None:
+    """ADR-0022: diffused codes are frozen; a code freed later (never diffused) is reused."""
+
     def create() -> Any:
         body = {"name": "Lampe", "categoryId": world["lud"].id}
         return client.post(
             base(world), json={**body, "placements": [{"locationId": world["cha"].id}]}
         ).json()
 
-    first, second, third = create(), create(), create()
-    assert client.post(f"/api/v1/projects/{world['project'].id}/indice").status_code == 200
-    # Moving CHA-LUD-02 elsewhere frees its number; CHA-LUD-03, already issued, does not move.
+    first, second, _third = create(), create(), create()
+    sheets = f"/api/v1/projects/{world['project'].id}/exports/sheets"
+    assert client.post(sheets, json={"diffuse": True}).status_code == 200
     placement = second["placements"][0]["id"]
-    client.patch(f"/api/v1/placements/{placement}", json={"locationId": world["lob"].id})
-    assert client.get(f"/api/v1/project-items/{third['id']}").json()["itemCode"] == "CHA-LUD-03"
-    assert create()["itemCode"] == "CHA-LUD-02"  # the smallest free number
+    moved = client.patch(f"/api/v1/placements/{placement}", json={"locationId": world["lob"].id})
+    assert moved.status_code == 409  # a diffused code never moves
+    fourth = create()
+    assert fourth["itemCode"] == "CHA-LUD-04"
+    fifth = create()
+    assert client.delete(f"/api/v1/project-items/{fourth['id']}").status_code == 204
+    assert client.get(f"/api/v1/project-items/{fifth['id']}").json()["itemCode"] == "CHA-LUD-05"
+    assert create()["itemCode"] == "CHA-LUD-04"  # the smallest free number, nothing moved
     assert first["itemCode"] == "CHA-LUD-01"
 
 
@@ -249,9 +256,13 @@ def test_patch_sheet_price_and_type_journals_price_and_recodes_placements(
     renumbered = client.patch(url, json={"categoryId": tab}).json()
     assert renumbered["placements"][0]["code"] == renumbered["itemCode"] == "CHA-TAB-01"
     events = client.get(f"{url}/events").json()
-    assert [e["kind"] for e in events] == ["created", "price", "placement"]
+    assert [e["kind"] for e in events] == ["created", "price", "sheet", "placement", "sheet"]
     assert '"cost":118000' in events[1]["newValue"] and '"discount":2000' in events[1]["newValue"]
-    assert '"CHA-LUD-01"' in events[2]["oldValue"] and '"CHA-TAB-01"' in events[2]["newValue"]
+    # The sheet fields changed are journaled too, named in the note (CLAUDE.md: always).
+    assert '"finish":"laiton noir"' in events[2]["newValue"]
+    assert events[2]["note"].startswith("Fiche modifiée : ") and "finitions" in events[2]["note"]
+    assert '"CHA-LUD-01"' in events[3]["oldValue"] and '"CHA-TAB-01"' in events[3]["newValue"]
+    assert events[4]["note"] == "Fiche modifiée : type."
     # A product code is never typed by hand (ADR-0018) ; a type change recodes at any status.
     manual = client.patch(url, json={"itemCode": "AUTRE"})
     assert manual.status_code == 422 and manual.json()["details"][0]["field"] == "itemCode"
@@ -311,19 +322,18 @@ def test_status_is_free_and_journaled_with_an_optional_note(
     ]
 
 
-def test_after_the_first_indice_delete_only_a_new_article_without_history(
+def test_after_the_first_diffusion_only_an_article_never_shown_is_deleted(
     client: TestClient, world: dict[str, Any]
 ) -> None:
-    client.post(f"/api/v1/projects/{world['project'].id}/indice")
-    item = client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).json()
-    url = f"/api/v1/project-items/{item['id']}"
-    client.post(f"{url}/status", json={"status": "quoted"})
-    client.post(f"{url}/status", json={"status": "to_quote"})
-    blocked = client.delete(url)
+    shown = client.post(base(world), json={"name": "A", "categoryId": world["lud"].id}).json()
+    client.post(f"/api/v1/projects/{world['project'].id}/exports/sheets", json={"diffuse": True})
+    blocked = client.delete(f"/api/v1/project-items/{shown['id']}")
     assert blocked.status_code == 409 and "annuler" in blocked.json()["message"]
     fresh = client.post(base(world), json={"name": "B", "categoryId": world["lud"].id}).json()
-    assert client.delete(f"/api/v1/project-items/{fresh['id']}").status_code == 204
-    assert client.get(f"/api/v1/project-items/{fresh['id']}").status_code == 404
+    url = f"/api/v1/project-items/{fresh['id']}"
+    client.post(f"{url}/status", json={"status": "quoted"})  # a history does not matter
+    assert client.delete(url).status_code == 204
+    assert client.get(url).status_code == 404
 
 
 def test_placements_add_update_delete_and_journal(
@@ -410,6 +420,14 @@ def test_files_photo_and_drawing(
     detached = client.delete(f"{url}/{photo.id}")
     assert detached.status_code == 200 and len(detached.json()["files"]) == 1
     assert not (settings.files_dir / photo.filename).exists()
+    events = client.get(f"/api/v1/project-items/{item.id}/events").json()
+    notes = [e["note"] for e in events if e["kind"] == "file"]
+    assert notes == [
+        "Fichier ajouté : a.png.",
+        "Fichier ajouté : plan.pdf.",
+        "Fichier modifié : a.png.",
+        "Fichier retiré : a.png.",
+    ]
 
 
 def test_closed_project_refuses_every_write(
@@ -729,7 +747,7 @@ def test_deleting_an_article_removes_its_photo_from_the_disk(
     assert [p for p in settings.files_dir.rglob("*") if p.is_file()]
     assert client.delete(f"/api/v1/project-items/{item['id']}").status_code == 204
     assert [p.name for p in settings.files_dir.rglob("*") if p.is_file()] == []
-    assert client.get(f"/api/v1/files/{stored['id']}").status_code == 404
+    assert client.get(f"/api/v1/files/{stored['id']}/content").status_code == 404
 
 
 def test_renaming_a_location_never_touches_a_location_with_a_similar_code(
@@ -760,7 +778,20 @@ def test_a_new_option_stays_deletable_after_its_base_changed(
     client: TestClient, world: dict[str, Any]
 ) -> None:
     lamp = _lamp(client, world, world["cha"])
-    client.post(f"/api/v1/projects/{world['project'].id}/indice")
+    client.post(f"/api/v1/projects/{world['project'].id}/exports/sheets", json={"diffuse": True})
     option = _lamp(client, world, optionOfId=lamp["id"])
     client.post(f"/api/v1/project-items/{lamp['id']}/placements", json={"locationId": None})
     assert client.delete(f"/api/v1/project-items/{option['id']}").status_code == 204
+
+
+def test_a_diffused_code_never_changes_by_type_nor_location_code(
+    client: TestClient, world: dict[str, Any]
+) -> None:
+    lamp = _lamp(client, world, world["cha"])
+    client.post(f"/api/v1/projects/{world['project'].id}/exports/sheets", json={"diffuse": True})
+    tab = make_category_via_api(client, "TAB", "Table")
+    retyped = client.patch(f"/api/v1/project-items/{lamp['id']}", json={"categoryId": tab})
+    assert retyped.status_code == 422 and retyped.json()["details"][0]["field"] == "categoryId"
+    renamed = client.patch(f"/api/v1/locations/{world['cha'].id}", json={"code": "CHB"})
+    assert renamed.status_code == 409
+    assert client.get(f"/api/v1/project-items/{lamp['id']}").json()["itemCode"] == "CHA-LUD-01"

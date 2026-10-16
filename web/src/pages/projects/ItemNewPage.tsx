@@ -15,7 +15,7 @@ import { useAttachItemFile, useCreateItem, useProjectItem } from '../../api/quer
 import { useSuppliers } from '../../api/queries/supplier'
 import { Form } from '../../components/forms/Form'
 import { textToMilli } from '../../components/forms/QuantityField'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClass } from '../../components/ui/Button'
 import { PendingPhoto } from '../../components/PendingPhoto'
 import { UrlCaptureBox, type Captured } from '../../components/UrlCaptureBox'
 import { Card, PageHeader } from '../../components/ui/Card'
@@ -179,8 +179,8 @@ export function ItemNewPage() {
           </>
         }
         actions={
-          <Link to={`/projects/${p.id}`}>
-            <Button variant="ghost">Retour au projet</Button>
+          <Link to={`/projects/${p.id}`} className={buttonClass('ghost')}>
+            Retour au projet
           </Link>
         }
       />
@@ -275,11 +275,7 @@ export function ItemNewPage() {
               <div className="flex flex-wrap items-end gap-4">
                 <label className="flex flex-col gap-1 text-sm font-medium text-ink-2">
                   Localisation
-                  <select
-                    value={locationId}
-                    onChange={(e) => setLocationId(e.target.value)}
-                    className="min-w-64 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-normal"
-                  >
+                  <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="control min-w-64 bg-surface font-normal">
                     <option value="">Non affecté</option>
                     {(locations.data ?? []).map((l) => (
                       <option key={l.id} value={l.id}>
@@ -305,8 +301,8 @@ export function ItemNewPage() {
             <Button type="submit" variant="primary" disabled={form.formState.isSubmitting}>
               {optionOf ? "Créer l'option" : "Créer l'article"}
             </Button>
-            <Link to={`/projects/${p.id}`}>
-              <Button variant="ghost">Annuler</Button>
+            <Link to={`/projects/${p.id}`} className={buttonClass('ghost')}>
+              Annuler
             </Link>
           </div>
         </Form>

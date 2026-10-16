@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
-/* Design tokens of the 2026-10-13 refonte (references/Model site, hors dépôt) : page « paper »,
-   cartes blanches à bord fin, accent bleu ardoise, police Geist servie en local (SIL OFL). */
+/* Design tokens of the 2026-10-13 redesign (references/Model site, outside the repository): a « paper » page,
+   white cards with a thin border, a slate-blue accent, the Geist font served locally (SIL OFL). */
 @font-face {
   font-family: 'Geist';
   src: url('/fonts/Geist[wght].woff2') format('woff2');
@@ -18,6 +18,9 @@
 @theme {
   --font-sans: 'Geist', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+  /* The marks of the sheets (ADR-0022, exports/templates/base.html): « Nouveau » slate blue, « Modifié » sage. */
+  --color-mark-new: #46667f;
+  --color-mark-revised: #6b8a72;
 
   --color-paper: #f6f5f2;
   --color-surface: #ffffff;

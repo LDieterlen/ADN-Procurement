@@ -17,6 +17,7 @@ import { Card } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
 import { buttonClass } from '../../components/ui/Button'
 import { StatusSelect } from './StatusSelect'
+import { IndiceCell } from './IndiceCell'
 
 const ALL = { q: '', includeArchived: true, limit: 1000, offset: 0 } // every supplier, archived ones too: names of existing articles
 
@@ -349,7 +350,7 @@ function GroupRows({
             <td className="px-3 py-2">
               {readOnly ? <Pill status={item.status}>{ITEM_STATUS_LABELS[item.status]}</Pill> : <StatusSelect item={item} readOnly={readOnly} />}
             </td>
-            <td className="py-2 pr-5 pl-3 text-center text-ink-2">{item.indice ?? '—'}</td>
+            <IndiceCell placement={placement} className="py-2 pr-5 pl-3" />
           </tr>
         )
       })}

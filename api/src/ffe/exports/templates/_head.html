@@ -1,0 +1,10 @@
+{# The running head of the sheets and the installation pages. #}
+{% macro head(where) -%}
+  {# Three fixed columns, so the project stays centred whatever the sides hold: the agency's logo
+     (Réglages) at left, the project in the middle, the procurement company and its logo at right. #}
+  <table class="sheet-head"><tr>
+    <td class="side">{% if agency.logo %}<img src="{{ agency.logo }}" alt="{{ agency.name }}">{% endif %}</td>
+    <td class="project"><div class="name">{{ project.name }}</div><div class="sub">Projet {{ project.code }}{% if where %} · {{ where }}{% endif %}</div></td>
+    <td class="side procurement">{% if procurement.name %}<span>{{ procurement.name }}</span>{% endif %}{% if procurement.logo %}<img src="{{ procurement.logo }}" alt="">{% endif %}</td>
+  </tr></table>
+{%- endmacro %}

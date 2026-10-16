@@ -6,7 +6,7 @@ import { PROJECT_STATUS_LABELS, useProjects, type ProjectListRead, type ProjectS
 import { type Column } from '../../components/tables/DataTable'
 import { ListToolbar } from '../../components/tables/ListToolbar'
 import { TableCard } from '../../components/tables/TableCard'
-import { Button } from '../../components/ui/Button'
+import { buttonClass } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/Card'
 import { Pill } from '../../components/ui/Pill'
 import { Segmented } from '../../components/ui/Segmented'
@@ -76,8 +76,8 @@ export function ProjectsPage() {
         title="Projets"
         subtitle={projects.data ? `${projects.data.length} projet${projects.data.length > 1 ? 's' : ''}` : undefined}
         actions={
-          <Link to="/projects/new">
-            <Button variant="primary">Nouveau projet</Button>
+          <Link to="/projects/new" className={buttonClass('primary')}>
+            Nouveau projet
           </Link>
         }
       />

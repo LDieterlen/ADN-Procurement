@@ -1,22 +1,31 @@
-// « Réglages » : identité de l'agence (en-tête des PDF), préfixe des codes projet, extension Chrome, sauvegardes, santé.
+// « Réglages »: the agency's identity (head of the PDFs), the project code prefix, listing profiles, Chrome extension, backups, health.
 import { useEffect, useState } from 'react'
 import { useForm, type Path } from 'react-hook-form'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { isApiError, type ErrorDetail } from '../../api/errors'
 import { useHealth } from '../../api/queries/health'
 import { useGenerateExtensionToken, useSettings, useUpdateSettings, type SettingRead, type SettingUpdate } from '../../api/queries/setting'
 import { useCreateBackup, type BackupRead } from '../../api/queries/system'
 import { Form } from '../../components/forms/Form'
+import { LogoField } from '../../components/forms/LogoField'
 import { TextArea } from '../../components/forms/TextArea'
 import { TextInput } from '../../components/forms/TextInput'
 import { Button } from '../../components/ui/Button'
 import { Card, PageHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import { ListingProfilesCard } from './ListingProfilesCard'
 
-type SettingsFormValues = { agencyName: string; agencyAddress: string; agencyEmail: string; agencyPhone: string; projectCodePrefix: string }
+type SettingsFormValues = {
+  agencyName: string
+  agencyAddress: string
+  agencyEmail: string
+  agencyPhone: string
+  agencyLogoFileId: number | null
+  projectCodePrefix: string
+}
 
-const EMPTY: SettingsFormValues = { agencyName: '', agencyAddress: '', agencyEmail: '', agencyPhone: '', projectCodePrefix: '' }
+const EMPTY: SettingsFormValues = { agencyName: '', agencyAddress: '', agencyEmail: '', agencyPhone: '', agencyLogoFileId: null, projectCodePrefix: '' }
 
 function fromSettings(s: SettingRead): SettingsFormValues {
   return {
@@ -24,6 +33,7 @@ function fromSettings(s: SettingRead): SettingsFormValues {
     agencyAddress: s.agencyAddress ?? '',
     agencyEmail: s.agencyEmail ?? '',
     agencyPhone: s.agencyPhone ?? '',
+    agencyLogoFileId: s.agencyLogoFileId ?? null,
     projectCodePrefix: s.projectCodePrefix,
   }
 }
@@ -36,6 +46,7 @@ export function toPayload(v: SettingsFormValues): SettingUpdate {
     agencyAddress: orNull(v.agencyAddress),
     agencyEmail: orNull(v.agencyEmail),
     agencyPhone: orNull(v.agencyPhone),
+    agencyLogoFileId: v.agencyLogoFileId,
     projectCodePrefix: v.projectCodePrefix.trim(),
   }
 }
@@ -62,13 +73,14 @@ function SettingsForm({
   return (
     <Form form={form} onSubmit={onSubmit} banner={banner}>
       <div className="grid max-w-3xl grid-cols-2 gap-4">
-        <TextInput name="agencyName" label="Nom" />
+        <TextInput name="agencyName" label="Nom" hint="Imprimé en bas à gauche des fiches : « Réalisé par … »" />
         <TextInput name="projectCodePrefix" label="Préfixe des codes projet" hint="Ex. P → P2026-001" />
         <TextInput name="agencyEmail" label="E-mail" type="email" />
         <TextInput name="agencyPhone" label="Téléphone" type="tel" />
         <div className="col-span-2">
           <TextArea name="agencyAddress" label="Adresse" rows={2} />
         </div>
+        <LogoField<SettingsFormValues> name="agencyLogoFileId" label="Logo de l'agence" alt="Logo de l'agence" hint="Imprimé en haut à gauche des fiches" />
       </div>
       <Button type="submit" variant="primary" disabled={submitting}>
         Enregistrer
@@ -78,11 +90,17 @@ function SettingsForm({
 }
 
 export function SettingsPage() {
+  // « Gérer les profils » (Listing PDF) points at #profils: scrolled to once the page is drawn.
+  const { hash } = useLocation()
   const settings = useSettings()
   const health = useHealth()
   const update = useUpdateSettings()
   const backup = useCreateBackup()
   const generateToken = useGenerateExtensionToken()
+  const drawn = settings.isSuccess // the cards exist once the settings are read
+  useEffect(() => {
+    if (hash && drawn) document.getElementById(hash.slice(1))?.scrollIntoView?.({ block: 'start' })
+  }, [hash, drawn])
   function copyToken(token: string) {
     void copyText(token)
       .then(() => toast.show({ kind: 'success', message: 'Jeton copié ; le coller dans les options de l’extension.' }))
@@ -139,6 +157,7 @@ export function SettingsPage() {
           />
         )}
       </Card>
+      <ListingProfilesCard />
       <Card title="Extension Chrome" label="Extension Chrome" className="max-w-3xl">
         <p className="mb-3 text-sm text-ink-2">
           Le bouton « Envoyer à FFE » de l'extension lit la page produit dans ton navigateur (utile sur les sites qui refusent « Coller une adresse ») et la
